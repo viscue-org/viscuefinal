@@ -36,3 +36,7 @@ viscue-components*.html
 *.egg-info/
 *.bak
 ml/checkpoints/
+
+.vercel
+.env*
+supabase/.temp/

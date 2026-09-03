@@ -23,6 +23,7 @@ import {
   shouldShowOnboarding,
   skipOnboarding,
 } from './onboardingModel.mjs';
+import { accountView } from './accountModel.mjs';
 import './popup.css';
 
 const ONBOARDING_KEY = 'viscue-onboarding-complete';
@@ -173,17 +174,25 @@ function Onboarding({ onComplete, onStart }) {
 
 function StandardPopup() {
   const [autoSubmit, setAutoSubmit] = useState(false);
-  const [plan, setPlan] = useState('free');
-  const [userEmail, setUserEmail] = useState('witne@gmail.com');
-  const [isLoggedOut, setIsLoggedOut] = useState(false);
+  const [summary, setSummary] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
+
+  const fetchSummary = useCallback(() => {
+    if (globalThis.chrome?.runtime?.sendMessage) {
+      chrome.runtime.sendMessage({ type: 'account-get' }, res => {
+        if (res?.ok && res?.data) {
+          setSummary(res.data);
+        } else {
+          setSummary(null);
+        }
+      });
+    }
+  }, []);
 
   useEffect(() => {
     readSetting('viscue-auto-submit', false).then(setAutoSubmit);
-    readSetting('viscue-plan', 'free').then(value => setPlan(['free', 'pro', 'plus'].includes(value) ? value : 'free'));
-    readSetting('viscue-user-email', 'witne@gmail.com').then(setUserEmail);
-    readSetting('viscue-is-logged-out', false).then(setIsLoggedOut);
-  }, []);
+    fetchSummary();
+  }, [fetchSummary]);
 
   const toggleAutoSubmit = () => {
     const next = !autoSubmit;
@@ -191,23 +200,30 @@ function StandardPopup() {
     writeSetting('viscue-auto-submit', next);
   };
 
-  const pickPlan = (newPlan) => {
-    setPlan(newPlan);
-    writeSetting('viscue-plan', newPlan);
-  };
-
   const handleLogout = () => {
-    setIsLoggedOut(true);
-    writeSetting('viscue-is-logged-out', true);
+    if (globalThis.chrome?.runtime?.sendMessage) {
+      chrome.runtime.sendMessage({ type: 'auth-sign-out' }, () => {
+        setSummary(null);
+      });
+    }
   };
 
   const handleLogin = () => {
-    setIsLoggedOut(false);
-    writeSetting('viscue-is-logged-out', false);
+    if (globalThis.chrome?.runtime?.sendMessage) {
+      chrome.runtime.sendMessage({ type: 'auth-sign-in' }, res => {
+        if (res?.ok) fetchSummary();
+      });
+    }
   };
 
-  const planLabel = { free: 'Free', pro: 'Pro', plus: 'Plus' }[plan] ?? 'Free';
-  const cuesTotal = plan === 'free' ? 9 : plan === 'pro' ? 20 : 50;
+  const openBilling = () => {
+    if (globalThis.chrome?.runtime?.sendMessage) {
+      chrome.runtime.sendMessage({ type: 'billing-open' });
+    }
+  };
+
+  const view = accountView(summary);
+  const planLabel = { free: 'Free', pro: 'Pro', plus: 'Plus' }[view.plan] ?? 'Free';
 
   return (
     <main className="popup-shell">
@@ -242,7 +258,7 @@ function StandardPopup() {
         </div>
 
         <div className="typography-count">
-          {cuesTotal}/{cuesTotal}
+          {view.count}
         </div>
 
         <div className="toggle-container">
@@ -300,11 +316,11 @@ function StandardPopup() {
                 <div className="settings-account-email-wrap">
                   <span className="settings-account-label">Account</span>
                   <span className="settings-account-email-val">
-                    {isLoggedOut ? 'Signed out' : userEmail}
+                    {view.email || 'Signed out'}
                   </span>
                 </div>
               </div>
-              {isLoggedOut ? (
+              {!view.email || view.state === 'signed-out' ? (
                 <button type="button" className="settings-account-auth-btn" onClick={handleLogin}>
                   Sign in
                 </button>
@@ -325,25 +341,11 @@ function StandardPopup() {
                 <strong>Free</strong>
                 <small>9 Cues / day</small>
               </div>
-              {plan === 'free' ? (
+              {view.plan === 'free' ? (
                 <span className="settings-plan-badge">Current</span>
               ) : (
-                <button type="button" className="settings-plan-select-btn" onClick={() => pickPlan('free')}>
-                  Select
-                </button>
-              )}
-            </div>
-
-            <div className="settings-plan-choice">
-              <div className="settings-plan-name-group">
-                <strong>Pro</strong>
-                <small>20 Cues / day</small>
-              </div>
-              {plan === 'pro' ? (
-                <span className="settings-plan-badge">Current</span>
-              ) : (
-                <button type="button" className="settings-plan-select-btn" onClick={() => pickPlan('pro')}>
-                  $4.90 / mo
+                <button type="button" className="settings-plan-select-btn" onClick={openBilling}>
+                  Default
                 </button>
               )}
             </div>
@@ -351,13 +353,27 @@ function StandardPopup() {
             <div className="settings-plan-choice">
               <div className="settings-plan-name-group">
                 <strong>Plus</strong>
-                <small>50 Cues / day</small>
+                <small>28 Cues / day</small>
               </div>
-              {plan === 'plus' ? (
+              {view.plan === 'plus' ? (
                 <span className="settings-plan-badge">Current</span>
               ) : (
-                <button type="button" className="settings-plan-select-btn" onClick={() => pickPlan('plus')}>
-                  $9 / mo
+                <button type="button" className="settings-plan-select-btn" onClick={openBilling}>
+                  $4.90 / mo
+                </button>
+              )}
+            </div>
+
+            <div className="settings-plan-choice">
+              <div className="settings-plan-name-group">
+                <strong>Pro</strong>
+                <small>99 Cues / day</small>
+              </div>
+              {view.plan === 'pro' ? (
+                <span className="settings-plan-badge">Current</span>
+              ) : (
+                <button type="button" className="settings-plan-select-btn" onClick={openBilling}>
+                  $9.00 / mo
                 </button>
               )}
             </div>

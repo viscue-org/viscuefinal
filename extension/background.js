@@ -1,7 +1,36 @@
+import { signIn, signOut, getSession } from './auth/session.mjs';
+import { apiFetch } from './api/client.mjs';
+import { VISCUE_WEB_URL } from './api/config.mjs';
+
 const API = 'http://127.0.0.1:8787';
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   (async () => {
+    if (message.type === 'auth-sign-in') {
+      const session = await signIn();
+      sendResponse({ ok: true, session });
+      return;
+    }
+    if (message.type === 'auth-sign-out') {
+      await signOut();
+      sendResponse({ ok: true });
+      return;
+    }
+    if (message.type === 'auth-get-session') {
+      const session = await getSession();
+      sendResponse({ ok: true, session });
+      return;
+    }
+    if (message.type === 'account-get') {
+      const summary = await apiFetch('/account/summary');
+      sendResponse(summary);
+      return;
+    }
+    if (message.type === 'billing-open') {
+      await chrome.tabs.create({ url: `${VISCUE_WEB_URL}/account#plans`, active: true });
+      sendResponse({ ok: true });
+      return;
+    }
     if (message.type === 'open-workspace') {
       await openWorkspace(sender.tab);
       sendResponse({ ok: true });
@@ -67,11 +96,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return;
     }
     if (message.type === 'compile') {
-      const auth = await getAuthHeader();
-      const response = await fetch(`${API}/compile`, {
-        method: 'POST', headers: { 'content-type': 'application/json', ...auth }, body: JSON.stringify(message.payload)
-      });
-      sendResponse(await response.json());
+      try {
+        const result = await apiFetch('/compile/vicsuc', {
+          method: 'POST',
+          body: JSON.stringify(message.payload),
+        });
+        sendResponse(result);
+      } catch (err) {
+        try {
+          const auth = await getAuthHeader();
+          const response = await fetch(`${API}/compile`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', ...auth },
+            body: JSON.stringify(message.payload),
+          });
+          sendResponse(await response.json());
+        } catch {
+          sendResponse({ ok: false, error: err.message, code: err.code });
+        }
+      }
       return;
     }
     if (message.type === 'insert-prompt') {
@@ -109,10 +152,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 async function getAuthHeader() {
   try {
     const data = await chrome.storage.local.get('viscue-api-key');
-    const key = data?.['viscue-api-key'] || 'test_local_key_88';
+    const key = data?.['viscue-api-key'];
     return key ? { 'authorization': `Bearer ${key}` } : {};
   } catch {
-    return { 'authorization': 'Bearer test_local_key_88' };
+    return {};
   }
 }
 

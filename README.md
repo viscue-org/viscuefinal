@@ -85,6 +85,40 @@ The companion service supports `AWS_BEARER_TOKEN_BEDROCK` or SigV4 with `AWS_ACC
 
 Use `GET http://127.0.0.1:8787/capabilities` to see configured model routes without exposing credentials. MixFont Lens is intentionally not bundled because its published weights are noncommercial. When the font service is absent or uncertain, Viscue emits generic typography guidance rather than inventing a font family.
 
+## Verification commands
+
+Run the active verification suites before pushing:
+
+```powershell
+pnpm test
+pnpm web:test
+pnpm web:build
+```
+
+## Web Application & Authentication (Next.js 16 + Supabase)
+
+The online account, billing, and OAuth 2.1 authorization application lives in `web/`:
+
+```powershell
+pnpm install
+pnpm web:dev     # Starts web app at http://localhost:3000
+pnpm web:test    # Runs web test suite
+pnpm web:build   # Builds production Next.js application
+```
+
+### Environment Configuration
+
+Copy `web/.env.example` to `web/.env.local` (never commit `.env.local`):
+
+```dotenv
+NEXT_PUBLIC_SUPABASE_URL=https://<your-project-ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<your-anon-key>
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>
+```
+
+> **Security Note:** Never commit `.env.local`, API keys, or service role secrets. If an API key was previously pasted in a terminal or shared in chat, rotate it immediately in the respective dashboard.
+
 ## Verification and packaging
 
 ```powershell

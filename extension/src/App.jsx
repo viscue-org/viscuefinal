@@ -72,7 +72,7 @@ function chromeMessage(message) {
   if (globalThis.chrome?.runtime?.sendMessage) return chrome.runtime.sendMessage(message);
   
   const headers = { 'content-type': 'application/json' };
-  const apiKey = import.meta.env.VITE_VISCUE_API_KEY || localStorage.getItem('viscue-api-key') || 'test_local_key_88';
+  const apiKey = import.meta.env.VITE_VISCUE_API_KEY || localStorage.getItem('viscue-api-key') || '';
   if (apiKey) headers['authorization'] = `Bearer ${apiKey}`;
 
   if (message.type === 'health') return fetch('http://127.0.0.1:8787/health', { headers }).then(r => r.json()).catch(() => ({ ok: false }));

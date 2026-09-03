@@ -1,0 +1,19 @@
+# Exclude extension, ML assets, local server, dependencies and temporary files from Vercel deployments
+node_modules/
+**/node_modules/
+.git/
+.next/
+web/.next/
+extension/
+local-server/
+gesture/
+ml/
+dist/
+*.zip
+*.onnx
+*.wasm
+.viscue-local.env
+.env*.local
+docs/
+supabase/tests/
+scripts/

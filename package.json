@@ -11,7 +11,10 @@
     "checkpoint": "node scripts/source-manifest.mjs . artifacts/manifests/source-current.json",
     "server": "node local-server/server.mjs",
     "build": "vite build --config vite.config.mjs",
-    "preview": "vite preview --config vite.config.mjs"
+    "preview": "vite preview --config vite.config.mjs",
+    "web:dev": "pnpm --dir web dev",
+    "web:test": "pnpm --dir web test",
+    "web:build": "pnpm --dir web build"
   },
   "devDependencies": {
     "vite": "^7.1.3"

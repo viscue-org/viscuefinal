@@ -3,9 +3,11 @@
   "name": "Viscue — Visual intent layer",
   "version": "3.3.0",
   "description": "Build verified multimodal AI instructions from visual references.",
-  "permissions": ["storage", "unlimitedStorage", "activeTab", "scripting", "tabs"],
+  "permissions": ["storage", "unlimitedStorage", "activeTab", "scripting", "tabs", "identity"],
   "host_permissions": [
     "<all_urls>",
+    "https://vqqaxhzqaehjdpoefrjc.supabase.co/*",
+    "https://viscue.com/*",
     "http://127.0.0.1:8787/*"
   ],
   "action": { "default_title": "Open Viscue", "default_popup": "popup.html" },
