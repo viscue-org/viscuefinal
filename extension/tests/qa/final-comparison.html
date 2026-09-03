@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VisCue popup — source / implementation QA</title>
+    <style>
+      :root { color-scheme: light; font-family: "Instrument Sans", system-ui, sans-serif; background: #161616; color: #fff; }
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 28px; }
+      header { max-width: 1180px; margin: 0 auto 20px; }
+      h1 { margin: 0 0 6px; font-size: 28px; letter-spacing: -0.03em; }
+      p { margin: 0; color: #aaa5a0; font-size: 14px; }
+      main { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; max-width: 1180px; margin: 0 auto; }
+      section { border: 1px solid #3a3734; border-radius: 16px; background: #22201e; padding: 16px; }
+      h2 { margin: 0 0 14px; font-size: 17px; }
+      .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+      figure { margin: 0; }
+      figcaption { margin-bottom: 8px; color: #aaa5a0; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+      img { display: block; width: 100%; height: 520px; object-fit: contain; object-position: top; border-radius: 12px; background: #f7f5f2; }
+      @media (max-width: 840px) { body { padding: 16px; } main { grid-template-columns: 1fr; } img { height: 440px; } }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>VisCue popup fidelity check</h1>
+      <p>Provided visual direction and final responsive build shown in the same comparison input.</p>
+    </header>
+    <main>
+      <section>
+        <h2>Home / usage</h2>
+        <div class="pair">
+          <figure><figcaption>Reference</figcaption><img src="./comparison-assets/popup-home-reference.png" alt="Provided VisCue usage popup reference" /></figure>
+          <figure><figcaption>Implementation</figcaption><img src="./comparison-assets/popup-home-implementation.png" alt="Final VisCue usage popup implementation" /></figure>
+        </div>
+      </section>
+      <section>
+        <h2>Settings / plans</h2>
+        <div class="pair">
+          <figure><figcaption>Reference</figcaption><img src="./comparison-assets/popup-settings-reference.png" alt="Provided VisCue plans popup reference" /></figure>
+          <figure><figcaption>Implementation</figcaption><img src="./comparison-assets/popup-settings-implementation.png" alt="Final VisCue plans popup implementation" /></figure>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

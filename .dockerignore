@@ -1,0 +1,13 @@
+*
+!gesture/
+!gesture/**
+!scripts/
+!scripts/source-manifest.mjs
+!artifacts/
+!artifacts/manifests/
+!artifacts/manifests/source-current.json
+!ml/
+!ml/sagemaker/
+!ml/sagemaker/simulator/
+!ml/sagemaker/simulator/Dockerfile
+!ml/sagemaker/simulator/entrypoint.mjs

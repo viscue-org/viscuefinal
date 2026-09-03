@@ -1,0 +1,11 @@
+# 1.43.81 is incompatible with SageMaker 3.21.0's current aiobotocore ceiling.
+boto3==1.43.56
+sagemaker==3.21.0
+s3fs==2026.7.0
+aiobotocore==3.9.0
+numpy==2.5.2
+scikit-learn==1.9.0
+torch==2.13.0
+onnx==1.22.0
+onnxruntime==1.29.0
+pytest==9.1.1

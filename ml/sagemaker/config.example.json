@@ -1,0 +1,20 @@
+{
+  "region": "us-east-1",
+  "role_arn": "arn:aws:iam::<account>:role/<sagemaker-execution-role>",
+  "image_uri": "<account>.dkr.ecr.us-east-1.amazonaws.com/viscue-gesture-simulator:v1",
+  "ecr_repository": "viscue-gesture-simulator",
+  "bucket": "<private-versioned-encrypted-bucket>",
+  "output_prefix": "gesture/smoke-v1",
+  "dataset_version": "gesture-smoke-v1",
+  "source_sha256": "325da718bf8afb58ad7a4355bb66e17c72cded4ecfe311f8678f8080bf6824d2",
+  "dataset_sha256": "a951b5f2e32bbd994566506fb077a22bad60738037ef7c5888b23ee79c11ea9e",
+  "cost_center": "research",
+  "instance_type": "ml.m5.large",
+  "instance_count": 1,
+  "volume_size_gb": 30,
+  "max_runtime_seconds": 1800,
+  "hourly_ceiling_usd": 4.00,
+  "personas": 1000,
+  "samples": 10000,
+  "seed": 20260827
+}

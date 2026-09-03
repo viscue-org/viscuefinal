@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Viscue handoff ordering test</title></head>
+<body>
+  <form>
+    <textarea id="prompt-textarea" aria-label="Mock composer"></textarea>
+    <input id="mock-file" type="file" multiple>
+    <div id="attachments"></div>
+    <button type="button" data-testid="send-button">Send</button>
+  </form>
+  <output id="result">running</output>
+  <script>
+    const events=[]; let messageHandler;
+    globalThis.chrome={runtime:{onMessage:{addListener(fn){messageHandler=fn}},sendMessage(){return Promise.resolve({ok:true})}}};
+    const input=document.querySelector('#mock-file'),composer=document.querySelector('#prompt-textarea'),result=document.querySelector('#result');
+    input.addEventListener('change',()=>{
+      events.push('attach-start');
+      const progress=document.createElement('div');progress.setAttribute('role','progressbar');progress.textContent='Uploading';document.querySelector('#attachments').append(progress);
+      setTimeout(()=>{progress.remove();for(const file of input.files){const preview=document.createElement('div');preview.dataset.testid='attachment-preview';preview.textContent=file.name;preview.style.width='120px';preview.style.height='30px';document.querySelector('#attachments').append(preview)}events.push('attach-ready')},350);
+    });
+    composer.addEventListener('input',()=>{if(composer.value)events.push('prompt-insert')});
+    document.querySelector('[data-testid="send-button"]').addEventListener('click',()=>events.push('submit'));
+    import('../content.js').then(()=>setTimeout(()=>messageHandler({type:'handoff',prompt:'Compiled visual intent',attachments:[{id:'1',name:'reference.txt',mime:'text/plain',dataUrl:'data:text/plain;base64,cmVmZXJlbmNl'}],submit:true},{},response=>{result.textContent=JSON.stringify({events,response,pass:events.join('>')==='attach-start>attach-ready>prompt-insert>submit'});result.dataset.done='true'}),50));
+  </script>
+</body>
+</html>

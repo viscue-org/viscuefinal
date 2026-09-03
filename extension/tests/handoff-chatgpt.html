@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Viscue ChatGPT editor handoff test</title></head>
+<body>
+  <form>
+    <div id="prompt-textarea" contenteditable="true" role="textbox" aria-label="Mock ChatGPT composer"></div>
+    <input id="mock-file" type="file" multiple>
+    <div id="attachments"></div>
+    <button type="button" data-testid="send-button">Send</button>
+  </form>
+  <output id="result">running</output>
+  <script>
+    const events=[];let messageHandler,editorState='';const rejecting=new URLSearchParams(location.search).has('reject');
+    globalThis.chrome={runtime:{onMessage:{addListener(fn){messageHandler=fn}},sendMessage(){return Promise.resolve({ok:true})}}};
+    const input=document.querySelector('#mock-file'),composer=document.querySelector('#prompt-textarea'),result=document.querySelector('#result');
+    input.addEventListener('change',()=>{events.push('attach-start');const progress=document.createElement('div');progress.setAttribute('role','progressbar');progress.textContent='Uploading';document.querySelector('#attachments').append(progress);setTimeout(()=>{progress.remove();for(const file of input.files){const preview=document.createElement('div');preview.dataset.testid='attachment-preview';preview.textContent=file.name;preview.style.cssText='width:120px;height:30px';document.querySelector('#attachments').append(preview)}events.push('attach-ready')},250)});
+    composer.addEventListener('input',()=>{editorState=composer.innerText;if(editorState)events.push('prompt-committed');if(rejecting)setTimeout(()=>{editorState='';composer.replaceChildren()},40)});
+    document.querySelector('[data-testid="send-button"]').addEventListener('click',()=>events.push(`submit:${editorState}`));
+    import('../content.js').then(()=>setTimeout(()=>messageHandler({type:'handoff',prompt:'Make the marked house red.',attachments:[{id:'1',name:'reference.png',mime:'image/png',dataUrl:'data:image/png;base64,iVBORw0KGgo='}],submit:true},{},response=>{const sent=events.find(event=>event.startsWith('submit:'));const pass=rejecting?!sent&&!response.ok:sent==='submit:Make the marked house red.'&&response.ok;result.textContent=JSON.stringify({events,response,pass,rejecting});result.dataset.done='true'}),50));
+  </script>
+</body>
+</html>

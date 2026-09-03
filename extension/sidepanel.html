@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Viscue Workspace</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <header class="appbar">
+    <div class="brand-block"><span class="product-mark" aria-hidden="true"></span><div><p>VISUAL INTENT LAYER</p><h1>Viscue</h1></div></div>
+    <div class="destination-block"><span id="destination-label">Detecting destination</span><small id="service-state">Checking local intelligence</small></div>
+    <div class="app-actions"><button id="expand-workspace" class="quiet-button" type="button">Expand</button><button id="send-intent" class="primary-button" type="button">Send intent</button></div>
+  </header>
+  <div class="workspace">
+    <nav class="creation-rail" aria-label="Create and connect">
+      <label class="rail-button" data-tool="asset"><span>Asset</span><small>Image, video, document</small><input id="file-input" type="file" multiple accept="image/*,video/*,.pdf,.doc,.docx,.txt"></label>
+      <button class="rail-button" id="add-note" type="button"><span>Note</span><small>Instruction node</small></button>
+      <button class="rail-button" id="start-cue" type="button"><span>Cue</span><small>Target to instruction</small></button>
+      <button class="rail-button" id="capture-view" type="button"><span>View</span><small>Capture this page</small></button>
+      <div class="rail-spacer"></div><button class="rail-button compact" id="undo" type="button">Undo</button><button class="rail-button compact" id="redo" type="button">Redo</button>
+    </nav>
+    <main class="stage" aria-label="Viscue canvas workspace">
+      <canvas id="intent-canvas" tabindex="0" aria-label="Spatial canvas. Add assets and notes, then connect targets to instructions with Cues."></canvas>
+      <div id="canvas-node-list" class="sr-only" aria-label="Canvas nodes"></div>
+      <section id="empty-state" class="empty-state"><p>Start with what matters</p><h2>Add references, point to exact regions, and connect them to instructions.</h2><div><button id="empty-add-asset" class="primary-button" type="button">Add assets</button><button id="empty-add-note" class="quiet-button" type="button">Add a note</button></div></section>
+      <div id="context-toolbar" class="context-toolbar hidden" role="toolbar" aria-label="Selected node actions"></div>
+      <div id="mode-banner" class="mode-banner hidden" aria-live="polite"></div>
+      <div class="canvas-controls" aria-label="Canvas view controls"><button id="zoom-out" type="button">Zoom out</button><span id="zoom-label">100%</span><button id="zoom-in" type="button">Zoom in</button><button id="fit-canvas" type="button">Fit</button></div>
+    </main>
+    <aside class="inspector" aria-label="Selection inspector">
+      <div id="inspector-empty"><p class="section-label">SELECTION</p><h2>Nothing selected</h2><p>Select any asset or instruction to see provenance, status, role, and all available actions.</p></div>
+      <div id="inspector-content" class="hidden"></div>
+    </aside>
+  </div>
+  <footer class="statusbar"><span id="intent-summary">No intentional references yet</span><span id="save-state">Canvas saved locally</span></footer>
+  <dialog id="note-dialog"><form method="dialog"><header><div><p class="section-label">INSTRUCTION NODE</p><h2 id="note-dialog-title">Add note</h2></div><button class="dialog-close" value="cancel">Close</button></header><label class="field-label" for="note-text">Instruction</label><textarea id="note-text" placeholder="Describe exactly what should change, stay, move, or be used as reference."></textarea><footer><button value="cancel" class="quiet-button">Cancel</button><button id="save-note" value="default" class="primary-button">Save note</button></footer></form></dialog>
+  <dialog id="role-dialog"><form method="dialog"><header><div><p class="section-label">INTENT ROLE</p><h2>What does this asset contribute?</h2></div><button class="dialog-close" value="cancel">Close</button></header><div id="role-options" class="role-options"></div><footer><button value="cancel" class="quiet-button">Cancel</button></footer></form></dialog>
+  <dialog id="video-dialog" class="media-dialog"><form method="dialog"><header><div><p class="section-label">DERIVED ASSET</p><h2>Extract video frame</h2></div><button class="dialog-close" value="cancel">Close</button></header><video id="frame-video" controls preload="metadata"></video><label class="field-label" for="frame-time">Frame position</label><input id="frame-time" type="range" min="0" max="1000" value="500"><output id="frame-time-label">00:00.000</output><footer><button value="cancel" class="quiet-button">Cancel</button><button id="extract-frame" value="default" class="primary-button">Add frame to canvas</button></footer></form></dialog>
+  <dialog id="preflight-dialog"><form method="dialog"><header><div><p class="section-label">AUTOMATIC HANDOFF</p><h2>Send this intent</h2></div><button class="dialog-close" value="cancel">Close</button></header><div id="preflight-list" class="preflight-list"></div><label class="auto-submit-row"><input id="auto-submit" type="checkbox" checked><span><strong>Submit automatically</strong><small>Paste the compiled prompt, attach every required clean source, and press Send in the current AI chat.</small></span></label><div id="handoff-progress" class="handoff-progress hidden" aria-live="polite"></div><footer><button value="cancel" class="quiet-button">Keep editing</button><button id="confirm-handoff" value="default" class="primary-button">Compile and send</button></footer></form></dialog>
+  <div id="live-region" class="sr-only" aria-live="polite"></div>
+  <script type="module" src="sidepanel.js"></script>
+</body>
+</html>

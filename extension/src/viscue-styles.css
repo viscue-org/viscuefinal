@@ -1,0 +1,129 @@
+/* VisCue Global Styles — VisCue Design System v1.0 */
+:root {
+  /* Primitive Viscue Steel Scale */
+  --steel-50: #F3F6FA;
+  --steel-100: #E6EDF4;
+  --steel-200: #CFDAE6;
+  --steel-300: #ADBED0;
+  --steel-400: #8299B2;
+  --steel-500: #5B7593;
+  --steel-600: #4A6380;
+  --steel-700: #3A5069;
+  --steel-800: #293D52;
+  --steel-900: #1B2C3E;
+  --steel-950: #111D29;
+
+  /* Primitive Neutral Palette */
+  --neutral-0: #FFFFFF;
+  --neutral-25: #FBFCFD;
+  --neutral-50: #F6F8FA;
+  --neutral-100: #EDF1F5;
+  --neutral-200: #DDE4EB;
+  --neutral-300: #C8D1DB;
+  --neutral-400: #9DAAB8;
+  --neutral-500: #748292;
+  --neutral-600: #566474;
+  --neutral-700: #3B4856;
+  --neutral-800: #26323F;
+  --neutral-900: #17222D;
+  --neutral-950: #0D151E;
+
+  /* Legacy & Semantic Mapping */
+  --vc-signal: #5B7593;
+  --vc-ink: #17222D;
+  --vc-canvas: #F4F7FA;
+  --vc-paper: #FFFFFF;
+  --vc-muted: #526375;
+  --vc-hairline: #D8E1E9;
+  --vc-soft: #E7EDF3;
+  --vc-shadow-float: 0 8px 24px rgba(17, 35, 52, .08);
+  --vc-shadow-small: 0 2px 8px rgba(17, 35, 52, .05);
+
+  /* Production rhythm: 4px base grid */
+  --vc-space-025: 2px;
+  --vc-space-1: 4px;
+  --vc-space-2: 8px;
+  --vc-space-3: 12px;
+  --vc-space-4: 16px;
+  --vc-space-5: 20px;
+  --vc-space-6: 24px;
+  --vc-space-8: 32px;
+  --vc-space-10: 40px;
+  --vc-space-12: 48px;
+  --vc-space-16: 64px;
+
+  /* Radius System (Section 7) */
+  --vc-radius-xs: 6px;
+  --vc-radius-sm: 8px;
+  --vc-radius-input: 10px;
+  --vc-radius-button: 10px;
+  --vc-radius-card: 14px;
+  --vc-radius-panel: 20px;
+  --vc-radius-full: 999px;
+
+  /* Motion System (Section 26) */
+  --vc-motion-press: 90ms;
+  --vc-motion-hover: 120ms;
+  --vc-motion-active: 160ms;
+  --vc-motion-panel: 200ms;
+  --vc-ease-quiet: cubic-bezier(.2, .7, .2, 1);
+}
+
+.viscue-component-base {
+  font-family: "Instrument Sans", "Inter", "Noto Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--vc-ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-synthesis: none;
+  box-sizing: border-box;
+}
+
+.viscue-component-base * {
+  box-sizing: border-box;
+}
+
+.viscue-component-base button {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.viscue-component-base button:focus-visible {
+  outline: 2px solid var(--vc-signal);
+  outline-offset: 3px;
+}
+
+.viscue-component-base button:disabled,
+.viscue-component-base button[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+@media (forced-colors: active) {
+  .viscue-component-base button:focus-visible { outline: 2px solid CanvasText; }
+}
+
+.viscue-component-base svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.viscue-component-base svg path, 
+.viscue-component-base svg line, 
+.viscue-component-base svg polyline, 
+.viscue-component-base svg circle, 
+.viscue-component-base svg rect, 
+.viscue-component-base svg ellipse {
+  vector-effect: non-scaling-stroke;
+}
