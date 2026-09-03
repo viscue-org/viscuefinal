@@ -1,19 +1,48 @@
-# Exclude extension, ML assets, local server, dependencies and temporary files from Vercel deployments
+# Exclude everything not needed for the Next.js web app build
 node_modules/
 **/node_modules/
 .git/
 .next/
 web/.next/
+
+# Extension and non-web code
 extension/
 local-server/
 gesture/
 ml/
+ml-runs/
+datasets/
 dist/
+scratch/
+
+# Binary / large assets
 *.zip
 *.onnx
 *.wasm
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.mp4
+*.webp
+
+# Env and secrets
 .viscue-local.env
 .env*.local
+
+# Docs and scripts
 docs/
 supabase/tests/
 scripts/
+artifacts/
+logomains/
+.tmp-brand-deck/
+.audit-current/
+tmp/
+tmp-audit-debug-991/
+Viscue-2.0-Production/
+Viscue-3.0-React-Production/
+Viscue-3.1-React-Production/
+Viscue-3.2-React-Production/
+.worktrees/
+.venv-gesture/
