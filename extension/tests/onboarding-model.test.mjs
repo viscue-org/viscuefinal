@@ -32,10 +32,13 @@ test('advancing moves through one scene at a time and completes only after the f
   });
 });
 
-test('skip completes onboarding without changing the current scene', () => {
+test('skip jumps to the final start screen without completing authentication', () => {
   const state = { scene: 2, completed: false };
 
-  assert.deepEqual(skipOnboarding(state), { scene: 2, completed: true });
+  assert.deepEqual(skipOnboarding(state), {
+    scene: ONBOARDING_SCENE_COUNT - 1,
+    completed: false,
+  });
 });
 
 test('the real-tool demo remains visible long enough to play its full recording', () => {

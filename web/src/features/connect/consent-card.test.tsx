@@ -9,18 +9,15 @@ describe('ConsentCard', () => {
         userEmail="witne@gmail.com"
         clientName="Viscue Chrome Extension"
         scopes={['openid', 'email', 'profile']}
-        approveAction="/api/oauth/approve"
-        denyUrl="https://abcdefghijklmnopabcdefghijklmnop.chromiumapp.org/oauth?error=access_denied"
+        approveAction={async () => {}}
+        denyAction={async () => {}}
       />
     );
 
     expect(screen.getByRole('heading', { name: /connect viscue/i })).toBeVisible();
     expect(screen.getByText(/witne@gmail\.com/i)).toBeVisible();
     expect(screen.getByText(/viscue chrome extension/i)).toBeVisible();
-    expect(screen.getByRole('button', { name: /approve connection/i })).toBeVisible();
-    expect(screen.getByRole('link', { name: /cancel/i })).toHaveAttribute(
-      'href',
-      expect.stringContaining('error=access_denied')
-    );
+    expect(screen.getByRole('button', { name: /connect extension/i })).toBeVisible();
+    expect(screen.getByRole('button', { name: /cancel/i })).toBeVisible();
   });
 });

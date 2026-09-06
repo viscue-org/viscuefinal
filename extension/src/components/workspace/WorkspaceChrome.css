@@ -9,8 +9,10 @@
   --workspace-on-panel: #ffffff;
   --workspace-panel-card: #eef3f7;
   --workspace-panel-card-text: #17222d;
-  --workspace-radius-control: 12px;
-  --workspace-radius-container: 28px;
+  --workspace-radius-compact: 10px;
+  --workspace-radius-control: 14px;
+  --workspace-radius-card: 18px;
+  --workspace-radius-container: 24px;
   --workspace-shadow: 0 12px 32px rgba(35, 54, 72, 0.12);
 }
 
@@ -52,7 +54,7 @@
   align-items: center;
   gap: 2px;
   padding: 2px 7px;
-  border-radius: var(--workspace-radius-container);
+  border-radius: var(--workspace-radius-control);
 }
 
 .workspace-dock__button,
@@ -350,7 +352,7 @@
   gap: 8px;
   padding: 0 18px;
   border: 1px solid color-mix(in srgb, var(--workspace-steel) 16%, transparent);
-  border-radius: var(--workspace-radius-container);
+  border-radius: var(--workspace-radius-control);
   color: var(--workspace-steel);
   background: var(--workspace-soft);
   box-shadow: none;
@@ -419,7 +421,7 @@
   gap: 4px;
   padding: 7px;
   border: 1px solid color-mix(in srgb, var(--workspace-steel) 16%, transparent);
-  border-radius: 13px;
+  border-radius: var(--workspace-radius-card);
   background: var(--workspace-white);
   box-shadow: var(--workspace-shadow);
 }
@@ -430,7 +432,7 @@
   align-items: center;
   gap: 9px;
   padding: 0 10px;
-  border-radius: 9px;
+  border-radius: var(--workspace-radius-compact);
   color: var(--workspace-ink);
   background: transparent;
   font-size: 12px;
@@ -447,7 +449,7 @@
   flex-direction: column;
   padding: 32px;
   padding-bottom: 24px;
-  border-radius: 0px !important;
+  border-radius: var(--workspace-radius-container);
   color: var(--workspace-white);
   background: var(--workspace-steel);
   box-shadow: 0 40px 100px rgba(15, 25, 35, 0.4);
@@ -460,7 +462,7 @@
   padding: 10px 14px;
   background: rgba(0, 0, 0, 0.18);
   border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 0px !important;
+  border-radius: var(--workspace-radius-card);
 }
 
 .workspace-history__retention {
@@ -478,7 +480,7 @@
   background: var(--workspace-control);
   color: var(--workspace-steel);
   border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 0px !important;
+  border-radius: var(--workspace-radius-compact);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -499,7 +501,7 @@
   justify-content: space-between;
   gap: 16px;
   padding: 8px 16px;
-  border-radius: 0px !important;
+  border-radius: var(--workspace-radius-card);
   color: var(--workspace-ink);
   background: var(--workspace-control);
   transition: transform 0.25s, box-shadow 0.25s;
@@ -542,7 +544,7 @@
 .workspace-history__restore {
   height: 36px;
   padding: 0 16px;
-  border-radius: 0px !important;
+  border-radius: var(--workspace-radius-control);
   border: none;
   background: var(--workspace-steel);
   color: var(--workspace-white);
@@ -562,7 +564,7 @@
   height: 36px;
   display: grid;
   place-items: center;
-  border-radius: 0px !important;
+  border-radius: var(--workspace-radius-compact);
   border: none;
   background: transparent;
   color: var(--workspace-steel);
@@ -623,6 +625,7 @@
   justify-content: center;
   transition: transform 0.2s, opacity 0.2s;
   padding: 0;
+  border-radius: var(--workspace-radius-compact);
 }
 
 .workspace-history__action-btn:hover {
@@ -644,7 +647,7 @@
   bottom: 6px;
   width: 44px;
   height: 44px;
-  border-radius: 0px !important;
+  border-radius: var(--workspace-radius-control);
   background: var(--workspace-control);
   border: none;
   color: var(--workspace-steel);
@@ -712,7 +715,7 @@
   .workspace-empty__action { width: 240px; min-height: 36px; font-size: 18px; }
   .workspace-dock { inset-block-end: 7px; }
   .workspace-dock__menu { inset-block-end: 50px; }
-  .workspace-history { max-height: calc(100vh - 24px); border-radius: 20px; }
+  .workspace-history { max-height: calc(100vh - 24px); border-radius: var(--workspace-radius-container); }
   .workspace-history__header { padding: 14px 16px 10px; }
   .workspace-history h2 { font-size: 27px; }
   .workspace-history__list { padding: 0 9px 9px; }
@@ -731,7 +734,7 @@
 }
 
 @media (max-width: 420px) {
-  .workspace-history { width: calc(100vw - 16px); max-height: calc(100vh - 16px); border-radius: 22px; }
+  .workspace-history { width: calc(100vw - 16px); max-height: calc(100vh - 16px); border-radius: var(--workspace-radius-container); }
   .workspace-history__retention { grid-template-columns: 1fr; gap: 7px; }
 }
 

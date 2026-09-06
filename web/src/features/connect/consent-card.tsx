@@ -4,8 +4,9 @@ export interface ConsentCardProps {
   userEmail: string;
   clientName: string;
   scopes: string[];
-  approveAction: string;
-  denyUrl: string;
+  approveAction?: string | (() => Promise<void>) | ((formData: FormData) => void | Promise<void>);
+  denyAction?: string | (() => Promise<void>) | ((formData: FormData) => void | Promise<void>);
+  denyUrl?: string;
 }
 
 export function ConsentCard({
@@ -13,8 +14,11 @@ export function ConsentCard({
   clientName,
   scopes,
   approveAction,
+  denyAction,
   denyUrl,
 }: ConsentCardProps) {
+  const isApproveString = typeof approveAction === 'string';
+
   return (
     <div
       style={{
@@ -22,7 +26,7 @@ export function ConsentCard({
         maxWidth: '460px',
         background: 'rgba(255, 255, 255, 0.04)',
         border: '1px solid rgba(255, 255, 255, 0.1)',
-        borderRadius: '16px',
+        borderRadius: '24px',
         padding: '32px',
       }}
     >
@@ -30,7 +34,7 @@ export function ConsentCard({
         style={{
           width: '52px',
           height: '52px',
-          borderRadius: '12px',
+          borderRadius: '14px',
           background: '#5B7593',
           display: 'grid',
           placeItems: 'center',
@@ -55,15 +59,35 @@ export function ConsentCard({
         style={{
           background: 'rgba(0, 0, 0, 0.2)',
           border: '1px solid rgba(255, 255, 255, 0.08)',
-          borderRadius: '10px',
+          borderRadius: '18px',
           padding: '16px',
           marginBottom: '24px',
         }}
       >
-        <div style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#8E9BAE', marginBottom: '8px', fontWeight: 600 }}>
+        <div
+          style={{
+            fontSize: '12px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            color: '#8E9BAE',
+            marginBottom: '8px',
+            fontWeight: 600,
+          }}
+        >
           Requested Permissions
         </div>
-        <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '13px', color: '#CBD5E1', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <ul
+          style={{
+            listStyle: 'none',
+            padding: 0,
+            margin: 0,
+            fontSize: '13px',
+            color: '#CBD5E1',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '6px',
+          }}
+        >
           <li>✓ Verify your account identity ({scopes.join(', ')})</li>
           <li>✓ Synchronize daily compilation quota</li>
           <li>✓ Zero access to local project files or device canvas</li>
@@ -71,41 +95,85 @@ export function ConsentCard({
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        <form action={approveAction} method="POST">
-          <button
-            type="submit"
+        {isApproveString ? (
+          <form action={approveAction} method="POST">
+            <button
+              type="submit"
+              style={{
+                width: '100%',
+                background: '#5B7593',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: '14px',
+                padding: '12px',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Connect Extension
+            </button>
+          </form>
+        ) : (
+          <form action={approveAction as any}>
+            <button
+              type="submit"
+              style={{
+                width: '100%',
+                background: '#5B7593',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: '14px',
+                padding: '12px',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Connect Extension
+            </button>
+          </form>
+        )}
+
+        {typeof denyAction === 'function' ? (
+          <form action={denyAction as any}>
+            <button
+              type="submit"
+              style={{
+                width: '100%',
+                background: 'transparent',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                color: '#8E9BAE',
+                borderRadius: '14px',
+                padding: '10px',
+                fontSize: '14px',
+                fontWeight: 500,
+                cursor: 'pointer',
+              }}
+            >
+              Cancel
+            </button>
+          </form>
+        ) : (
+          <a
+            href={denyUrl || '#'}
+            role="button"
             style={{
-              width: '100%',
-              background: '#5B7593',
-              color: '#FFFFFF',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '12px',
+              display: 'block',
+              textAlign: 'center',
+              background: 'transparent',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              color: '#8E9BAE',
+              borderRadius: '14px',
+              padding: '10px',
               fontSize: '14px',
-              fontWeight: 600,
-              cursor: 'pointer',
+              fontWeight: 500,
+              textDecoration: 'none',
             }}
           >
-            Approve Connection
-          </button>
-        </form>
-
-        <a
-          href={denyUrl}
-          style={{
-            display: 'block',
-            textAlign: 'center',
-            background: 'transparent',
-            border: '1px solid rgba(255, 255, 255, 0.15)',
-            color: '#8E9BAE',
-            borderRadius: '8px',
-            padding: '10px',
-            fontSize: '14px',
-            fontWeight: 500,
-          }}
-        >
-          Cancel
-        </a>
+            Cancel
+          </a>
+        )}
       </div>
     </div>
   );

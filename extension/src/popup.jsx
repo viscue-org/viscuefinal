@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import markSteel from '../assets/viscue-mark-steel.png';
 import markOrange from '../assets/viscue-mark-orange.png';
@@ -132,7 +132,7 @@ function Scene({ scene, blinking, onAdvance, onStart }) {
   );
 }
 
-function Onboarding({ onComplete, onStart }) {
+function Onboarding({ onStart }) {
   const [state, setState] = useState(createOnboardingState);
   const [blinking, setBlinking] = useState(false);
   const reducedMotion = useReducedMotion();
@@ -158,7 +158,6 @@ function Onboarding({ onComplete, onStart }) {
 
   const skip = () => {
     setState(current => skipOnboarding(current));
-    onComplete();
   };
 
   return (
@@ -173,14 +172,19 @@ function Onboarding({ onComplete, onStart }) {
 }
 
 function StandardPopup() {
+  const [activeView, setActiveView] = useState('home');
   const [autoSubmit, setAutoSubmit] = useState(false);
   const [summary, setSummary] = useState(null);
-  const [showSettings, setShowSettings] = useState(false);
+  const [authBusy, setAuthBusy] = useState(false);
+  const [billingBusy, setBillingBusy] = useState(null);
+  const generationRef = useRef(0);
 
   const fetchSummary = useCallback(() => {
+    const reqGen = ++generationRef.current;
     if (globalThis.chrome?.runtime?.sendMessage) {
       chrome.runtime.sendMessage({ type: 'account-get' }, res => {
-        if (res?.ok && res?.data) {
+        if (generationRef.current !== reqGen) return;
+        if (res?.ok && res?.data && !res.signedOut) {
           setSummary(res.data);
         } else {
           setSummary(null);
@@ -201,24 +205,39 @@ function StandardPopup() {
   };
 
   const handleLogout = () => {
+    generationRef.current++;
+    setSummary(null);
+    setAuthBusy(true);
     if (globalThis.chrome?.runtime?.sendMessage) {
       chrome.runtime.sendMessage({ type: 'auth-sign-out' }, () => {
+        setAuthBusy(false);
         setSummary(null);
       });
+    } else {
+      setAuthBusy(false);
     }
   };
 
   const handleLogin = () => {
+    setAuthBusy(true);
     if (globalThis.chrome?.runtime?.sendMessage) {
       chrome.runtime.sendMessage({ type: 'auth-sign-in' }, res => {
+        setAuthBusy(false);
         if (res?.ok) fetchSummary();
       });
+    } else {
+      setAuthBusy(false);
     }
   };
 
-  const openBilling = () => {
+  const openBilling = (plan) => {
+    setBillingBusy(plan || 'default');
     if (globalThis.chrome?.runtime?.sendMessage) {
-      chrome.runtime.sendMessage({ type: 'billing-open' });
+      chrome.runtime.sendMessage({ type: 'billing-open', plan }, () => {
+        setBillingBusy(null);
+      });
+    } else {
+      setBillingBusy(null);
     }
   };
 
@@ -236,9 +255,9 @@ function StandardPopup() {
           <button
             type="button"
             className="brand-settings-toggle"
-            onClick={() => setShowSettings(!showSettings)}
-            aria-label="Settings"
-            title="Open Settings"
+            onClick={() => setActiveView(activeView === 'home' ? 'settings' : 'home')}
+            aria-label={activeView === 'home' ? 'Open settings' : 'Return to home'}
+            title={activeView === 'home' ? 'Open settings' : 'Return to home'}
           >
             <SlidersHorizontal size={20} weight="bold" />
           </button>
@@ -247,7 +266,7 @@ function StandardPopup() {
         <button
           type="button"
           className="plan-label"
-          onClick={() => setShowSettings(true)}
+          onClick={() => setActiveView('settings')}
           title="Change plan"
         >
           <strong>Plan</strong> - {planLabel}
@@ -261,29 +280,39 @@ function StandardPopup() {
           {view.count}
         </div>
 
-        <div className="toggle-container">
-          <button
-            type="button"
-            className={`switch ${autoSubmit ? 'is-on' : ''}`}
-            onClick={toggleAutoSubmit}
-            aria-label="Toggle auto submit"
-            role="switch"
-            aria-checked={autoSubmit}
-            title={autoSubmit ? 'Auto submit is ON' : 'Auto submit is OFF'}
-          >
-            <span className="handle" />
-          </button>
+        <div className="toggle-container" role="tablist" aria-label="Navigation">
+          <div className={`segmented-control ${activeView === 'settings' ? 'is-settings' : 'is-home'}`}>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeView === 'home'}
+              className={`segmented-btn ${activeView === 'home' ? 'is-active' : ''}`}
+              onClick={() => setActiveView('home')}
+            >
+              Home
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeView === 'settings'}
+              className={`segmented-btn ${activeView === 'settings' ? 'is-active' : ''}`}
+              onClick={() => setActiveView('settings')}
+            >
+              Settings
+            </button>
+            <span className="segmented-thumb" aria-hidden="true" />
+          </div>
         </div>
       </div>
 
-      {showSettings && (
+      {activeView === 'settings' && (
         <aside className="settings-overlay" aria-label="Settings">
           <header className="settings-overlay-header">
             <h2>Settings</h2>
             <button
               type="button"
               className="settings-overlay-close"
-              onClick={() => setShowSettings(false)}
+              onClick={() => setActiveView('home')}
               aria-label="Close settings"
             >
               <X size={22} weight="bold" />
@@ -321,13 +350,23 @@ function StandardPopup() {
                 </div>
               </div>
               {!view.email || view.state === 'signed-out' ? (
-                <button type="button" className="settings-account-auth-btn" onClick={handleLogin}>
-                  Sign in
+                <button
+                  type="button"
+                  className="settings-account-auth-btn"
+                  onClick={handleLogin}
+                  disabled={authBusy}
+                >
+                  {authBusy ? 'Signing in…' : 'Sign in'}
                 </button>
               ) : (
-                <button type="button" className="settings-account-auth-btn" onClick={handleLogout}>
+                <button
+                  type="button"
+                  className="settings-account-auth-btn"
+                  onClick={handleLogout}
+                  disabled={authBusy}
+                >
                   <SignOut size={14} weight="bold" />
-                  <span>Log out</span>
+                  <span>{authBusy ? 'Signing out…' : 'Log out'}</span>
                 </button>
               )}
             </div>
@@ -344,7 +383,12 @@ function StandardPopup() {
               {view.plan === 'free' ? (
                 <span className="settings-plan-badge">Current</span>
               ) : (
-                <button type="button" className="settings-plan-select-btn" onClick={openBilling}>
+                <button
+                  type="button"
+                  className="settings-plan-select-btn"
+                  onClick={() => openBilling('free')}
+                  disabled={Boolean(billingBusy)}
+                >
                   Default
                 </button>
               )}
@@ -358,8 +402,13 @@ function StandardPopup() {
               {view.plan === 'plus' ? (
                 <span className="settings-plan-badge">Current</span>
               ) : (
-                <button type="button" className="settings-plan-select-btn" onClick={openBilling}>
-                  $4.90 / mo
+                <button
+                  type="button"
+                  className="settings-plan-select-btn"
+                  onClick={() => openBilling('plus')}
+                  disabled={Boolean(billingBusy)}
+                >
+                  {billingBusy === 'plus' ? 'Opening…' : '$4.90 / mo'}
                 </button>
               )}
             </div>
@@ -372,8 +421,13 @@ function StandardPopup() {
               {view.plan === 'pro' ? (
                 <span className="settings-plan-badge">Current</span>
               ) : (
-                <button type="button" className="settings-plan-select-btn" onClick={openBilling}>
-                  $9.00 / mo
+                <button
+                  type="button"
+                  className="settings-plan-select-btn"
+                  onClick={() => openBilling('pro')}
+                  disabled={Boolean(billingBusy)}
+                >
+                  {billingBusy === 'pro' ? 'Opening…' : '$9.00 / mo'}
                 </button>
               )}
             </div>
@@ -397,18 +451,18 @@ function Popup() {
   };
 
   const startViscue = async () => {
-    await completeOnboarding();
     if (globalThis.chrome?.runtime?.sendMessage) {
-      const response = await chrome.runtime.sendMessage({ type: 'open-workspace' });
-      if (response?.ok) globalThis.close();
+      chrome.runtime.sendMessage({ type: 'auth-sign-in' });
       return;
     }
+    // Fallback for non-extension environments
+    await completeOnboarding();
     globalThis.location.assign('./index.html');
   };
 
   if (onboardingComplete === null) return <main className="popup-loading" aria-label="Loading Viscue" />;
   if (shouldShowOnboarding(onboardingComplete)) {
-    return <Onboarding onComplete={completeOnboarding} onStart={startViscue} />;
+    return <Onboarding onStart={startViscue} />;
   }
   return <StandardPopup />;
 }

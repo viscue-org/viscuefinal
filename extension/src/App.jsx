@@ -28,7 +28,7 @@ import {
   WorkspaceUtilities,
 } from './components/workspace/WorkspaceChrome.mjs';
 import { resolvePageCapture, resolveToolbarOption } from './components/workspace/workspaceChromeModel.mjs';
-import { createHistoryExport } from './components/workspace/workspaceHistoryModel.mjs';
+import { createHistoryExport, importHistoryArchive } from './components/workspace/workspaceHistoryModel.mjs';
 import { cancelNodeMotion, finishNodeMotion, removeNodeMotion, startNodeMotion } from './components/nodes/motionModel.mjs';
 import './components/workspace/WorkspaceChrome.css';
 import { fileToDataUrl, normalizeUrl, isValidUrl, safeHost, renderCropDataUrl, captureVideoFrame, digest, downscaleDataUrl, formatTime, createWebpagePreview, cropImageDataUrl } from './utils/helpers';
@@ -188,7 +188,7 @@ function AppCanvas() {
   const [platformName, setPlatformName] = useState('ChatGPT');
   const [cueAnimation, setCueAnimation] = useState(null); // null | { phase, nodeRects, submitRef }
   const fileInput = useRef(null);
-  const folderInput = useRef(null);
+  const zipInput = useRef(null);
   const fileKind = useRef('image');
   const draftLineRef = useRef(null);
   const flow = useReactFlow();
@@ -238,7 +238,10 @@ function AppCanvas() {
       
       const log = result['viscue-history-log'] || [];
       const cutoff = Date.now() - (config.autoDeleteHours * 60 * 60 * 1000);
-      const filtered = log.filter(item => item.timestamp > cutoff);
+      const filtered = log.filter(item => {
+        const t = typeof item.timestamp === 'number' ? item.timestamp : Date.parse(item.timestamp) || 0;
+        return t > cutoff;
+      });
       
       setPersistentHistory(filtered);
       
@@ -943,34 +946,31 @@ function AppCanvas() {
     setNodes(items => [...items, ...additions]); event.target.value = ''; setMode('select');
   }
 
-  async function onFolderImport(event) {
-    const files = [...event.target.files]; 
+  async function onZipImport(event) {
+    const file = event.target.files?.[0];
     event.target.value = '';
-    if (!files.length) return;
-    
-    // Look for a state file in the folder (either viscue-state.json or workspace.json or similar)
-    const stateFile = files.find(f => f.name.endsWith('.json') && (f.name.includes('viscue') || f.name.includes('workspace') || f.name.includes('state')));
-    
-    if (stateFile) {
-      try {
-        const text = await stateFile.text();
-        const snapshot = JSON.parse(text);
-        if (snapshot.nodes) {
-          setPersistentHistory(prev => {
-            const next = [{ id: crypto.randomUUID(), timestamp: Date.now(), ...snapshot }, ...prev];
-            if (globalThis.chrome?.storage?.local) chrome.storage.local.set({ 'viscue-history-log': next });
-            else localStorage.setItem('viscue-history-log', JSON.stringify(next));
-            return next;
-          });
-          setResult({ success: 'Workspace imported to history.' });
-        } else {
-          setResult({ error: 'Invalid workspace format in JSON.' });
-        }
-      } catch (e) {
-        setResult({ error: 'Failed to parse workspace state.' });
-      }
-    } else {
-      setResult({ error: 'No workspace JSON found in this folder.' });
+    if (!file) return;
+    setBusy(true);
+    try {
+      const buffer = await file.arrayBuffer();
+      const snapshot = await importHistoryArchive(new Uint8Array(buffer));
+      const newHistoryItem = {
+        ...snapshot,
+        id: crypto.randomUUID(),
+        timestamp: Date.now(),
+        importedAt: Date.now(),
+      };
+      setPersistentHistory(prev => {
+        const next = [newHistoryItem, ...prev];
+        if (globalThis.chrome?.storage?.local) chrome.storage.local.set({ 'viscue-history-log': next });
+        else localStorage.setItem('viscue-history-log', JSON.stringify(next));
+        return next;
+      });
+      setResult({ success: 'Workspace archive imported to history.' });
+    } catch (err) {
+      setResult({ error: err.message || 'Failed to import workspace archive.' });
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -1338,7 +1338,7 @@ function AppCanvas() {
         }}
       />
       <input ref={fileInput} className="hidden-input" type="file" multiple onChange={onFiles} />
-      <input ref={folderInput} className="hidden-input" type="file" webkitdirectory="" directory="" onChange={onFolderImport} />
+      <input ref={zipInput} className="hidden-input" type="file" accept=".zip,application/zip" onChange={onZipImport} />
 
       {dialog?.type === 'webpage' && <WebDialog close={() => setDialog(null)} submit={addWebpage} />}
       {dialog?.type === 'crop' && (
@@ -1428,16 +1428,23 @@ function AppCanvas() {
               });
             }}
             onImport={() => {
-              if (folderInput.current) folderInput.current.click();
+              if (zipInput.current) zipInput.current.click();
             }}
-            onExport={(snapshot) => {
-              const payload = createHistoryExport(snapshot);
-              const url = URL.createObjectURL(new Blob([payload.contents], { type: payload.mimeType }));
-              const anchor = document.createElement('a');
-              anchor.href = url;
-              anchor.download = payload.filename;
-              anchor.click();
-              URL.revokeObjectURL(url);
+            onExport={async (snapshot) => {
+              setBusy(true);
+              try {
+                const payload = await createHistoryExport(snapshot);
+                const url = URL.createObjectURL(new Blob([payload.contents], { type: payload.mimeType }));
+                const anchor = document.createElement('a');
+                anchor.href = url;
+                anchor.download = payload.filename;
+                anchor.click();
+                URL.revokeObjectURL(url);
+              } catch (err) {
+                setResult({ error: err.message || 'Failed to export workspace.' });
+              } finally {
+                setBusy(false);
+              }
             }}
             onClose={() => setDialog(null)}
             onRestore={(snapshot) => {

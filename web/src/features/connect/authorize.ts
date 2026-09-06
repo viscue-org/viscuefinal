@@ -66,3 +66,16 @@ export function validateAuthorizationRequest(
     },
   };
 }
+
+export function buildSupabaseAuthorizationUrl(
+  baseUrl: string,
+  request: Extract<AuthorizationValidationResult, { ok: true }>['params']
+): string {
+  const url = new URL('/auth/v1/oauth/authorize', baseUrl);
+
+  Object.entries(request).forEach(([key, value]) => {
+    url.searchParams.set(key, value);
+  });
+
+  return url.toString();
+}

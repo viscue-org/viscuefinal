@@ -1,13 +1,27 @@
-import { signIn, signOut, getSession } from './auth/session.mjs';
+import { signIn, signOut, getSession, getAccessToken, handleWorkspaceAccess } from './auth/session.mjs';
 import { apiFetch } from './api/client.mjs';
 import { VISCUE_WEB_URL } from './api/config.mjs';
 
 const API = 'http://127.0.0.1:8787';
+const ONBOARDING_KEY = 'viscue-onboarding-complete';
+
+async function showAccountPopup() {
+  await chrome.storage.local.set({ [ONBOARDING_KEY]: true });
+  if (chrome.action?.openPopup) {
+    await chrome.action.openPopup().catch(() => {});
+  }
+}
+
+async function authenticateAndShowPopup() {
+  const session = await signIn();
+  await showAccountPopup();
+  return session;
+}
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   (async () => {
     if (message.type === 'auth-sign-in') {
-      const session = await signIn();
+      const session = await authenticateAndShowPopup();
       sendResponse({ ok: true, session });
       return;
     }
@@ -22,18 +36,39 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return;
     }
     if (message.type === 'account-get') {
-      const summary = await apiFetch('/account/summary');
-      sendResponse(summary);
+      const token = await getAccessToken();
+      if (!token) {
+        sendResponse({ ok: true, data: null, signedOut: true });
+        return;
+      }
+      try {
+        const summary = await apiFetch('/account/summary');
+        sendResponse(summary);
+      } catch (err) {
+        sendResponse({ ok: false, error: err.message });
+      }
       return;
     }
     if (message.type === 'billing-open') {
-      await chrome.tabs.create({ url: `${VISCUE_WEB_URL}/account#plans`, active: true });
+      const planParam = message.plan && ['plus', 'pro'].includes(message.plan) ? `?plan=${message.plan}` : '';
+      const [sourceTab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+      const createProps = { url: `${VISCUE_WEB_URL}/account${planParam}#plans`, active: true };
+      if (sourceTab) {
+        if (sourceTab.index !== undefined) createProps.index = sourceTab.index + 1;
+        if (sourceTab.windowId !== undefined) createProps.windowId = sourceTab.windowId;
+      }
+      await chrome.tabs.create(createProps);
       sendResponse({ ok: true });
       return;
     }
     if (message.type === 'open-workspace') {
-      await openWorkspace(sender.tab);
-      sendResponse({ ok: true });
+      const result = await handleWorkspaceAccess({
+        getAccessToken: () => getAccessToken(),
+        authenticate: () => signIn(),
+        openWorkspace: () => openWorkspace(sender.tab),
+        showPopup: showAccountPopup,
+      });
+      sendResponse(result);
       return;
     }
     if (message.type === 'capture-page') {
@@ -120,16 +155,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'insert-prompt') {
       const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
       if (!tab?.id) throw new Error('No active destination tab');
-      sendResponse(await chrome.tabs.sendMessage(tab.id, { type: 'insert-prompt', prompt: message.prompt }));
+      try {
+        sendResponse(await chrome.tabs.sendMessage(tab.id, { type: 'insert-prompt', prompt: message.prompt }));
+      } catch (err) {
+        sendResponse({ ok: false, error: 'Target page not supported. Please open ChatGPT, Claude, or Gemini, or refresh the page.' });
+      }
       return;
     }
     if (message.type === 'handoff') {
       const tab = message.tabId ? await chrome.tabs.get(message.tabId) : (await chrome.tabs.query({ active: true, lastFocusedWindow: true }))[0];
       if (!tab?.id) throw new Error('Open the destination AI chat before sending intent.');
-      sendResponse(await chrome.tabs.sendMessage(tab.id, {
-        type: 'handoff', prompt: message.prompt, attachments: message.attachments || [], submit: Boolean(message.submit),
-        executionId: message.executionId, destinationFingerprint: message.destinationFingerprint, promptHash: message.promptHash
-      }));
+      try {
+        sendResponse(await chrome.tabs.sendMessage(tab.id, {
+          type: 'handoff', prompt: message.prompt, attachments: message.attachments || [], submit: Boolean(message.submit),
+          executionId: message.executionId, destinationFingerprint: message.destinationFingerprint, promptHash: message.promptHash
+        }));
+      } catch (err) {
+        sendResponse({ ok: false, error: 'Could not connect to the page. Make sure you are on a supported AI chat (ChatGPT, Claude, etc.) and refresh the page if needed.' });
+      }
       return;
     }
     if (message.type === 'handoff-receipt') {

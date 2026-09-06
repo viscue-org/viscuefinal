@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { validateAuthorizationRequest } from './authorize';
+import * as authorizeModule from './authorize';
 
 describe('validateAuthorizationRequest', () => {
   const validRequest = {
@@ -65,5 +66,21 @@ describe('validateAuthorizationRequest', () => {
       ok: true,
       params: validRequest,
     });
+  });
+
+  it('builds the Supabase authorization URL from a validated extension request', () => {
+    const buildUrl = (authorizeModule as Record<string, unknown>).buildSupabaseAuthorizationUrl;
+    expect(typeof buildUrl).toBe('function');
+    const url = (buildUrl as (baseUrl: string, request: typeof validRequest) => string)(
+      'https://project.supabase.co',
+      validRequest
+    );
+    const parsed = new URL(url);
+
+    expect(parsed.origin + parsed.pathname).toBe('https://project.supabase.co/auth/v1/oauth/authorize');
+    expect(parsed.searchParams.get('client_id')).toBe('viscue-extension');
+    expect(parsed.searchParams.get('redirect_uri')).toBe(validRequest.redirect_uri);
+    expect(parsed.searchParams.get('code_challenge')).toBe(validRequest.code_challenge);
+    expect(parsed.searchParams.get('state')).toBe(validRequest.state);
   });
 });

@@ -24,7 +24,7 @@ export default async function ConnectPage(props: {
   if (!validation.ok) {
     return (
       <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-        <div style={{ maxWidth: '420px', background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 90, 54, 0.4)', borderRadius: '16px', padding: '32px', textAlign: 'center' }}>
+        <div style={{ maxWidth: '420px', background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 90, 54, 0.4)', borderRadius: '24px', padding: '32px', textAlign: 'center' }}>
           <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#FF7D60', marginBottom: '12px' }}>
             Invalid Authorization Request
           </h1>
@@ -39,6 +39,15 @@ export default async function ConnectPage(props: {
   // Check user authentication
   const supabase = await createServerClient();
   let user;
+
+  const promptParam = (searchParams as any).prompt;
+  if (promptParam === 'login') {
+    await supabase.auth.signOut();
+    const cleanParams = { ...searchParams } as Record<string, string>;
+    delete cleanParams.prompt;
+    const connectPath = `/connect?${new URLSearchParams(cleanParams).toString()}`;
+    redirect(`/login?next=${encodeURIComponent(connectPath)}`);
+  }
 
   try {
     user = await requireUser(supabase);

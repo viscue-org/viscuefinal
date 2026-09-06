@@ -6,21 +6,29 @@ import { getAccountSummary } from '../../lib/quota/repository';
 import { signOut } from '../../features/auth/actions';
 import { AccountDashboard } from '../../features/account/account-dashboard';
 
-export default async function AccountPage() {
+export default async function AccountPage(props: {
+  searchParams: Promise<{ plan?: string }>;
+}) {
+  const searchParams = await props.searchParams;
+  const requestedPlan = searchParams.plan === 'plus' || searchParams.plan === 'pro'
+    ? (searchParams.plan as 'plus' | 'pro')
+    : undefined;
+
   const supabase = await createServerClient();
   let user;
 
   try {
     user = await requireUser(supabase);
   } catch {
-    redirect('/login?next=/account');
+    const nextUrl = `/account${requestedPlan ? `?plan=${requestedPlan}` : ''}`;
+    redirect(`/login?next=${encodeURIComponent(nextUrl)}`);
   }
 
   let summary;
   try {
     summary = await getAccountSummary(supabase);
   } catch {
-    // Default fallback when database is fresh
+    // Default fallback when database quota is uninitialized
     summary = {
       email: user.email ?? 'Unknown',
       plan: 'free' as const,
@@ -35,24 +43,38 @@ export default async function AccountPage() {
 
   return (
     <main style={{ minHeight: '100vh', padding: '40px 0' }}>
-      <div className="container" style={{ maxWidth: '680px' }}>
+      <div className="container" style={{ maxWidth: '680px', margin: '0 auto', padding: '0 24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px' }}>
-          <Link href="/" style={{ color: '#8E9BAE', fontSize: '14px' }}>
+          <Link href="/" style={{ color: '#8E9BAE', fontSize: '14px', textDecoration: 'none' }}>
             &larr; Viscue Home
           </Link>
           <form action={signOut}>
             <button
               type="submit"
-              style={{ background: 'transparent', border: '1px solid rgba(255, 255, 255, 0.2)', color: '#EDF2F6', borderRadius: '6px', padding: '6px 14px', fontSize: '13px', cursor: 'pointer' }}
+              style={{
+                background: 'transparent',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                color: '#EDF2F6',
+                borderRadius: '10px',
+                padding: '6px 14px',
+                fontSize: '13px',
+                cursor: 'pointer',
+              }}
             >
               Sign out
             </button>
           </form>
         </div>
 
-        <h1 style={{ fontSize: '32px', fontWeight: 800, marginBottom: '24px' }}>Account &amp; Quota</h1>
+        <h1 style={{ fontSize: '32px', fontWeight: 800, marginBottom: '24px', letterSpacing: '-0.02em' }}>
+          Account &amp; Quota
+        </h1>
 
-        <AccountDashboard summary={summary} userId={user.id} />
+        <AccountDashboard
+          summary={summary}
+          userId={user.id}
+          selectedPlan={requestedPlan}
+        />
       </div>
     </main>
   );

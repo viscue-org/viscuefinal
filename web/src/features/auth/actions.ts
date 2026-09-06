@@ -30,7 +30,8 @@ export type AuthActionResult = {
 };
 
 export async function signUpWithPassword(
-  formData: FormData
+  formData: FormData,
+  nextParam?: string | null
 ): Promise<AuthActionResult> {
   const rawEmail = formData.get('email');
   const rawPassword = formData.get('password');
@@ -49,12 +50,13 @@ export async function signUpWithPassword(
 
   const supabase = await createServerClient();
   const siteUrl = publicEnv.NEXT_PUBLIC_SITE_URL;
+  const targetNext = safeRedirectPath(nextParam);
 
   const { error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
-      emailRedirectTo: `${siteUrl}/auth/callback?next=/account`,
+      emailRedirectTo: `${siteUrl}/auth/callback?next=${encodeURIComponent(targetNext)}`,
     },
   });
 

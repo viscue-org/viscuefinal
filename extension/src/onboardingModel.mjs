@@ -17,7 +17,7 @@ export function advanceOnboarding(state) {
 }
 
 export function skipOnboarding(state) {
-  return { ...state, completed: true };
+  return { scene: ONBOARDING_SCENE_COUNT - 1, completed: false };
 }
 
 export function getOnboardingSceneDuration(scene, reducedMotion) {

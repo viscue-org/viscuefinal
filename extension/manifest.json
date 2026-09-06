@@ -7,7 +7,7 @@
   "host_permissions": [
     "<all_urls>",
     "https://vqqaxhzqaehjdpoefrjc.supabase.co/*",
-    "https://viscue.com/*",
+    "https://ext.viscue.space/*",
     "http://127.0.0.1:8787/*"
   ],
   "action": { "default_title": "Open Viscue", "default_popup": "popup.html" },

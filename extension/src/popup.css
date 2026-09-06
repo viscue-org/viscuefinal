@@ -8,6 +8,10 @@
   --mist: #e9eff3;
   --paper: #ffffff;
   --soft: #d6d7d8;
+  --radius-compact: 10px;
+  --radius-control: 14px;
+  --radius-card: 18px;
+  --radius-container: 24px;
 }
 
 * { box-sizing: border-box; }
@@ -110,7 +114,10 @@ button { font: inherit; }
 .onboarding-eye:focus-visible,
 .skip-button:focus-visible,
 .start-viscue:focus-visible { outline: 3px solid #ff5a36; outline-offset: 3px; }
-.onboarding-eye.is-blinking { animation: eyeBlink .46s cubic-bezier(.7, 0, .3, 1) both !important; }
+.onboarding-eye.is-blinking { 
+  animation: eyeCoreBlink .46s cubic-bezier(.7, 0, .3, 1) both !important;
+  box-shadow: 0 0 20px 4px rgba(0, 150, 255, 0.6) !important;
+}
 .eye-content { position: absolute; inset: 0; display: block; overflow: hidden; border-radius: inherit; }
 
 .person {
@@ -237,7 +244,7 @@ button { font: inherit; }
   color: var(--steel);
   background: #fff;
   border: 0;
-  border-radius: 25px;
+  border-radius: var(--radius-control);
   font-size: 25px;
   font-weight: 500;
   cursor: pointer;
@@ -381,56 +388,79 @@ button { font: inherit; }
   pointer-events: none;
 }
 
-/* Bottom Toggle Switch */
+/* Segmented Navigation Slider (Home / Settings) */
 .toggle-container {
   position: absolute;
-  z-index: 3;
+  z-index: 25;
   left: 50%;
-  bottom: 30px;
+  bottom: 28px;
   transform: translateX(-50%);
 }
 
-.switch {
+.segmented-control {
   position: relative;
   display: flex;
   align-items: center;
-  width: 154px;
-  height: 50px;
+  width: 172px;
+  height: 48px;
   padding: 4px;
-  background: transparent;
-  border: 2.5px solid #FFFFFF;
+  background: rgba(0, 0, 0, 0.2);
+  border: 2px solid #FFFFFF;
   border-radius: 999px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  box-sizing: border-box;
+}
+
+.segmented-btn {
+  flex: 1;
+  position: relative;
+  z-index: 2;
+  background: transparent;
+  border: none;
+  color: #FFFFFF;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
-  transition: border-color 0.2s ease;
+  text-align: center;
+  padding: 8px 0;
+  border-radius: 999px;
+  transition: color 0.2s ease;
+  user-select: none;
 }
 
-.switch:hover {
-  border-color: #F0F4F8;
+.segmented-btn.is-active {
+  color: #354E65;
 }
 
-.switch .handle {
-  width: 68px;
-  height: 38px;
+.segmented-thumb {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 80px;
+  height: 36px;
   border-radius: 999px;
   background: #FFFFFF;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 1;
+  pointer-events: none;
 }
 
-.switch.is-on .handle {
-  transform: translateX(74px);
+.segmented-control.is-settings .segmented-thumb {
+  transform: translateX(80px);
 }
 
 /* ── Settings Drawer / Overlay ── */
 .settings-overlay {
   position: absolute;
   inset: 0;
-  z-index: 10;
+  z-index: 15;
   background: #20364D;
   color: #F2F5F7;
-  padding: 28px 24px;
+  padding: 28px 24px 96px;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
   animation: settingsEnter 0.26s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -474,7 +504,7 @@ button { font: inherit; }
 .settings-card {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 16px;
+  border-radius: var(--radius-card);
   padding: 16px;
   margin-bottom: 16px;
 }
@@ -566,7 +596,7 @@ button { font: inherit; }
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: #FFFFFF;
   padding: 6px 12px;
-  border-radius: 999px;
+  border-radius: var(--radius-compact);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -625,7 +655,7 @@ button { font: inherit; }
   color: #17222D;
   border: 0;
   padding: 5px 14px;
-  border-radius: 999px;
+  border-radius: var(--radius-compact);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;

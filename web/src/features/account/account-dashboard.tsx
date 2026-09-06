@@ -6,9 +6,11 @@ import type { AccountSummary } from '../../lib/account/types';
 export interface AccountDashboardProps {
   summary: AccountSummary;
   userId: string;
+  selectedPlan?: 'plus' | 'pro';
 }
 
-export function AccountDashboard({ summary, userId }: AccountDashboardProps) {
+export function AccountDashboard({ summary, userId, selectedPlan }: AccountDashboardProps) {
+  const [activeSelectedPlan, setActiveSelectedPlan] = useState<'plus' | 'pro' | undefined>(selectedPlan);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [loadingPortal, setLoadingPortal] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -26,6 +28,9 @@ export function AccountDashboard({ summary, userId }: AccountDashboardProps) {
 
       const data = await res.json();
       if (!res.ok || !data.checkoutUrl) {
+        if (res.status === 401) {
+          throw new Error('Your session has expired. Please sign in again.');
+        }
         throw new Error(data.error || 'Failed to start checkout');
       }
 
@@ -47,6 +52,9 @@ export function AccountDashboard({ summary, userId }: AccountDashboardProps) {
 
       const data = await res.json();
       if (!res.ok || !data.portalUrl) {
+        if (res.status === 401) {
+          throw new Error('Your session has expired. Please sign in again.');
+        }
         throw new Error(data.error || 'Failed to open customer portal');
       }
 
@@ -74,7 +82,7 @@ export function AccountDashboard({ summary, userId }: AccountDashboardProps) {
             border: '1px solid #FF5A36',
             color: '#FF7D60',
             padding: '12px 16px',
-            borderRadius: '8px',
+            borderRadius: '18px',
             fontSize: '14px',
             marginBottom: '20px',
           }}
@@ -83,11 +91,59 @@ export function AccountDashboard({ summary, userId }: AccountDashboardProps) {
         </div>
       )}
 
+      {/* Selected plan confirmation banner if redirected from popup */}
+      {summary.plan === 'free' && activeSelectedPlan && (
+        <div
+          style={{
+            background: 'rgba(91, 117, 147, 0.25)',
+            border: '2px solid #5B7593',
+            borderRadius: '18px',
+            padding: '20px 24px',
+            marginBottom: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '16px',
+          }}
+        >
+          <div>
+            <div style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#A5C2DE', fontWeight: 700 }}>
+              Selected Plan
+            </div>
+            <div style={{ fontSize: '20px', fontWeight: 800, color: '#EDF2F6', marginTop: '2px' }}>
+              {activeSelectedPlan === 'pro' ? 'Pro ($9.00 / month)' : 'Plus ($4.90 / month)'}
+            </div>
+            <div style={{ fontSize: '13px', color: '#CBD5E1', marginTop: '4px' }}>
+              {activeSelectedPlan === 'pro' ? '99 daily cues · High-capacity compilation' : '28 daily cues · Dedicated quota'}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => handleCheckout(activeSelectedPlan)}
+            disabled={Boolean(loadingPlan)}
+            style={{
+              background: '#5B7593',
+              color: '#FFFFFF',
+              border: 'none',
+              padding: '12px 24px',
+              borderRadius: '14px',
+              fontSize: '15px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              opacity: loadingPlan ? 0.7 : 1,
+            }}
+          >
+            {loadingPlan === activeSelectedPlan ? 'Opening checkout…' : 'Continue to checkout'}
+          </button>
+        </div>
+      )}
+
       <div
         style={{
           background: 'rgba(255, 255, 255, 0.04)',
           border: '1px solid rgba(255, 255, 255, 0.1)',
-          borderRadius: '16px',
+          borderRadius: '18px',
           padding: '24px',
           marginBottom: '24px',
         }}
@@ -119,10 +175,11 @@ export function AccountDashboard({ summary, userId }: AccountDashboardProps) {
       </div>
 
       <div
+        id="plans"
         style={{
           background: 'rgba(91, 117, 147, 0.15)',
           border: '1px solid #5B7593',
-          borderRadius: '16px',
+          borderRadius: '18px',
           padding: '24px',
           marginBottom: '24px',
         }}
@@ -166,13 +223,16 @@ export function AccountDashboard({ summary, userId }: AccountDashboardProps) {
             <>
               <button
                 type="button"
-                onClick={() => handleCheckout('plus')}
+                onClick={() => {
+                  setActiveSelectedPlan('plus');
+                  handleCheckout('plus');
+                }}
                 disabled={Boolean(loadingPlan)}
                 style={{
                   background: '#5B7593',
                   color: '#FFFFFF',
                   padding: '10px 18px',
-                  borderRadius: '8px',
+                  borderRadius: '14px',
                   fontSize: '14px',
                   fontWeight: 600,
                   border: 'none',
@@ -185,13 +245,16 @@ export function AccountDashboard({ summary, userId }: AccountDashboardProps) {
 
               <button
                 type="button"
-                onClick={() => handleCheckout('pro')}
+                onClick={() => {
+                  setActiveSelectedPlan('pro');
+                  handleCheckout('pro');
+                }}
                 disabled={Boolean(loadingPlan)}
                 style={{
                   background: 'rgba(255, 255, 255, 0.1)',
                   color: '#EDF2F6',
                   padding: '10px 18px',
-                  borderRadius: '8px',
+                  borderRadius: '14px',
                   fontSize: '14px',
                   fontWeight: 600,
                   border: '1px solid rgba(255, 255, 255, 0.2)',
@@ -213,7 +276,7 @@ export function AccountDashboard({ summary, userId }: AccountDashboardProps) {
                 background: 'rgba(255, 255, 255, 0.1)',
                 color: '#EDF2F6',
                 padding: '10px 18px',
-                borderRadius: '8px',
+                borderRadius: '14px',
                 fontSize: '14px',
                 fontWeight: 600,
                 border: '1px solid rgba(255, 255, 255, 0.2)',
