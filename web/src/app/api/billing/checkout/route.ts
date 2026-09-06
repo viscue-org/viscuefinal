@@ -64,8 +64,9 @@ export async function POST(request: NextRequest) {
     });
 
     const checkoutUrl = subscription.payment_link;
-    if (!checkoutUrl || !checkoutUrl.startsWith('https://')) {
-      throw new Error('Dodo Payments did not return a valid secure checkout link');
+    if (typeof checkoutUrl !== 'string' || !checkoutUrl.startsWith('http')) {
+      console.error('Invalid subscription response from Dodo:', subscription);
+      throw new Error(`Dodo Payments did not return a valid secure checkout link (received: ${checkoutUrl})`);
     }
 
     return NextResponse.json({ ok: true, checkoutUrl });

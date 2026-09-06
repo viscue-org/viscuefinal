@@ -25,7 +25,8 @@ describe('GET /api/account/summary', () => {
   it('returns 401 if unauthenticated', async () => {
     vi.mocked(requireUser).mockRejectedValueOnce(new Error('Unauthorized'));
 
-    const response = await GET();
+    const mockRequest = new Request('http://localhost:3000/api/account/summary');
+    const response = await GET(mockRequest);
     expect(response.status).toBe(401);
     const body = await response.json();
     expect(body).toEqual({ ok: false, error: 'Unauthorized' });
@@ -48,7 +49,8 @@ describe('GET /api/account/summary', () => {
       subscriptionStatus: null,
     });
 
-    const response = await GET();
+    const mockRequest = new Request('http://localhost:3000/api/account/summary');
+    const response = await GET(mockRequest);
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.ok).toBe(true);

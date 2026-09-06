@@ -3,11 +3,13 @@ import { createServerClient } from '../../../../lib/supabase/server';
 import { requireUser } from '../../../../lib/auth/require-user';
 import { getAccountSummary } from '../../../../lib/quota/repository';
 
-export async function GET() {
+export async function GET(request: Request) {
   const supabase = await createServerClient();
+  const authHeader = request.headers.get('authorization');
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : undefined;
 
   try {
-    await requireUser(supabase);
+    await requireUser(supabase, token);
   } catch {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
   }

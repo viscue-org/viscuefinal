@@ -116,7 +116,7 @@ export function ConsentCard({
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         {isApproveString ? (
-          <form action={approveAction} method="POST">
+          <form action={approveAction} method="POST" target="_top">
             {hiddenParams &&
               Object.entries(hiddenParams).map(([key, val]) => (
                 <input key={key} type="hidden" name={key} value={val} />

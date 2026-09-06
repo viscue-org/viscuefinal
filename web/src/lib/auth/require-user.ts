@@ -16,8 +16,10 @@ export class AuthError extends Error {
   }
 }
 
-export async function requireUser(supabase: SupabaseClient): Promise<VerifiedUser> {
-  const { data, error } = await supabase.auth.getUser();
+export async function requireUser(supabase: SupabaseClient, token?: string): Promise<VerifiedUser> {
+  const { data, error } = token 
+    ? await supabase.auth.getUser(token) 
+    : await supabase.auth.getUser();
 
   if (error || !data?.user) {
     throw new AuthError('Unauthorized', 401);

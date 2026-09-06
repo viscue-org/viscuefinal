@@ -196,6 +196,14 @@ function StandardPopup() {
   useEffect(() => {
     readSetting('viscue-auto-submit', false).then(setAutoSubmit);
     fetchSummary();
+
+    const onVisibilityChange = () => {
+      if (!document.hidden) {
+        fetchSummary();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
   }, [fetchSummary]);
 
   const toggleAutoSubmit = () => {
