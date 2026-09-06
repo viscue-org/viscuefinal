@@ -50,7 +50,7 @@ export async function signUpWithPassword(
 
   const supabase = await createServerClient();
   const siteUrl = publicEnv.NEXT_PUBLIC_SITE_URL;
-  const targetNext = safeRedirectPath(nextParam);
+  const targetNext = nextParam ? safeRedirectPath(nextParam) : '/account';
 
   const { error } = await supabase.auth.signUp({
     email: parsed.data.email,
@@ -63,7 +63,7 @@ export async function signUpWithPassword(
   if (error) {
     return {
       ok: false,
-      error: 'Unable to complete signup. Please verify your details and try again.',
+      error: error.message || 'Unable to complete signup. Please verify your details and try again.',
     };
   }
 
@@ -101,17 +101,18 @@ export async function signInWithPassword(
   if (error) {
     return {
       ok: false,
-      error: 'Invalid email or password. Please try again.',
+      error: error.message || 'Invalid email or password. Please try again.',
     };
   }
 
-  redirect(safeRedirectPath(nextParam));
+  const targetNext = nextParam ? safeRedirectPath(nextParam) : '/account';
+  redirect(targetNext);
 }
 
 export async function signInWithGoogle(nextParam?: string | null) {
   const supabase = await createServerClient();
   const siteUrl = publicEnv.NEXT_PUBLIC_SITE_URL;
-  const targetNext = safeRedirectPath(nextParam);
+  const targetNext = nextParam ? safeRedirectPath(nextParam) : '/account';
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',

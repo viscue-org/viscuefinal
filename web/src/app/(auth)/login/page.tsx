@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { signInWithPassword, signInWithGoogle } from '../../../features/auth/actions';
 
 export default async function LoginPage(props: {
@@ -7,21 +8,6 @@ export default async function LoginPage(props: {
   const searchParams = await props.searchParams;
   const next = searchParams.next ?? '';
   const error = searchParams.error;
-
-  if (!next.startsWith('/connect')) {
-    return (
-      <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-        <div style={{ maxWidth: '480px', background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '24px', padding: '40px', textAlign: 'center' }}>
-          <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#EDF2F6', marginBottom: '16px' }}>
-            Extension Required
-          </h1>
-          <p style={{ color: '#8E9BAE', fontSize: '15px', lineHeight: 1.6, marginBottom: '24px' }}>
-            You can only sign in through the Viscue Chrome Extension. Please open the extension and click &quot;Start Viscue&quot; to authenticate.
-          </p>
-        </div>
-      </main>
-    );
-  }
 
   return (
     <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
@@ -39,20 +25,29 @@ export default async function LoginPage(props: {
           Welcome back
         </h1>
         <p style={{ color: '#8E9BAE', fontSize: '14px', marginBottom: '24px', textAlign: 'center' }}>
-          Sign in to continue to your Viscue extension
+          Sign in to continue to your Viscue account
         </p>
 
         {error && (
           <div role="alert" style={{ background: 'rgba(255, 90, 54, 0.15)', border: '1px solid #FF5A36', color: '#FF7D60', padding: '10px 14px', borderRadius: '18px', fontSize: '13px', marginBottom: '20px' }}>
             {error === 'auth_callback_failed'
               ? 'Authentication callback failed. Please try signing in again.'
-              : 'Unable to authenticate. Please check your credentials.'}
+              : error === 'oauth_failed'
+              ? 'Google sign-in failed. Please try again.'
+              : error}
           </div>
         )}
 
         <form action={async (formData: FormData) => {
           'use server';
-          await signInWithPassword(formData, next);
+          const res = await signInWithPassword(formData, next);
+          if (res && !res.ok && res.error) {
+            const redirectUrl = `/login?${new URLSearchParams({
+              ...(next ? { next } : {}),
+              error: res.error,
+            }).toString()}`;
+            redirect(redirectUrl);
+          }
         }}>
           <div style={{ marginBottom: '16px' }}>
             <label htmlFor="login-email" style={{ display: 'block', fontSize: '13px', color: '#CBD5E1', marginBottom: '6px' }}>

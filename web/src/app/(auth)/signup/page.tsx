@@ -9,21 +9,6 @@ export default async function SignupPage(props: {
   const next = searchParams.next ?? '';
   const error = searchParams.error;
 
-  if (!next.startsWith('/connect')) {
-    return (
-      <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-        <div style={{ maxWidth: '480px', background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '24px', padding: '40px', textAlign: 'center' }}>
-          <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#EDF2F6', marginBottom: '16px' }}>
-            Extension Required
-          </h1>
-          <p style={{ color: '#8E9BAE', fontSize: '15px', lineHeight: 1.6, marginBottom: '24px' }}>
-            You can only sign up through the Viscue Chrome Extension. Please open the extension and click &quot;Start Viscue&quot; to authenticate.
-          </p>
-        </div>
-      </main>
-    );
-  }
-
   return (
     <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
       <div style={{ width: '100%', maxWidth: '420px', background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '24px', padding: '32px' }}>
@@ -51,9 +36,13 @@ export default async function SignupPage(props: {
 
         <form action={async (formData: FormData) => {
           'use server';
-          const res = await signUpWithPassword(formData);
+          const res = await signUpWithPassword(formData, next);
           if (!res.ok) {
-            redirect(`/signup?next=${encodeURIComponent(next)}&error=${encodeURIComponent(res.error ?? 'Signup failed')}`);
+            const redirectUrl = `/signup?${new URLSearchParams({
+              ...(next ? { next } : {}),
+              error: res.error ?? 'Signup failed',
+            }).toString()}`;
+            redirect(redirectUrl);
           }
           redirect('/verify');
         }}>

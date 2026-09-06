@@ -55,6 +55,7 @@ export async function POST(request: NextRequest) {
       },
       product_id: productId,
       quantity: 1,
+      payment_link: true,
       return_url: `${siteUrl}/checkout-complete`,
       metadata: {
         user_id: user.id,
