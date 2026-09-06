@@ -43,9 +43,9 @@ export async function getAccessToken(config = {}, storage = globalThis.chrome?.s
 
 export async function refreshSession(refreshToken, config = {}, storage = globalThis.chrome?.storage?.local) {
   const startGen = (await storage?.get?.(LOGOUT_GEN_KEY))?.[LOGOUT_GEN_KEY] || 0;
-  const supabaseUrl = config.supabaseUrl || 'https://vqqaxhzqaehjdpoefrjc.supabase.co';
+  const webUrl = config.webUrl || 'https://ext.viscue.space';
   const clientId = config.clientId || 'viscue-extension';
-  const tokenEndpoint = `${supabaseUrl}/auth/v1/oauth/token`;
+  const tokenEndpoint = config.tokenUrl || `${webUrl}/api/auth/oauth/token`;
 
   const response = await (config.fetch || fetch)(tokenEndpoint, {
     method: 'POST',
@@ -82,14 +82,17 @@ export async function refreshSession(refreshToken, config = {}, storage = global
 }
 
 export function buildOAuthTokenRequest({
+  webUrl,
+  tokenUrl,
   supabaseUrl,
   clientId,
   redirectUri,
   code,
   verifier,
 }) {
+  const targetUrl = tokenUrl || (webUrl ? `${webUrl}/api/auth/oauth/token` : (supabaseUrl ? `${supabaseUrl}/auth/v1/oauth/token` : 'https://ext.viscue.space/api/auth/oauth/token'));
   return {
-    url: `${supabaseUrl}/auth/v1/oauth/token`,
+    url: targetUrl,
     init: {
       method: 'POST',
       headers: {
@@ -241,6 +244,7 @@ export async function signIn(
   }
 
   const tokenRequest = buildOAuthTokenRequest({
+    webUrl,
     supabaseUrl,
     clientId,
     redirectUri,

@@ -7,6 +7,8 @@ export interface ConsentCardProps {
   approveAction?: string | (() => Promise<void>) | ((formData: FormData) => void | Promise<void>);
   denyAction?: string | (() => Promise<void>) | ((formData: FormData) => void | Promise<void>);
   denyUrl?: string;
+  switchAccountUrl?: string;
+  hiddenParams?: Record<string, string>;
 }
 
 export function ConsentCard({
@@ -16,6 +18,8 @@ export function ConsentCard({
   approveAction,
   denyAction,
   denyUrl,
+  switchAccountUrl,
+  hiddenParams,
 }: ConsentCardProps) {
   const isApproveString = typeof approveAction === 'string';
 
@@ -50,10 +54,26 @@ export function ConsentCard({
       <h1 style={{ fontSize: '26px', fontWeight: 700, marginBottom: '8px' }}>
         Connect Viscue
       </h1>
-      <p style={{ color: '#8E9BAE', fontSize: '14px', marginBottom: '24px' }}>
+      <p style={{ color: '#8E9BAE', fontSize: '14px', marginBottom: switchAccountUrl ? '8px' : '24px' }}>
         <strong>{clientName}</strong> wants to connect to your Viscue account (
         <span style={{ color: '#EDF2F6' }}>{userEmail}</span>).
       </p>
+
+      {switchAccountUrl && (
+        <div style={{ marginBottom: '20px' }}>
+          <a
+            href={switchAccountUrl}
+            style={{
+              color: '#FF7D60',
+              fontSize: '13px',
+              textDecoration: 'none',
+              fontWeight: 500,
+            }}
+          >
+            Not you? Switch account
+          </a>
+        </div>
+      )}
 
       <div
         style={{
@@ -97,6 +117,10 @@ export function ConsentCard({
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         {isApproveString ? (
           <form action={approveAction} method="POST">
+            {hiddenParams &&
+              Object.entries(hiddenParams).map(([key, val]) => (
+                <input key={key} type="hidden" name={key} value={val} />
+              ))}
             <button
               type="submit"
               style={{
@@ -116,6 +140,10 @@ export function ConsentCard({
           </form>
         ) : (
           <form action={approveAction as any}>
+            {hiddenParams &&
+              Object.entries(hiddenParams).map(([key, val]) => (
+                <input key={key} type="hidden" name={key} value={val} />
+              ))}
             <button
               type="submit"
               style={{

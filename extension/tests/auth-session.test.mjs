@@ -94,6 +94,20 @@ describe('Extension Auth Session Storage', () => {
     );
   });
 
+  it('builds token request pointing to the web OAuth endpoint when webUrl is configured', () => {
+    const request = sessionModule.buildOAuthTokenRequest?.({
+      webUrl: 'https://ext.viscue.space',
+      clientId: 'viscue-extension',
+      redirectUri: 'https://abcdefghijklmnopabcdefghijklmnop.chromiumapp.org/oauth2',
+      code: 'code-123',
+      verifier: 'verifier-456',
+    });
+
+    assert.equal(request?.url, 'https://ext.viscue.space/api/auth/oauth/token');
+    assert.equal(request?.init.method, 'POST');
+    assert.match(request?.init.body, /code=code-123/);
+  });
+
   it('requires authentication before opening the workspace', async () => {
     assert.equal(typeof sessionModule.handleWorkspaceAccess, 'function');
     const calls = [];

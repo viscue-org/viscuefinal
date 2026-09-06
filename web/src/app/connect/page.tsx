@@ -3,7 +3,6 @@ import { createServerClient } from '../../lib/supabase/server';
 import { requireUser } from '../../lib/auth/require-user';
 import { validateAuthorizationRequest } from '../../features/connect/authorize';
 import { ConsentCard } from '../../features/connect/consent-card';
-import { publicEnv } from '../../lib/env';
 
 export default async function ConnectPage(props: {
   searchParams: Promise<{
@@ -42,11 +41,10 @@ export default async function ConnectPage(props: {
 
   const promptParam = (searchParams as any).prompt;
   if (promptParam === 'login') {
-    await supabase.auth.signOut();
     const cleanParams = { ...searchParams } as Record<string, string>;
     delete cleanParams.prompt;
     const connectPath = `/connect?${new URLSearchParams(cleanParams).toString()}`;
-    redirect(`/login?next=${encodeURIComponent(connectPath)}`);
+    redirect(`/api/auth/signout?next=${encodeURIComponent(`/login?next=${encodeURIComponent(connectPath)}`)}`);
   }
 
   try {
@@ -58,17 +56,26 @@ export default async function ConnectPage(props: {
     redirect(`/login?next=${encodeURIComponent(connectPath)}`);
   }
 
-  const { redirect_uri, state, scope, code_challenge, code_challenge_method } = validation.params;
+  const { redirect_uri, state, scope, code_challenge, code_challenge_method, client_id, response_type } = validation.params;
   const scopesList = scope.split(' ').filter(Boolean);
 
-  const supabaseUrl = publicEnv.NEXT_PUBLIC_SUPABASE_URL;
-  const approveAction = `${supabaseUrl}/auth/v1/oauth/authorize?client_id=${encodeURIComponent(
-    validation.params.client_id
-  )}&redirect_uri=${encodeURIComponent(redirect_uri)}&response_type=code&code_challenge=${encodeURIComponent(
-    code_challenge
-  )}&code_challenge_method=${encodeURIComponent(
-    code_challenge_method
-  )}&state=${encodeURIComponent(state)}&scope=${encodeURIComponent(scope)}`;
+  const currentConnectPath = `/connect?${new URLSearchParams(
+    searchParams as Record<string, string>
+  ).toString()}`;
+  const switchAccountUrl = `/api/auth/signout?next=${encodeURIComponent(
+    `/login?next=${encodeURIComponent(currentConnectPath)}`
+  )}`;
+
+  const approveAction = '/api/auth/oauth/approve';
+  const hiddenParams = {
+    client_id,
+    redirect_uri,
+    response_type,
+    code_challenge,
+    code_challenge_method,
+    state,
+    scope,
+  };
 
   const denyUrl = `${redirect_uri}?error=access_denied&state=${encodeURIComponent(state)}`;
 
@@ -80,6 +87,8 @@ export default async function ConnectPage(props: {
         scopes={scopesList}
         approveAction={approveAction}
         denyUrl={denyUrl}
+        switchAccountUrl={switchAccountUrl}
+        hiddenParams={hiddenParams}
       />
     </main>
   );

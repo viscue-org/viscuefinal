@@ -13,7 +13,7 @@ async function showAccountPopup() {
 }
 
 async function authenticateAndShowPopup() {
-  const session = await signIn();
+  const session = await signIn({ webUrl: VISCUE_WEB_URL });
   await showAccountPopup();
   return session;
 }

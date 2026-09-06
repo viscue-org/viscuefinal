@@ -20,4 +20,21 @@ describe('ConsentCard', () => {
     expect(screen.getByRole('button', { name: /connect extension/i })).toBeVisible();
     expect(screen.getByRole('button', { name: /cancel/i })).toBeVisible();
   });
+
+  it('renders switch account link when switchAccountUrl is provided', () => {
+    render(
+      <ConsentCard
+        userEmail="connect.viscue@gmail.com"
+        clientName="Viscue Chrome Extension"
+        scopes={['openid']}
+        approveAction="/api/auth/oauth/approve"
+        denyUrl="https://example.com"
+        switchAccountUrl="/api/auth/signout?next=%2Flogin"
+      />
+    );
+
+    const switchLink = screen.getByRole('link', { name: /not you\? switch account/i });
+    expect(switchLink).toBeVisible();
+    expect(switchLink.getAttribute('href')).toBe('/api/auth/signout?next=%2Flogin');
+  });
 });
