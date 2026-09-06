@@ -74,16 +74,76 @@ async function main() {
     console.error('Compiler failed:', e);
   }
 
-  console.log('\n2. Testing Multimodal Image Perception (Qwen 3 VL / Nova Pro):');
+  console.log('\n2a. Testing Multimodal Image Perception - Qwen 3 VL (Primary):');
   try {
-    const imgRes = await gateway.analyzeImage({
-      assetId: 'test_asset_1',
+    const qwenGateway = new BedrockGateway({
+      region: process.env.AWS_REGION || 'us-east-1',
+      credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+      },
+      bearerToken: process.env.AWS_BEARER_TOKEN_BEDROCK || '',
+      routes: {
+        imagePrimary: process.env.QWEN_MODEL_ID || 'qwen.qwen3-vl-235b-a22b',
+        imageFallback: process.env.NOVA_PRO_MODEL_ID || 'amazon.nova-pro-v1:0',
+      }
+    });
+    const qwenRes = await qwenGateway.analyzeImage({
+      assetId: 'test_asset_qwen',
       dataUrl: tinyPngBase64,
       prompt: 'Identify the objects and layout.'
     });
-    console.log('Image Perception response:', imgRes);
+    console.log('Qwen 3 VL Perception response:', qwenRes);
   } catch (e) {
-    console.error('Image Perception failed:', e);
+    console.error('Qwen 3 VL failed:', e);
+  }
+
+  console.log('\n2b. Testing Multimodal Image Perception - Amazon Nova Pro:');
+  try {
+    const novaProGateway = new BedrockGateway({
+      region: process.env.AWS_REGION || 'us-east-1',
+      credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+      },
+      bearerToken: process.env.AWS_BEARER_TOKEN_BEDROCK || '',
+      routes: {
+        imagePrimary: process.env.NOVA_PRO_MODEL_ID || 'amazon.nova-pro-v1:0',
+        imageFallback: process.env.NOVA_LITE_MODEL_ID || 'amazon.nova-lite-v1:0',
+      }
+    });
+    const novaProRes = await novaProGateway.analyzeImage({
+      assetId: 'test_asset_nova_pro',
+      dataUrl: tinyPngBase64,
+      prompt: 'Identify the objects and layout.'
+    });
+    console.log('Amazon Nova Pro Perception response:', novaProRes);
+  } catch (e) {
+    console.error('Amazon Nova Pro failed:', e);
+  }
+
+  console.log('\n2c. Testing Multimodal Image Perception - Amazon Nova Lite:');
+  try {
+    const novaLiteGateway = new BedrockGateway({
+      region: process.env.AWS_REGION || 'us-east-1',
+      credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+      },
+      bearerToken: process.env.AWS_BEARER_TOKEN_BEDROCK || '',
+      routes: {
+        imagePrimary: process.env.NOVA_LITE_MODEL_ID || 'amazon.nova-lite-v1:0',
+        imageFallback: process.env.NOVA_LITE_MODEL_ID || 'amazon.nova-lite-v1:0',
+      }
+    });
+    const novaLiteRes = await novaLiteGateway.analyzeImage({
+      assetId: 'test_asset_nova_lite',
+      dataUrl: tinyPngBase64,
+      prompt: 'Identify the objects and layout.'
+    });
+    console.log('Amazon Nova Lite Perception response:', novaLiteRes);
+  } catch (e) {
+    console.error('Amazon Nova Lite failed:', e);
   }
 
   console.log('\n3. Testing Relevance Embeddings (Titan Multimodal):');
