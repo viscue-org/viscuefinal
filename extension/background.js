@@ -166,9 +166,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const tab = message.tabId ? await chrome.tabs.get(message.tabId) : (await chrome.tabs.query({ active: true, lastFocusedWindow: true }))[0];
       if (!tab?.id) throw new Error('Open the destination AI chat before sending intent.');
       try {
+        // Re-detect the live fingerprint from the tab's current URL so that
+        // navigation that occurred during compilation does not cause a false
+        // "destination conversation changed" mismatch in content.js.
+        const liveCtx = detectContext(tab);
+        const liveFingerprint = liveCtx.fingerprint || message.destinationFingerprint;
         sendResponse(await chrome.tabs.sendMessage(tab.id, {
           type: 'handoff', prompt: message.prompt, attachments: message.attachments || [], submit: Boolean(message.submit),
-          executionId: message.executionId, destinationFingerprint: message.destinationFingerprint, promptHash: message.promptHash
+          executionId: message.executionId, destinationFingerprint: liveFingerprint, promptHash: message.promptHash
         }));
       } catch (err) {
         sendResponse({ ok: false, error: 'Could not connect to the page. Make sure you are on a supported AI chat (ChatGPT, Claude, etc.) and refresh the page if needed.' });

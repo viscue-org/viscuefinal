@@ -1,115 +1,72 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '../../../../lib/supabase/server';
 import { requireUser } from '../../../../lib/auth/require-user';
-import {
-  reserveCue,
-  commitCue,
-  releaseCue,
-  QuotaExhaustedError,
-} from '../../../../lib/quota/repository';
+import { reserveCue, commitCue, releaseCue, QuotaExhaustedError } from '../../../../lib/quota/repository';
+import { parseCompilePayload } from '../../../../lib/compiler/payload';
+import { runConfiguredPipeline } from '../../../../lib/compiler/run.mjs';
 
 const MAX_PAYLOAD_BYTES = 4_000_000;
+export const maxDuration = 300;
+const json = (value: unknown, status = 200) => NextResponse.json(value, { status, headers: { 'Cache-Control': 'no-store' } });
+
+async function readBoundedBody(request: Request) {
+  if (Number(request.headers.get('content-length')) > MAX_PAYLOAD_BYTES) throw new RangeError('Payload too large');
+  const reader = request.body?.getReader();
+  if (!reader) return '';
+  const decoder = new TextDecoder();
+  let size = 0;
+  let body = '';
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > MAX_PAYLOAD_BYTES) { await reader.cancel(); throw new RangeError('Payload too large'); }
+      body += decoder.decode(value, { stream: true });
+    }
+    return body + decoder.decode();
+  } finally { reader.releaseLock(); }
+}
 
 export async function POST(request: NextRequest) {
-  // 1. Enforce payload size limit (max 4,000,000 bytes)
-  const contentLength = request.headers.get('content-length');
-  if (contentLength && parseInt(contentLength, 10) > MAX_PAYLOAD_BYTES) {
-    return NextResponse.json(
-      { ok: false, error: 'Payload exceeds 4,000,000 bytes limit' },
-      { status: 413 }
-    );
-  }
+  let body;
+  try { body = await readBoundedBody(request); }
+  catch (error) { return json({ ok: false, error: error instanceof RangeError ? 'Payload exceeds 4,000,000 bytes limit' : 'Invalid request body' }, error instanceof RangeError ? 413 : 400); }
 
-  const rawBody = await request.text();
-  if (rawBody.length > MAX_PAYLOAD_BYTES) {
-    return NextResponse.json(
-      { ok: false, error: 'Payload exceeds 4,000,000 bytes limit' },
-      { status: 413 }
-    );
-  }
-
-  // 2. Authenticate user
-  const supabase = await createServerClient();
-  try {
-    await requireUser(supabase);
-  } catch {
-    return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
-  }
+  const supabase = await createServerClient(request);
+  try { await requireUser(supabase, request.headers.get('authorization')?.replace(/^Bearer\s+/i, '')); }
+  catch { return json({ ok: false, error: 'Unauthorized' }, 401); }
 
   let payload;
-  try {
-    payload = JSON.parse(rawBody);
-  } catch {
-    return NextResponse.json({ ok: false, error: 'Invalid JSON body' }, { status: 400 });
-  }
+  try { payload = parseCompilePayload(JSON.parse(body)); }
+  catch { return json({ ok: false, error: 'Invalid compilation payload' }, 400); }
 
-  const requestId =
-    payload?.requestId ||
-    request.headers.get('x-viscue-request-id') ||
-    crypto.randomUUID();
-
-  // 3. Atomically reserve cue
+  // Each new execution needs a server-owned reservation: a reused committed client
+  // key would permit unlimited model calls against one consumed cue.
   let reservation;
-  try {
-    reservation = await reserveCue(supabase, requestId);
-  } catch (err) {
-    if (err instanceof QuotaExhaustedError) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: 'Daily cue quota exhausted',
-          code: 'quota_exhausted',
-        },
-        { status: 429 }
-      );
-    }
-    return NextResponse.json(
-      { ok: false, error: 'Failed to reserve compilation cue' },
-      { status: 500 }
-    );
+  try { reservation = await reserveCue(supabase, crypto.randomUUID()); }
+  catch (error) {
+    return error instanceof QuotaExhaustedError
+      ? json({ ok: false, error: 'Daily cue quota exhausted', code: 'quota_exhausted' }, 429)
+      : json({ ok: false, error: 'Failed to reserve compilation cue' }, 500);
   }
-
-  // 4. Execute transient compiler in memory (zero cloud persistence of user media)
   try {
-    const prompt = payload.prompt || '';
-    const nodeCount = Array.isArray(payload.nodes) ? payload.nodes.length : 0;
-    const edgeCount = Array.isArray(payload.edges) ? payload.edges.length : 0;
-
-    const compiledOutput = {
-      version: '3.3.0',
-      status: 'compiled',
-      compiledPrompt: prompt,
-      diagnostics: {
-        nodeCount,
-        edgeCount,
-        processedAt: new Date().toISOString(),
-      },
-    };
-
-    // 5. Commit reservation on success
-    await commitCue(supabase, reservation.reservationId);
-
-    return NextResponse.json({
-      ok: true,
-      data: compiledOutput,
-      quota: {
-        remaining: Math.max(0, reservation.remaining - 1),
-        resetsAt: reservation.resetsAt,
-      },
+    const plan = reservation.allowance === 99 ? 'pro' : reservation.allowance === 28 ? 'plus' : 'free';
+    const result = await runConfiguredPipeline({ ...payload, profile: { plan } });
+    if (!result.ok) {
+      await releaseCue(supabase, reservation.reservationId);
+      return json(result, result.status === 'blocked' ? 422 : 400);
+    }
+    const committed = await commitCue(supabase, reservation.reservationId);
+    if (committed === false) throw new Error('Reservation was not committed');
+    return json({
+      ...result, destination_fingerprint: payload.session.destinationFingerprint || '',
+      data: { version: '3.3.0', status: result.status, compiledPrompt: result.final_prompt },
+      // Reservation already reduced remaining; commit must not decrement twice.
+      quota: { remaining: reservation.remaining, resetsAt: reservation.resetsAt },
     });
-  } catch (compileErr) {
-    // 6. Release reservation idempotently on failure
-    await releaseCue(supabase, reservation.reservationId);
-
-    return NextResponse.json(
-      {
-        ok: false,
-        error:
-          compileErr instanceof Error
-            ? compileErr.message
-            : 'Transient compilation error',
-      },
-      { status: 500 }
-    );
+  } catch {
+    await releaseCue(supabase, reservation.reservationId).catch(() => {});
+    return json({ ok: false, error: 'Transient compilation error. Please try again.' }, 500);
   }
 }
