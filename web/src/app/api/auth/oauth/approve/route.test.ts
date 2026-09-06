@@ -76,4 +76,36 @@ describe('POST /api/auth/oauth/approve', () => {
     expect(parsed.searchParams.get('state')).toBe(state);
     expect(parsed.searchParams.get('code')).toBeTruthy();
   });
+
+  it('returns JSON with redirectUrl when Accept header includes application/json', async () => {
+    vi.mocked(requireUser).mockResolvedValueOnce({ id: 'user-1', email: 'witne@gmail.com' });
+
+    const redirectUri = 'https://abcdefghijklmnopabcdefghijklmnop.chromiumapp.org/oauth2';
+    const state = 'abcdef0123456789abcdef0123456789';
+
+    const req = new NextRequest('http://localhost:3000/api/auth/oauth/approve', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        client_id: 'viscue-extension',
+        redirect_uri: redirectUri,
+        response_type: 'code',
+        code_challenge: 'E9Melhoa2OwvFrGMTJguCH5Zw_l5UG39WgpmJ351min',
+        code_challenge_method: 'S256',
+        state,
+      }),
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.redirectUrl).toContain(redirectUri);
+    expect(body.redirectUrl).toContain(`state=${state}`);
+    expect(body.redirectUrl).toContain('code=');
+  });
 });
+

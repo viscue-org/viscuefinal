@@ -65,5 +65,14 @@ async function handleApprove(request: NextRequest) {
   callbackUrl.searchParams.set('code', code);
   callbackUrl.searchParams.set('state', state);
 
+  const wantsJson =
+    request.headers.get('accept')?.includes('application/json') ||
+    request.nextUrl.searchParams.get('format') === 'json';
+
+  if (wantsJson) {
+    return NextResponse.json({ ok: true, redirectUrl: callbackUrl.toString() });
+  }
+
   return NextResponse.redirect(callbackUrl.toString(), 303);
 }
+

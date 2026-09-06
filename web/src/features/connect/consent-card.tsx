@@ -1,4 +1,6 @@
-import React from 'react';
+'use client';
+
+import React, { useState } from 'react';
 
 export interface ConsentCardProps {
   userEmail: string;
@@ -22,6 +24,44 @@ export function ConsentCard({
   hiddenParams,
 }: ConsentCardProps) {
   const isApproveString = typeof approveAction === 'string';
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
+
+  const handleApproveSubmit = async (e: React.FormEvent) => {
+    if (!isApproveString) return;
+    e.preventDefault();
+    setIsConnecting(true);
+    setError(null);
+
+    try {
+      const res = await fetch(approveAction, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(hiddenParams || {}),
+      });
+
+      if (res.status === 401) {
+        window.location.href = '/login';
+        return;
+      }
+
+      const data = await res.json();
+      if (!res.ok || !data.ok || !data.redirectUrl) {
+        throw new Error(data?.error || 'Failed to authorize extension');
+      }
+
+      setRedirectUrl(data.redirectUrl);
+      window.location.assign(data.redirectUrl);
+    } catch (err: any) {
+      console.error('Connection approval error:', err);
+      setError(err?.message || 'Connection failed. Please try again.');
+      setIsConnecting(false);
+    }
+  };
 
   return (
     <div
@@ -75,6 +115,48 @@ export function ConsentCard({
         </div>
       )}
 
+      {error && (
+        <div
+          style={{
+            background: 'rgba(255, 90, 54, 0.12)',
+            border: '1px solid rgba(255, 90, 54, 0.4)',
+            borderRadius: '14px',
+            padding: '12px 16px',
+            marginBottom: '20px',
+            color: '#FF7D60',
+            fontSize: '13px',
+            lineHeight: 1.5,
+          }}
+        >
+          {error}
+        </div>
+      )}
+
+      {redirectUrl && (
+        <div
+          style={{
+            background: 'rgba(91, 117, 147, 0.15)',
+            border: '1px solid rgba(91, 117, 147, 0.4)',
+            borderRadius: '14px',
+            padding: '14px 16px',
+            marginBottom: '20px',
+            color: '#CBD5E1',
+            fontSize: '13px',
+            lineHeight: 1.5,
+            textAlign: 'center',
+          }}
+        >
+          Connecting to extension... If nothing happens,{' '}
+          <a
+            href={redirectUrl}
+            style={{ color: '#FF7D60', textDecoration: 'underline', fontWeight: 600 }}
+          >
+            click here to complete connection
+          </a>
+          .
+        </div>
+      )}
+
       <div
         style={{
           background: 'rgba(0, 0, 0, 0.2)',
@@ -116,26 +198,29 @@ export function ConsentCard({
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         {isApproveString ? (
-          <form action={approveAction} method="POST" target="_top">
+          <form action={approveAction} method="POST" onSubmit={handleApproveSubmit}>
             {hiddenParams &&
               Object.entries(hiddenParams).map(([key, val]) => (
                 <input key={key} type="hidden" name={key} value={val} />
               ))}
             <button
               type="submit"
+              disabled={isConnecting}
               style={{
                 width: '100%',
-                background: '#5B7593',
+                background: isConnecting ? '#3A4C60' : '#5B7593',
                 color: '#FFFFFF',
                 border: 'none',
                 borderRadius: '14px',
                 padding: '12px',
                 fontSize: '14px',
                 fontWeight: 600,
-                cursor: 'pointer',
+                cursor: isConnecting ? 'not-allowed' : 'pointer',
+                opacity: isConnecting ? 0.8 : 1,
+                transition: 'all 0.2s ease',
               }}
             >
-              Connect Extension
+              {isConnecting ? 'Connecting Extension...' : 'Connect Extension'}
             </button>
           </form>
         ) : (
@@ -206,3 +291,4 @@ export function ConsentCard({
     </div>
   );
 }
+
