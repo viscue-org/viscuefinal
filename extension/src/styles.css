@@ -1403,6 +1403,17 @@ textarea:focus-visible {
 .vicsuc-plan-summary { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding: 11px 13px; border: 1px solid var(--line); border-radius: 10px; }
 .vicsuc-plan-summary strong { font-size: 12px; }
 .vicsuc-plan-summary span { color: var(--text-muted); font-size: 11px; }
+
+.platform-plan-backdrop { z-index: 1200; }
+.platform-plan-dialog { width: min(520px, calc(100vw - 32px)); }
+.platform-plan-dialog header { margin-bottom: 10px; }
+.platform-plan-intro { margin: 0 0 18px; color: var(--text-muted); font-size: 14px; line-height: 1.5; }
+.platform-plan-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 10px; }
+.platform-plan-option { display: flex; min-height: 72px; flex-direction: column; align-items: flex-start; justify-content: center; gap: 5px; padding: 12px 14px; border: 1px solid var(--border-default); border-radius: 14px; background: var(--surface); color: var(--text); text-align: left; }
+.platform-plan-option span { color: var(--text-muted); font-size: 11px; }
+.platform-plan-option.is-selected { border-color: var(--accent-red); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-red) 18%, transparent); }
+.platform-plan-limit { display: flex; justify-content: space-between; gap: 16px; margin-top: 16px; padding: 12px 14px; border-radius: 14px; background: var(--bg-subtle); }
+.platform-plan-limit span { color: var(--text-muted); font-size: 12px; text-align: right; }
 .vicsuc-stage-review { display: grid; gap: 7px; max-height: 190px; overflow: auto; margin-top: 12px; padding: 10px; border-radius: 10px; background: var(--bg-color); }
 .vicsuc-stage-review > div { display: flex; justify-content: space-between; gap: 12px; font-size: 11px; text-transform: capitalize; }
 .vicsuc-stage-review > div strong { color: var(--text-muted); }

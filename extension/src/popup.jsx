@@ -24,6 +24,9 @@ import {
   skipOnboarding,
 } from './onboardingModel.mjs';
 import { accountView } from './accountModel.mjs';
+import { normalizePlatformCapability } from '../../local-server/lib/platform-capabilities.mjs';
+import { PLATFORM_PLAN_SETUP_KEY, PLATFORM_PLAN_STORAGE_KEY, platformPlanState } from './platformPlanModel.mjs';
+import { PlatformPlanSettings } from './components/ui/PlatformPlanSettings.mjs';
 import './popup.css';
 
 const ONBOARDING_KEY = 'viscue-onboarding-complete';
@@ -177,6 +180,8 @@ function StandardPopup() {
   const [summary, setSummary] = useState(null);
   const [authBusy, setAuthBusy] = useState(false);
   const [billingBusy, setBillingBusy] = useState(null);
+  const [platformName, setPlatformName] = useState('ChatGPT');
+  const [platformCapability, setPlatformCapability] = useState(() => normalizePlatformCapability({}, 'ChatGPT'));
   const generationRef = useRef(0);
 
   const fetchSummary = useCallback(() => {
@@ -195,6 +200,18 @@ function StandardPopup() {
 
   useEffect(() => {
     readSetting('viscue-auto-submit', false).then(setAutoSubmit);
+    Promise.all([
+      readSetting(PLATFORM_PLAN_STORAGE_KEY, null),
+      readSetting(PLATFORM_PLAN_SETUP_KEY, false),
+      globalThis.chrome?.runtime?.sendMessage
+        ? new Promise(resolve => chrome.runtime.sendMessage({ type: 'active-context' }, resolve))
+        : Promise.resolve(null),
+    ]).then(([capability, completed, response]) => {
+      const detected = response?.context?.platform || 'ChatGPT';
+      const state = platformPlanState({ [PLATFORM_PLAN_STORAGE_KEY]: capability, [PLATFORM_PLAN_SETUP_KEY]: completed }, detected);
+      setPlatformName(detected);
+      setPlatformCapability(state.capability);
+    });
     fetchSummary();
 
     const onVisibilityChange = () => {
@@ -205,6 +222,17 @@ function StandardPopup() {
     document.addEventListener('visibilitychange', onVisibilityChange);
     return () => document.removeEventListener('visibilitychange', onVisibilityChange);
   }, [fetchSummary]);
+
+  const updatePlatformCapability = capability => {
+    const normalized = normalizePlatformCapability(capability, platformName);
+    setPlatformCapability(normalized);
+    if (globalThis.chrome?.storage?.local) {
+      chrome.storage.local.set({ [PLATFORM_PLAN_STORAGE_KEY]: normalized, [PLATFORM_PLAN_SETUP_KEY]: true });
+    } else {
+      writeSetting(PLATFORM_PLAN_STORAGE_KEY, normalized);
+      writeSetting(PLATFORM_PLAN_SETUP_KEY, true);
+    }
+  };
 
   const toggleAutoSubmit = () => {
     const next = !autoSubmit;
@@ -378,6 +406,15 @@ function StandardPopup() {
                 </button>
               )}
             </div>
+          </div>
+
+          <div className="settings-card">
+            <PlatformPlanSettings
+              platformName={platformName}
+              capability={platformCapability}
+              viscuePlan={view.plan}
+              onChange={updatePlatformCapability}
+            />
           </div>
 
           <div className="settings-card settings-plans-list">

@@ -666,6 +666,13 @@ button { font: inherit; }
   opacity: 0.9;
 }
 
+.settings-platform-plan { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px 12px; }
+.settings-platform-plan__copy h3 { margin: 0; font-size: 14px; }
+.settings-platform-plan__copy p { margin: 3px 0 0; color: #8299B2; font-size: 11px; }
+.settings-platform-plan label { display: block; }
+.settings-platform-plan select { max-width: 150px; padding: 8px 28px 8px 10px; border: 1px solid #2D4358; border-radius: 10px; background: #17222D; color: #FFFFFF; font: inherit; font-size: 12px; }
+.settings-platform-plan__limit { grid-column: 1 / -1; color: #8299B2; font-size: 11px; font-weight: 600; }
+
 @keyframes eyeCoreBlink {
   0%, 86%, 92%, 98%, 100% {
     transform: scaleY(1);

@@ -37,6 +37,14 @@ import { acceptRawGesture } from '../../gesture/runtime/acceptance.mjs';
 import { resolveAnnotationCandidate } from '../../gesture/runtime/annotation-policy.mjs';
 import { attachStrokeResolution, collectStrokeOperations, createWorkspaceSnapshot, hydrateWorkspace, resetWorkspace } from '../../gesture/shared/operation-lifecycle.mjs';
 import { createOnnxGestureModel } from '../../gesture/runtime/onnx-resolver.mjs';
+import { effectiveReferenceLimit, normalizePlatformCapability } from '../../local-server/lib/platform-capabilities.mjs';
+import {
+  PLATFORM_PLAN_SETUP_KEY,
+  PLATFORM_PLAN_STORAGE_KEY,
+  platformPlanState,
+  preflightVisualAddition,
+} from './platformPlanModel.mjs';
+import { PlatformPlanDialog } from './components/dialogs/PlatformPlanDialog.mjs';
 
 const initialNodes = [];
 
@@ -182,10 +190,13 @@ function AppCanvas() {
   const [theme, setTheme] = useState('light');
   const [autoSubmit, setAutoSubmit] = useState(false);
   const [plan, setPlan] = useState('free');
+  const [platformCapability, setPlatformCapability] = useState(() => normalizePlatformCapability({}, new URLSearchParams(location.search).get('destination') || 'ChatGPT'));
+  const [platformSetupLoaded, setPlatformSetupLoaded] = useState(false);
+  const [needsPlatformSetup, setNeedsPlatformSetup] = useState(false);
   const [historyConfig, setHistoryConfig] = useState({ autoDeleteHours: 24 });
   const [persistentHistory, setPersistentHistory] = useState([]);
   const [gestureOperations, setGestureOperations] = useState([]);
-  const [platformName, setPlatformName] = useState('ChatGPT');
+  const [platformName, setPlatformName] = useState(() => new URLSearchParams(location.search).get('destination') || 'ChatGPT');
   const [cueAnimation, setCueAnimation] = useState(null); // null | { phase, nodeRects, submitRef }
   const fileInput = useRef(null);
   const zipInput = useRef(null);
@@ -194,9 +205,16 @@ function AppCanvas() {
   const flow = useReactFlow();
   const params = useMemo(() => new URLSearchParams(location.search), []);
   const sourceTabId = Number(params.get('sourceTab')) || null;
+  const referencePolicy = useMemo(() => effectiveReferenceLimit({ viscuePlan: plan, capability: platformCapability }), [plan, platformCapability]);
 
   usePersistentWorkspace(nodes, edges, gestureOperations, setNodes, setEdges, setGestureOperations);
   useEffect(() => { chromeMessage({ type: 'health' }).then(setHealth); }, []);
+  useEffect(() => {
+    Promise.resolve(chromeMessage({ type: 'account-get' })).then(response => {
+      const serverPlan = response?.ok && response?.data?.plan;
+      setPlan(['free', 'pro', 'plus'].includes(serverPlan) ? serverPlan : 'free');
+    }).catch(() => setPlan('free'));
+  }, []);
   useEffect(() => {
     chromeMessage({ type: 'active-context', tabId: sourceTabId }).then(res => {
       if (res?.context?.platform) setPlatformName(res.context.platform);
@@ -220,13 +238,14 @@ function AppCanvas() {
   
   useEffect(() => {
     const load = globalThis.chrome?.storage?.local
-      ? new Promise(resolve => chrome.storage.local.get(['viscue-history-log', 'viscue-history-config', 'viscue-theme', 'viscue-auto-submit', 'viscue-plan'], resolve))
+      ? new Promise(resolve => chrome.storage.local.get(['viscue-history-log', 'viscue-history-config', 'viscue-theme', 'viscue-auto-submit', PLATFORM_PLAN_STORAGE_KEY, PLATFORM_PLAN_SETUP_KEY], resolve))
       : Promise.resolve({
           'viscue-history-log': JSON.parse(localStorage.getItem('viscue-history-log') || '[]'),
           'viscue-history-config': JSON.parse(localStorage.getItem('viscue-history-config') || '{"autoDeleteHours":24}'),
           'viscue-theme': localStorage.getItem('viscue-theme') || 'light',
           'viscue-auto-submit': JSON.parse(localStorage.getItem('viscue-auto-submit') || 'false'),
-          'viscue-plan': JSON.parse(localStorage.getItem('viscue-plan') || '"free"')
+          [PLATFORM_PLAN_STORAGE_KEY]: JSON.parse(localStorage.getItem(PLATFORM_PLAN_STORAGE_KEY) || 'null'),
+          [PLATFORM_PLAN_SETUP_KEY]: JSON.parse(localStorage.getItem(PLATFORM_PLAN_SETUP_KEY) || 'false')
         });
 
     load.then(result => {
@@ -234,7 +253,10 @@ function AppCanvas() {
       setHistoryConfig(config);
       setTheme(result['viscue-theme'] || 'light');
       setAutoSubmit(Boolean(result['viscue-auto-submit']));
-      setPlan(['free', 'pro', 'plus'].includes(result['viscue-plan']) ? result['viscue-plan'] : 'free');
+      const platformState = platformPlanState(result, platformName);
+      setPlatformCapability(platformState.capability);
+      setNeedsPlatformSetup(platformState.needsSetup);
+      setPlatformSetupLoaded(true);
       
       const log = result['viscue-history-log'] || [];
       const cutoff = Date.now() - (config.autoDeleteHours * 60 * 60 * 1000);
@@ -251,6 +273,25 @@ function AppCanvas() {
       }
     });
   }, []);
+
+  const savePlatformPlan = useCallback(async capability => {
+    const normalized = normalizePlatformCapability(capability, platformName);
+    if (globalThis.chrome?.storage?.local) {
+      await chrome.storage.local.set({ [PLATFORM_PLAN_STORAGE_KEY]: normalized, [PLATFORM_PLAN_SETUP_KEY]: true });
+    } else {
+      localStorage.setItem(PLATFORM_PLAN_STORAGE_KEY, JSON.stringify(normalized));
+      localStorage.setItem(PLATFORM_PLAN_SETUP_KEY, 'true');
+    }
+    setPlatformCapability(normalized);
+    setNeedsPlatformSetup(false);
+  }, [platformName]);
+
+  const ensureVisualCapacity = useCallback((candidates, currentNodes = nodes) => {
+    const decision = preflightVisualAddition({ nodes: currentNodes, candidates, limit: referencePolicy.limit });
+    if (decision.ok) return true;
+    setResult({ error: `Visual reference limit reached (${decision.current}/${decision.limit}). Change your AI platform plan in Settings or remove a reference.` });
+    return false;
+  }, [nodes, referencePolicy.limit]);
 
   const saveToPersistentHistory = useCallback((currentNodes, currentEdges, currentGestureOperations = gestureOperations) => {
     setPersistentHistory(prev => {
@@ -430,7 +471,6 @@ function AppCanvas() {
   }, [setNodes, snapshot]);
 
   const onCopy = useCallback(id => {
-    snapshot();
     const parent = nodes.find(n => n.id === id);
     if (!parent) return;
     const newId = crypto.randomUUID();
@@ -439,8 +479,10 @@ function AppCanvas() {
       position: { x: parent.position.x + 40, y: parent.position.y + 40 }, selected: true,
       data: { ...parent.data, strokes: [], cueAnchors: [], targetAnchors: [], motion: null }
     };
+    if (parent.type === 'asset' && !ensureVisualCapacity([newNode])) return;
+    snapshot();
     setNodes(items => [...items.map(n => ({ ...n, selected: false })), newNode]);
-  }, [nodes, setNodes, snapshot]);
+  }, [ensureVisualCapacity, nodes, setNodes, snapshot]);
 
   const onClose = useCallback(id => {
     setNodes(items => items.map(n => n.id === id ? { ...n, selected: false } : n));
@@ -546,6 +588,7 @@ function AppCanvas() {
       setResult({ error: 'Play or load the video first, then choose Extract frame.' });
       return;
     }
+    if (!ensureVisualCapacity([{ id: 'prospective-video-frame', type: 'asset', data: { kind: 'image', provenance: { parentId: id, detached: false } } }])) return;
     setBusy(true);
     try {
       const frame = await captureVideoFrame(video);
@@ -576,9 +619,10 @@ function AppCanvas() {
     } finally {
       setBusy(false);
     }
-  }, [nodes, setNodes, snapshot, setDialog]);
+  }, [ensureVisualCapacity, nodes, setNodes, snapshot, setDialog]);
 
   const extractSelection = useCallback(async (id, url) => {
+    if (!ensureVisualCapacity([{ id: 'prospective-webpage-selection', type: 'asset', data: { kind: 'image', provenance: { parentId: id, detached: false } } }])) return;
     try {
       setBusy(true);
       const normalized = normalizeUrl(url);
@@ -802,7 +846,7 @@ function AppCanvas() {
     } finally {
       setBusy(false);
     }
-  }, [nodes, setNodes, snapshot]);
+  }, [ensureVisualCapacity, nodes, setNodes, snapshot]);
 
   const onToggleEdgeInstruction = useCallback((id) => {
     snapshot();
@@ -930,17 +974,25 @@ function AppCanvas() {
   
   async function onFiles(event) {
     const files = [...event.target.files]; if (!files.length) return;
-    snapshot();
-    const center = flow.screenToFlowPosition({ x: innerWidth / 2, y: innerHeight / 2 });
-    const additions = await Promise.all(files.map(async (file, index) => {
-      const dataUrl = await fileToDataUrl(file);
+    const additionsMeta = files.map(file => {
       let kind = fileKind.current || 'document';
       if (!fileKind.current) {
         if (file.type.startsWith('image/')) kind = 'image';
         else if (file.type.startsWith('video/')) kind = 'video';
       }
+      return { id: crypto.randomUUID(), kind };
+    });
+    if (!ensureVisualCapacity(additionsMeta.map(item => ({ id: item.id, type: 'asset', data: { kind: item.kind } })))) {
+      event.target.value = '';
+      return;
+    }
+    snapshot();
+    const center = flow.screenToFlowPosition({ x: innerWidth / 2, y: innerHeight / 2 });
+    const additions = await Promise.all(files.map(async (file, index) => {
+      const dataUrl = await fileToDataUrl(file);
+      const { id, kind } = additionsMeta[index];
       return {
-        id: crypto.randomUUID(), type: 'asset', position: { x: center.x - 180 + index * 36, y: center.y - 130 + index * 36 },
+        id, type: 'asset', position: { x: center.x - 180 + index * 36, y: center.y - 130 + index * 36 },
         data: { kind, name: file.name, mime: file.type, dataUrl, hash: await digest(dataUrl), role: 'Reference', strokes: [], cueAnchors: [], targetAnchors: [] },
       };
     }));
@@ -983,28 +1035,32 @@ function AppCanvas() {
     e.preventDefault();
     const files = [...(e.dataTransfer?.files || [])];
     if (!files.length) return;
+    const additionsMeta = files.map(file => ({
+      id: crypto.randomUUID(),
+      kind: file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : 'document',
+    }));
+    if (!ensureVisualCapacity(additionsMeta.map(item => ({ id: item.id, type: 'asset', data: { kind: item.kind } })))) return;
     snapshot();
     
     const position = flow.screenToFlowPosition({ x: e.clientX, y: e.clientY });
     
     const additions = await Promise.all(files.map(async (file, index) => {
       const dataUrl = await fileToDataUrl(file);
-      let kind = 'document';
-      if (file.type.startsWith('image/')) kind = 'image';
-      else if (file.type.startsWith('video/')) kind = 'video';
+      const { id, kind } = additionsMeta[index];
       
       return {
-        id: crypto.randomUUID(), type: 'asset', 
+        id, type: 'asset', 
         position: { x: position.x - 180 + index * 36, y: position.y - 130 + index * 36 },
         data: { kind, name: file.name, mime: file.type, dataUrl, hash: await digest(dataUrl), role: 'Reference', strokes: [], cueAnchors: [], targetAnchors: [] },
       };
     }));
     setNodes(items => [...items, ...additions]);
     setMode('select');
-  }, [flow, snapshot, setNodes, setMode]);
+  }, [ensureVisualCapacity, flow, snapshot, setNodes, setMode]);
   
   async function addWebpage(url) {
     if (!url) return;
+    if (!ensureVisualCapacity([{ id: 'prospective-webpage', type: 'asset', data: { kind: 'webpage' } }])) return;
     const normalized = normalizeUrl(url);
     const host = safeHost(normalized);
     snapshot();
@@ -1057,6 +1113,7 @@ function AppCanvas() {
   }
   
   async function capturePage() {
+    if (!ensureVisualCapacity([{ id: 'prospective-page-capture', type: 'asset', data: { kind: 'image' } }])) return;
     setOpenChromeMenu(null); setBusy(true);
     const response = await chromeMessage({ type: 'capture-page', tabId: sourceTabId });
     setBusy(false);
@@ -1201,7 +1258,7 @@ function AppCanvas() {
         media[item.id] = { kind: 'video', dataUrl: node.data.dataUrl, temporalRange: item.temporalRange || null };
       }
     }
-    const response = await chromeMessage({ type: 'compile', payload: buildVicsucRequest(graph, media, { plan }, sessionCtx) });
+    const response = await chromeMessage({ type: 'compile', payload: buildVicsucRequest(graph, media, { plan }, sessionCtx, platformCapability) });
     if (!response?.ok) { setBusy(false); onPhase?.('error'); setResult({ error: response?.error || 'Compilation failed.' }); setCueAnimation(null); return; }
 
     onPhase?.('attaching');
@@ -1341,6 +1398,14 @@ function AppCanvas() {
       <input ref={fileInput} className="hidden-input" type="file" multiple onChange={onFiles} />
       <input ref={zipInput} className="hidden-input" type="file" accept=".zip,application/zip" onChange={onZipImport} />
 
+      {platformSetupLoaded && needsPlatformSetup && (
+        <PlatformPlanDialog
+          platformName={platformName}
+          initialCapability={platformCapability}
+          viscuePlan={plan}
+          onSave={savePlatformPlan}
+        />
+      )}
       {dialog?.type === 'webpage' && <WebDialog close={() => setDialog(null)} submit={addWebpage} />}
       {dialog?.type === 'crop' && (
         <CropDialog 
@@ -1363,8 +1428,9 @@ function AppCanvas() {
           node={nodes.find(n => n.id === dialog.id)} 
           close={() => setDialog(null)} 
           extractPage={(dataUrl, pageNum, provenanceMeta) => {
-            snapshot();
             const parent = nodes.find(n => n.id === dialog.id);
+            if (!ensureVisualCapacity([{ id: 'prospective-document-page', type: 'asset', data: { kind: 'image', provenance: { parentId: parent?.id || dialog.id, detached: false } } }])) return;
+            snapshot();
             const point = flow.screenToFlowPosition({ x: innerWidth / 2, y: innerHeight / 2 });
             const childId = crypto.randomUUID();
             const provenance = {
@@ -1419,7 +1485,6 @@ function AppCanvas() {
             items={persistentHistory}
             historyConfig={historyConfig}
             onHistoryConfigChange={updateHistoryConfig}
-            onClearAll={() => { clearPersistentHistory(); setDialog(null); }}
             onDelete={(id) => {
               setPersistentHistory(prev => {
                 const next = prev.filter(item => item.id !== id);
@@ -1458,7 +1523,7 @@ function AppCanvas() {
           />
         </div>
       )}
-      {dialog?.type === 'send' && <SendDialog graph={buildGraph()} plan={plan} review={dialog.review} busy={busy} submit={dialog.submit} setSubmit={submit => setDialog({ ...dialog, submit })} close={() => !busy && setDialog(null)} action={() => compileAndSend(dialog.submit)} />}
+      {dialog?.type === 'send' && <SendDialog graph={buildGraph()} plan={plan} referencePolicy={referencePolicy} review={dialog.review} busy={busy} submit={dialog.submit} setSubmit={submit => setDialog({ ...dialog, submit })} close={() => !busy && setDialog(null)} action={() => compileAndSend(dialog.submit)} />}
       {dialog?.type === 'host-closed' && <HostClosedDialog saveAndClose={() => { saveToPersistentHistory(nodes, edges); window.close(); }} discardAndClose={() => window.close()} />}
       {!cueAnimation && busy && <div className="busy-chip"><SpinnerGap className="spin" size={18} /> Working…</div>}
       {cueAnimation && (

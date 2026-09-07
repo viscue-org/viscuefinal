@@ -358,11 +358,12 @@ export function ConfirmDialog({ title, body, confirm, close, action }) {
   );
 }
 
-export function SendDialog({ graph, plan = 'free', review, busy, submit, setSubmit, close, action }) { 
+export function SendDialog({ graph, plan = 'free', review, busy, submit, setSubmit, close, action, referencePolicy }) { 
   const assets = graph.items.filter(item => item.kind !== 'note').length; 
   const annotations = graph.cues.length; 
   const motions = graph.motions.length; 
-  const limits = { free: 2, pro: 10, plus: 20 };
+  const defaultLimits = { free: 2, pro: 10, plus: 20 };
+  const effectiveLimit = referencePolicy?.limit ?? defaultLimits[plan] ?? 2;
   const selected = review?.selected_references?.length;
   const trimmed = review?.trimmed_references || [];
   return (
@@ -376,7 +377,7 @@ export function SendDialog({ graph, plan = 'free', review, busy, submit, setSubm
       </div>
       <div className="vicsuc-plan-summary">
         <strong>{plan[0].toUpperCase() + plan.slice(1)} plan</strong>
-        <span>{review ? `${selected} selected of ${limits[plan]} allowed` : `Up to ${limits[plan]} physical references`}</span>
+        <span>{review ? `${selected} selected of ${effectiveLimit} allowed` : `Up to ${effectiveLimit} physical references`}</span>
       </div>
       {review && <div className="vicsuc-stage-review" aria-label="VICSUC execution stages">
         {review.stages?.map(stage => <div key={stage.name} className={`stage-${stage.status}`}><span>{stage.name.replaceAll('.', ' ')}</span><strong>{stageLabel(stage)}</strong></div>)}
