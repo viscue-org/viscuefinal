@@ -38,7 +38,12 @@ export function requiredReferenceIds(graph = {}) {
 }
 
 export function enforceReferencePlan(graph = {}, planName = 'free', scores = new Map()) {
-  const plan = PLAN_POLICY[String(planName).toLowerCase()] || PLAN_POLICY.free;
+  const explicitPolicy = planName && typeof planName === 'object' ? planName : null;
+  const normalizedPlanName = explicitPolicy?.plan || String(planName).toLowerCase();
+  const configuredLimit = explicitPolicy?.limit;
+  const plan = Number.isInteger(configuredLimit) && configuredLimit > 0
+    ? { physicalReferences: configuredLimit }
+    : (PLAN_POLICY[normalizedPlanName] || PLAN_POLICY.free);
   const itemIds = new Set((graph.items || []).map(item => item.id));
   const requiredIds = requiredReferenceIds(graph);
   const requiredSet = new Set(requiredIds);
@@ -61,8 +66,9 @@ export function enforceReferencePlan(graph = {}, planName = 'free', scores = new
   if (requiredIds.length > plan.physicalReferences) {
     return {
       status: 'blocked',
-      plan: String(planName).toLowerCase(),
+      plan: normalizedPlanName,
       limit: plan.physicalReferences,
+      constrainedBy: explicitPolicy?.constrainedBy || 'viscue',
       requiredIds,
       selected: [],
       trimmed: references.filter(item => !item.required),
@@ -75,8 +81,9 @@ export function enforceReferencePlan(graph = {}, planName = 'free', scores = new
   const selectedIds = new Set(selected.map(item => item.id));
   return {
     status: 'ok',
-    plan: String(planName).toLowerCase(),
+    plan: normalizedPlanName,
     limit: plan.physicalReferences,
+    constrainedBy: explicitPolicy?.constrainedBy || 'viscue',
     requiredIds,
     selected,
     trimmed: references.filter(item => !selectedIds.has(item.id)),

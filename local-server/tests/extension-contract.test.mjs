@@ -9,8 +9,15 @@ test('buildVicsucRequest includes a normalized plan and only visual perception m
     note_1: { kind: 'note', dataUrl: 'not-visual' },
     absent: { kind: 'image', dataUrl: 'data:image/jpeg;base64,Yg==' },
   };
-  const request = buildVicsucRequest(graph, media, { plan: 'PRO' }, { chatId: 'chat:1' });
+  const request = buildVicsucRequest(graph, media, { plan: 'PRO' }, { chatId: 'chat:1' }, { platform: 'Claude', plan: 'MAX' });
   assert.equal(request.profile.plan, 'pro');
+  assert.deepEqual(request.platformCapability, {
+    schemaVersion: 1,
+    registryVersion: '2026-09-07',
+    platform: 'claude',
+    plan: 'max',
+    confidence: 'verified',
+  });
   assert.deepEqual(Object.keys(request.media), ['image_1']);
   assert.equal(request.session.chatId, 'chat:1');
 });

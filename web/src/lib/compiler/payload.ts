@@ -22,11 +22,12 @@ const schema = z.object({
   graph: graph.optional(), prompt: text.optional(),
   media: z.record(z.object({ kind: z.string(), dataUrl: z.string().max(4_000_000) })).default({}),
   session: z.object({ chatId: z.string().max(1000).optional(), destinationFingerprint: z.string().max(2000).optional() }).default({}),
+  platformCapability: z.object({ platform: z.string().max(100), plan: z.string().max(100) }).passthrough().default({ platform: 'chatgpt', plan: 'free' }),
 }).refine(value => value.graph || value.prompt?.trim(), 'A graph or instruction is required');
 
 export function parseCompilePayload(value: unknown) {
   const payload = schema.parse(value);
   const normalized = payload.graph ?? { items: [{ id: 'instruction', kind: 'note' as const, name: 'Instruction', text: payload.prompt!, intentional: true }], cues: [], relations: [], motions: [], operations: [] };
   if (new Set(normalized.items.map(item => item.id)).size !== normalized.items.length) throw new Error('Duplicate item IDs');
-  return { graph: normalized, media: payload.media, session: payload.session };
+  return { graph: normalized, media: payload.media, session: payload.session, platformCapability: payload.platformCapability };
 }

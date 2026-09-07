@@ -133,6 +133,20 @@ describe('POST /api/compile/vicsuc', () => {
     expect(releaseCue).toHaveBeenCalledWith(expect.anything(), 'r');
   });
 
+  it('uses the lower destination capability even for a paid Viscue reservation', async () => {
+    vi.mocked(reserveCue).mockResolvedValue({ reservationId: 'r', allowance: 28, consumed: 0, reserved: 1, remaining: 27, resetsAt: '2026-09-07T00:00:00Z' });
+    const response = await POST(new Request('http://localhost/api/compile/vicsuc', {
+      method: 'POST',
+      body: JSON.stringify({
+        platformCapability: { platform: 'perplexity', plan: 'max' },
+        graph: { items: ['a', 'b', 'c', 'd', 'e'].map(id => ({ id, name: id, kind: 'image', intentional: true, preserved: true })) },
+      }),
+    }) as never);
+    expect(response.status).toBe(422);
+    expect(commitCue).not.toHaveBeenCalled();
+    expect(releaseCue).toHaveBeenCalledWith(expect.anything(), 'r');
+  });
+
   it('does not reuse a client-controlled quota reservation key for a new compilation', async () => {
     vi.mocked(reserveCue).mockResolvedValue({ reservationId: 'r', allowance: 9, consumed: 0, reserved: 1, remaining: 8, resetsAt: '2026-09-07T00:00:00Z' });
     for (let i = 0; i < 2; i++) await POST(new Request('http://localhost/api/compile/vicsuc', { method: 'POST', body: JSON.stringify({ prompt: 'test', requestId: 'reuse-forever' }) }) as never);

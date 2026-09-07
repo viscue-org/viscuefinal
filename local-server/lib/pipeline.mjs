@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { createStage } from './contracts.mjs';
 import { enforceReferencePlan } from './policy.mjs';
 import { buildCanonicalBrief, verifyProtectedFacts } from './brief.mjs';
+import { effectiveReferenceLimit } from './platform-capabilities.mjs';
 
 const hash = value => crypto.createHash('sha256').update(String(value || '')).digest('hex');
 
@@ -45,8 +46,9 @@ async function collectEvidence(selected, media, bedrock, stages) {
 export async function runPipeline(request = {}, deps = {}) {
   const graph = request.graph || {};
   const stages = [];
-  const policy = enforceReferencePlan(graph, request.profile?.plan || 'free', explicitScores(graph));
-  stages.push(createStage('plan.selection', policy.status, { summary: policy.summary, limit: policy.limit, required_ids: policy.requiredIds }));
+  const referencePolicy = effectiveReferenceLimit({ viscuePlan: request.profile?.plan, capability: request.platformCapability });
+  const policy = enforceReferencePlan(graph, { ...referencePolicy, plan: request.profile?.plan || 'free' }, explicitScores(graph));
+  stages.push(createStage('plan.selection', policy.status, { summary: policy.summary, limit: policy.limit, constrained_by: policy.constrainedBy, required_ids: policy.requiredIds }));
   if (policy.status === 'blocked') {
     return { ok: false, status: 'blocked', error: policy.summary, stages, selected_references: [], trimmed_references: policy.trimmed };
   }

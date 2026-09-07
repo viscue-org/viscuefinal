@@ -35,3 +35,12 @@ test('ranks equal references by explicit score then workspace order', () => {
   ]);
   assert.deepEqual(ranked.map(item => item.id), ['a', 'c', 'b']);
 });
+
+test('uses an explicit effective limit without trusting a client plan name', () => {
+  const result = enforceReferencePlan(graphWithAssets(5), { limit: 3, plan: 'plus', constrainedBy: 'destination' });
+  assert.equal(result.status, 'ok');
+  assert.equal(result.limit, 3);
+  assert.equal(result.selected.length, 3);
+  assert.equal(result.trimmed.length, 2);
+  assert.equal(result.constrainedBy, 'destination');
+});
