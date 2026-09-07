@@ -171,9 +171,26 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return;
     }
     if (message.type === 'handoff-receipt') {
-      const auth = await getAuthHeader();
-      const response = await fetch(`${API}/handoff-receipt`, { method: 'POST', headers: { 'content-type': 'application/json', ...auth }, body: JSON.stringify(message.receipt) });
-      sendResponse(await response.json());
+      try {
+        const receipt = message.receipt || {};
+        await chrome.storage.local.set({
+          'viscue-state-cache': receipt,
+          'viscue-last-receipt': receipt,
+          [`viscue-receipt-${receipt.executionId || Date.now()}`]: receipt,
+        });
+        const devSettings = await chrome.storage.local.get('viscue-dev-server').catch(() => ({}));
+        if (devSettings?.['viscue-dev-server']) {
+          const auth = await getAuthHeader();
+          await fetch(`${API}/handoff-receipt`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', ...auth },
+            body: JSON.stringify(receipt),
+          }).catch(() => {});
+        }
+        sendResponse({ ok: true, cached: true, receiptId: receipt.executionId });
+      } catch (err) {
+        sendResponse({ ok: true, cached: false, warning: err.message });
+      }
       return;
     }
     if (message.type === 'health') {

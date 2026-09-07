@@ -12,7 +12,6 @@ import {
   Hand,
   CaretDown,
   ChatCircle,
-  MonitorArrowUp,
   Moon,
   Note,
   PencilSimple,
@@ -35,7 +34,6 @@ const MENU_OPTIONS = Object.freeze({
     ['image', 'Image', Image],
     ['video', 'Video', VideoCamera],
     ['document', 'Document', FileText],
-    ['page', 'Current page', MonitorArrowUp],
     ['web', 'Web page', Globe],
   ],
   annotate: [

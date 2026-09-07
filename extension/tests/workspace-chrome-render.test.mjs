@@ -45,9 +45,10 @@ test('destination is a text-only pill without decorative icons', () => {
 
 test('assets state exposes every supported source', () => {
   const html = renderDock({ openMenu: 'assets' });
-  for (const name of ['Image', 'Video', 'Document', 'Current page', 'Web page']) {
+  for (const name of ['Image', 'Video', 'Document', 'Web page']) {
     assert.match(html, new RegExp(`aria-label="${name}"`));
   }
+  assert.doesNotMatch(html, /aria-label="Current page"/);
 });
 
 test('undo and redo expose disabled state independently', () => {

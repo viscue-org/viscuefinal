@@ -1264,7 +1264,8 @@ function AppCanvas() {
     onPhase?.('attaching');
     const attachmentById = new Map((response.attachments || []).map(item => [item.id, item]));
     const attachments = await Promise.all(nodes.filter(node => node.type === 'asset' && node.data.dataUrl && attachmentById.has(node.id)).map(async node => ({ id: node.id, name: node.data.name, mime: node.data.mime, stateHash: attachmentById.get(node.id).stateHash, dataUrl: node.data.kind === 'image' && node.data.crop ? await renderCropDataUrl(node.data.dataUrl, node.data.crop) : node.data.dataUrl })));
-    const handoff = await chromeMessage({ type: 'handoff', tabId: sourceTabId, prompt: response.final_prompt, attachments, submit, executionId: response.execution_id || response.executionId, destinationFingerprint: response.destination_fingerprint, promptHash: response.prompt_hash });
+    const promptHash = response.prompt_hash || response.promptHash || response.data?.promptHash;
+    const handoff = await chromeMessage({ type: 'handoff', tabId: sourceTabId, prompt: response.final_prompt, attachments, submit, executionId: response.execution_id || response.executionId, destinationFingerprint: response.destination_fingerprint, promptHash });
     setBusy(false);
     if (!handoff?.ok) { onPhase?.('error'); setResult({ error: handoff?.error || 'The destination did not accept the intent.' }); setCueAnimation(null); return; }
     const receipt = await chromeMessage({ type: 'handoff-receipt', receipt: handoff });

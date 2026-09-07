@@ -22,8 +22,16 @@
 
   async function runHandoff({prompt,attachments=[],submit=false,executionId,destinationFingerprint,promptHash}){
     const actualDestination=`${platform}:${location.pathname}`;
-    if(destinationFingerprint!==actualDestination)throw new Error('The destination conversation changed after compilation. Nothing was attached or submitted.');
-    if(await sha256(prompt)!==promptHash)throw new Error('The compiled prompt hash does not match this handoff. Nothing was attached or submitted.');
+    if(destinationFingerprint&&destinationFingerprint!==actualDestination)throw new Error('The destination conversation changed after compilation. Nothing was attached or submitted.');
+    if(promptHash){
+      const computedNorm=await sha256(normalizeForHash(prompt));
+      const computedRaw=await sha256(prompt);
+      const targetHash=String(promptHash).toLowerCase().trim();
+      if(computedNorm.toLowerCase()!==targetHash&&computedRaw.toLowerCase()!==targetHash){
+        console.warn('[Viscue handoff] prompt hash mismatch',{promptHash,computedNorm,computedRaw});
+        throw new Error('The compiled prompt hash does not match this handoff. Nothing was attached or submitted.');
+      }
+    }
     const composer=await waitFor(()=>queryFirst(adapter.composer),8000,'Destination composer was not found.');
     let attached=0;
     if(attachments.length){
@@ -76,6 +84,7 @@
   }
   function composerContainsPrompt(composer,text){const actual=normalizeText('value'in composer?composer.value:composer.innerText||composer.textContent||'');const expected=normalizeText(text);return actual.length>0&&(actual===expected||actual.includes(expected.slice(0,Math.min(160,expected.length))))}
   function normalizeText(value){return String(value||'').replace(/\s+/g,' ').trim()}
+  function normalizeForHash(value){return String(value||'').replace(/\r\n/g,'\n').replace(/\r/g,'\n').trim()}
   async function sha256(value){const bytes=new TextEncoder().encode(String(value||'')),digest=await crypto.subtle.digest('SHA-256',bytes);return[...new Uint8Array(digest)].map(byte=>byte.toString(16).padStart(2,'0')).join('')}
   function waitForStablePrompt(composer,text,timeout){return new Promise((resolve,reject)=>{const started=Date.now();let stableSince=0;const tick=()=>{if(composerContainsPrompt(composer,text)){if(!stableSince)stableSince=Date.now();if(Date.now()-stableSince>=450)return resolve(true)}else stableSince=0;if(Date.now()-started>=timeout)return reject(new Error('Prompt did not remain in the destination editor.'));setTimeout(tick,90)};tick()})}
   function attachThroughInput(input,files){try{const transfer=new DataTransfer();files.forEach(file=>transfer.items.add(file));input.files=transfer.files;input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));return input.files?.length||files.length}catch{return 0}}

@@ -159,9 +159,19 @@
   background: transparent;
 }
 
+.workspace-dock__cue span {
+  display: inline-block;
+  transform-origin: center center;
+  transition: transform 0.16s ease;
+}
+
 .workspace-dock__cue:hover:not(:disabled) {
   background: var(--workspace-steel-deep);
   transform: translateY(-1px);
+}
+
+.workspace-dock__cue:hover:not(:disabled) span {
+  animation: visEyeBlinkSubtle 3.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 .workspace-dock__minimize {
@@ -869,4 +879,19 @@
   transform: translateY(0);
   font-weight: 600;
   transition: opacity 0.2s ease;
+}
+
+@keyframes visEyeBlinkSubtle {
+  0%, 86%, 100% {
+    transform: scaleY(1) scaleX(1);
+    filter: brightness(1);
+  }
+  90% {
+    transform: scaleY(0.12) scaleX(1.05);
+    filter: brightness(1.15);
+  }
+  94% {
+    transform: scaleY(1) scaleX(1);
+    filter: brightness(1);
+  }
 }

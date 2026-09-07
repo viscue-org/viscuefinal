@@ -5,11 +5,6 @@ import markOrange from '../assets/viscue-mark-orange.png';
 import usageHero from '../assets/viscue-usage-hero.png';
 import person from '../assets/onboarding-person.png';
 import aiGrid from '../assets/onboarding-ai-grid.png';
-import demoWorkspace from '../assets/demo-01-workspace.png';
-import demoAssets from '../assets/demo-02-assets.png';
-import demoReference from '../assets/demo-03-reference.png';
-import demoAnnotate from '../assets/demo-04-annotate.png';
-import demoText from '../assets/demo-05-text.png';
 import {
   SlidersHorizontal,
   UserCircle,
@@ -30,7 +25,6 @@ import { PlatformPlanSettings } from './components/ui/PlatformPlanSettings.mjs';
 import './popup.css';
 
 const ONBOARDING_KEY = 'viscue-onboarding-complete';
-const DEMO_FRAMES = [demoWorkspace, demoAssets, demoReference, demoAnnotate, demoText];
 
 const readSetting = (key, fallback) => {
   if (globalThis.chrome?.storage?.local) {
@@ -72,6 +66,76 @@ function Eye({ children, className = '', blinking, label, onClick }) {
   );
 }
 
+function LiveWorkspaceDemo() {
+  return (
+    <div className="live-demo-workspace" aria-label="Interactive live preview of Viscue workspace">
+      <div className="live-demo-dest">
+        <span className="live-demo-dest__pill">ChatGPT</span>
+        <div className="live-demo-dest__badge">
+          <span className="live-demo-pulse" />
+          <span>Intent Attached</span>
+        </div>
+      </div>
+
+      <div className="live-demo-canvas">
+        <div className="live-demo-card">
+          <div className="live-demo-card__header">
+            <span className="live-demo-card__dot red" />
+            <span className="live-demo-card__dot yellow" />
+            <span className="live-demo-card__dot green" />
+            <span className="live-demo-card__title">Checkout Modal</span>
+          </div>
+          <div className="live-demo-card__body">
+            <div className="live-demo-card__row">
+              <span className="live-demo-card__line long" />
+              <span className="live-demo-card__line short" />
+            </div>
+            <div className="live-demo-target-btn">
+              Pay $49.00
+              <div className="live-demo-target-ring" />
+            </div>
+          </div>
+        </div>
+
+        <svg className="live-demo-svg" viewBox="0 0 160 90" fill="none">
+          <path d="M 72 48 C 92 32, 102 28, 114 28" stroke="#DF5360" strokeWidth="2" strokeDasharray="3 3" />
+          <polygon points="115,25 123,28 115,31" fill="#DF5360" />
+        </svg>
+
+        <div className="live-demo-note">
+          <span className="live-demo-note__pin" />
+          <div className="live-demo-note__text">
+            <strong>Make rounded</strong>
+            <span>with #3B82F6</span>
+          </div>
+        </div>
+
+        <div className="live-demo-scanline" />
+      </div>
+
+      <div className="live-demo-dock">
+        <div className="live-demo-dock__rail">
+          <span className="live-demo-dock__icon active" title="Select">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M3 3l7 18 3-7 7-3L3 3z"/></svg>
+          </span>
+          <span className="live-demo-dock__icon" title="Add Assets">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M12 5v14M5 12h14"/></svg>
+          </span>
+          <span className="live-demo-dock__icon" title="Annotate">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>
+          </span>
+          <span className="live-demo-dock__icon" title="Text Note">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg>
+          </span>
+        </div>
+        <div className="live-demo-dock__cue">
+          <span>Cue</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Scene({ scene, blinking, onAdvance, onStart }) {
   if (scene === 0) {
     return (
@@ -100,12 +164,7 @@ function Scene({ scene, blinking, onAdvance, onStart }) {
       <section className="onboarding-scene scene-demo" aria-label="Show AI what you really mean">
         <h2>Show AI what you<br />really mean.</h2>
         <Eye blinking={blinking} className="demo-eye" label="Continue to supported AI tools" onClick={onAdvance}>
-          <span className="demo-recording" aria-label="Recording of the real Viscue workspace">
-            {DEMO_FRAMES.map((frame, index) => (
-              <img key={frame} src={frame} alt="" style={{ '--frame-index': index }} />
-            ))}
-            <span className="recording-badge"><span /> Actual Viscue flow</span>
-          </span>
+          <LiveWorkspaceDemo />
         </Eye>
       </section>
     );
@@ -136,7 +195,14 @@ function Scene({ scene, blinking, onAdvance, onStart }) {
 }
 
 function Onboarding({ onStart }) {
-  const [state, setState] = useState(createOnboardingState);
+  const [state, setState] = useState(() => {
+    const params = new URLSearchParams(globalThis.location?.search || '');
+    const sceneParam = params.get('scene');
+    if (sceneParam !== null && !isNaN(Number(sceneParam))) {
+      return { scene: Number(sceneParam), completed: false };
+    }
+    return createOnboardingState();
+  });
   const [blinking, setBlinking] = useState(false);
   const reducedMotion = useReducedMotion();
 
@@ -487,6 +553,11 @@ function Popup() {
   const [onboardingComplete, setOnboardingComplete] = useState(null);
 
   useEffect(() => {
+    const params = new URLSearchParams(globalThis.location?.search || '');
+    if (params.get('onboarding') === '1' || params.get('scene') !== null) {
+      setOnboardingComplete(false);
+      return;
+    }
     readSetting(ONBOARDING_KEY, false).then(value => setOnboardingComplete(Boolean(value)));
   }, []);
 

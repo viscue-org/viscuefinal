@@ -4,7 +4,8 @@ import { enforceReferencePlan } from './policy.mjs';
 import { buildCanonicalBrief, verifyProtectedFacts } from './brief.mjs';
 import { effectiveReferenceLimit } from './platform-capabilities.mjs';
 
-const hash = value => crypto.createHash('sha256').update(String(value || '')).digest('hex');
+const normalizeForHash = value => String(value || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+const hash = value => crypto.createHash('sha256').update(normalizeForHash(value)).digest('hex');
 
 function explicitScores(graph = {}) {
   const scores = new Map();
