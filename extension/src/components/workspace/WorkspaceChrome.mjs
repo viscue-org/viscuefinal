@@ -3,6 +3,7 @@ import {
   ArrowUUpLeft,
   ArrowUUpRight,
   ArrowsClockwise,
+  BoundingBox,
   Cursor,
   ClockCounterClockwise,
   Eraser,
@@ -38,6 +39,7 @@ const MENU_OPTIONS = Object.freeze({
   ],
   annotate: [
     ['annotate', 'Point', Cursor],
+    ['whole', 'Whole image', BoundingBox],
     ['area', 'Area', Selection],
     ['draw', 'Draw', PencilSimple],
     ['erase', 'Erase', Eraser],

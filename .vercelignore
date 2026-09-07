@@ -7,8 +7,6 @@ web/.next/
 
 # Extension and non-web code
 extension/
-local-server/
-gesture/
 ml/
 ml-runs/
 datasets/

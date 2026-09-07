@@ -6,6 +6,7 @@ import { GestureCapture } from '../../../../gesture/runtime/capture.mjs';
 import { releasePointerCapture } from '../../../../gesture/runtime/acceptance.mjs';
 import { WorkspaceContext } from '../../WorkspaceContext';
 import { AssetMotionControls } from './AssetMotionControls.mjs';
+import { annotationSourcePoint } from '../../utils/annotationTargets.mjs';
 
 export const AssetNode = memo(function AssetNode({ id, data, selected }) {
   const drawing = useRef(null);
@@ -15,7 +16,7 @@ export const AssetNode = memo(function AssetNode({ id, data, selected }) {
   const [videoTimeMs, setVideoTimeMs] = useState(0);
   const updateNodeInternals = useUpdateNodeInternals();
   const context = useContext(WorkspaceContext) || {};
-  const { mode, annotationTool, onAnnotLinkStart, onAnnotLinkMove, onAnnotLinkEnd, onErase, onAreaAnnotate, onStroke, activeAnchors, onMode, onStartMotion, onResetMotion, onCompleteMotion, onCancelMotion, onExplain, onToggleLock, onCopy, onDelete, onClose, onCrop, onExtractFrame, onEditVideo, onExtractSelection, onViewDocument } = context;
+  const { mode, annotationTool, onAnnotLinkStart, onAnnotLinkMove, onAnnotLinkEnd, onErase, onAreaAnnotate, onStroke, activeAnchors, wholeImageSourceId, annotationTargetId, onMode, onStartMotion, onResetMotion, onCompleteMotion, onCancelMotion, onExplain, onToggleLock, onCopy, onDelete, onClose, onCrop, onExtractFrame, onEditVideo, onExtractSelection, onViewDocument } = context;
   
   useEffect(() => { 
     updateNodeInternals(id); 
@@ -32,16 +33,17 @@ export const AssetNode = memo(function AssetNode({ id, data, selected }) {
       videoRef.current.pause();
       point.timeMs = Math.round(videoRef.current.currentTime * 1000);
     }
-    if (annotationTool === 'annotate') {
-      linking.current = { x: point[0], y: point[1], timeMs: point.timeMs, screenStart: { x: event.clientX, y: event.clientY } };
-      onAnnotLinkStart(id, { x: linking.current.x, y: linking.current.y, timeMs: linking.current.timeMs }, linking.current.screenStart);
-      const moveLink = moveEvent => onAnnotLinkMove({ x: moveEvent.clientX, y: moveEvent.clientY });
+    if (annotationTool === 'annotate' || annotationTool === 'whole') {
+      const sourcePoint = annotationSourcePoint(annotationTool, { x: point[0], y: point[1], timeMs: point.timeMs });
+      linking.current = { ...sourcePoint, screenStart: { x: event.clientX, y: event.clientY } };
+      onAnnotLinkStart(id, sourcePoint, linking.current.screenStart);
+      const moveLink = moveEvent => onAnnotLinkMove(id, { x: moveEvent.clientX, y: moveEvent.clientY }, linking.current);
       const endLink = endEvent => {
         const start = linking.current;
         window.removeEventListener('pointermove', moveLink, true);
         window.removeEventListener('pointerup', endLink, true);
         window.removeEventListener('pointercancel', endLink, true);
-        if (start) onAnnotLinkEnd(id, { x: start.x, y: start.y, timeMs: start.timeMs }, { x: endEvent.clientX, y: endEvent.clientY }, start.screenStart);
+        if (start) onAnnotLinkEnd(id, { x: start.x, y: start.y, timeMs: start.timeMs, isWholeAsset: start.isWholeAsset === true }, { x: endEvent.clientX, y: endEvent.clientY }, start.screenStart);
         linking.current = null;
       };
       window.addEventListener('pointermove', moveLink, true);
@@ -137,7 +139,7 @@ export const AssetNode = memo(function AssetNode({ id, data, selected }) {
 
   return (
     <div
-      className={`asset-node ${selected ? 'selected' : ''} ${data.motion?.active ? 'recording-motion' : ''}`}
+      className={`asset-node ${selected ? 'selected' : ''} ${wholeImageSourceId === id ? 'whole-image-source' : ''} ${annotationTargetId === id ? 'annotation-target' : ''} ${data.motion?.active ? 'recording-motion' : ''}`}
       data-testid="asset-node"
     >
       <NodeToolbar className="node-toolbar asset-toolbar" isVisible={selected} position={Position.Top} align="center" offset={8}>

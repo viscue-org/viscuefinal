@@ -1,6 +1,7 @@
 import { signIn, signOut, getSession, getAccessToken, handleWorkspaceAccess } from './auth/session.mjs';
 import { apiFetch } from './api/client.mjs';
 import { VISCUE_WEB_URL } from './api/config.mjs';
+import { isWorkspaceUrl } from './api/workspaceCompletion.mjs';
 
 const API = 'http://127.0.0.1:8787';
 const ONBOARDING_KEY = 'viscue-onboarding-complete';
@@ -195,6 +196,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       } catch (err) {
         sendResponse({ ok: true, cached: false, warning: err.message });
       }
+      return;
+    }
+    if (message.type === 'complete-workspace') {
+      const workspaceTab = sender.tab;
+      if (!workspaceTab?.id || !isWorkspaceUrl(workspaceTab.url, chrome.runtime.getURL(''))) {
+        sendResponse({ ok: false, error: 'Automatic close is limited to the Viscue workspace tab.' });
+        return;
+      }
+      if (message.sourceTabId) {
+        const destination = await chrome.tabs.get(message.sourceTabId).catch(() => null);
+        if (destination?.id) {
+          await chrome.tabs.update(destination.id, { active: true }).catch(() => {});
+          if (destination.windowId) await chrome.windows.update(destination.windowId, { focused: true }).catch(() => {});
+        }
+      }
+      sendResponse({ ok: true });
+      await chrome.tabs.remove(workspaceTab.id).catch(() => {});
       return;
     }
     if (message.type === 'health') {

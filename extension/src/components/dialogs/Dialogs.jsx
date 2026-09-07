@@ -384,7 +384,7 @@ export function SendDialog({ graph, plan = 'free', review, busy, submit, setSubm
         {trimmed.length > 0 && <p><strong>{trimmed.length} optional reference{trimmed.length === 1 ? '' : 's'} trimmed:</strong> {trimmed.map(item => item.name).join(', ')}</p>}
       </div>}
       <div className="sequence">
-        <div><span>1</span><p><strong>Attach references</strong><small>Wait for every upload to finish</small></p></div>
+        <div><span>1</span><p><strong>{assets ? 'Attach references' : 'Text-only intent'}</strong><small>{assets ? 'Wait for every upload to finish' : 'No visual attachment required'}</small></p></div>
         <ArrowElbowRightDown size={18} />
         <div><span>2</span><p><strong>Insert intent</strong><small>Only after references are ready</small></p></div>
         <ArrowElbowRightDown size={18} />

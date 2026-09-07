@@ -27,6 +27,29 @@ test('all provider failures still produce a deterministic prompt with degraded s
   assert.ok(result.stages.every(stage => ['ok', 'degraded', 'skipped'].includes(stage.status)));
 });
 
+test('text-only flow compiles without physical references', async () => {
+  const result = await runPipeline({
+    graph: {
+      destination: 'ChatGPT',
+      items: [
+        { id: 'note_start', kind: 'note', text: 'Start with account creation.', intentional: true },
+        { id: 'note_finish', kind: 'note', text: 'Then show the dashboard.', intentional: true },
+      ],
+      cues: [],
+      relations: [{ type: 'FLOWS_TO', sourceId: 'note_start', targetId: 'note_finish' }],
+      motions: [],
+    },
+    profile: { plan: 'free' },
+  });
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.attachments, []);
+  assert.deepEqual(result.selected_references, []);
+  assert.match(result.final_prompt, /Start with account creation/);
+  assert.match(result.final_prompt, /Then show the dashboard/);
+  assert.match(result.final_prompt, /Flowchart sequence/);
+});
+
 test('required references above the plan block before any provider executes', async () => {
   const request = requestWith(3, 'free');
   request.graph.items.forEach(item => { item.role = 'Preserve'; });

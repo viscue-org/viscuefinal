@@ -759,6 +759,7 @@ textarea:focus-visible {
   opacity: 1 !important; 
   transform: translate(-50%, -50%) !important;
   transition: background-color 120ms ease, border-color 120ms ease !important;
+  pointer-events: none !important;
 }
 .react-flow__node.selected .whole-asset-handle {
   background: rgba(91, 117, 147, 0.04) !important; 
@@ -1775,4 +1776,14 @@ textarea:focus-visible {
 }
 .flow-add-btn.bottom:hover {
   transform: translateX(-50%) scale(1.1);
+}
+
+.asset-node.whole-image-source {
+  border-color: var(--color-selection);
+  box-shadow: 0 0 0 4px rgba(91, 117, 147, 0.22);
+}
+
+.asset-node.annotation-target {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 4px rgba(91, 117, 147, 0.16);
 }

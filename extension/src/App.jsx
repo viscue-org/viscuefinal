@@ -33,6 +33,9 @@ import { cancelNodeMotion, finishNodeMotion, removeNodeMotion, startNodeMotion }
 import './components/workspace/WorkspaceChrome.css';
 import { fileToDataUrl, normalizeUrl, isValidUrl, safeHost, renderCropDataUrl, captureVideoFrame, digest, downscaleDataUrl, formatTime, createWebpagePreview, cropImageDataUrl } from './utils/helpers';
 import { buildVicsucRequest } from './utils/vicsuc';
+import { validateCueEligibility } from './utils/cueEligibility.mjs';
+import { resolveAnnotationTarget } from './utils/annotationTargets.mjs';
+import { shouldCloseWorkspace } from '../api/workspaceCompletion.mjs';
 import { acceptRawGesture } from '../../gesture/runtime/acceptance.mjs';
 import { resolveAnnotationCandidate } from '../../gesture/runtime/annotation-policy.mjs';
 import { attachStrokeResolution, collectStrokeOperations, createWorkspaceSnapshot, hydrateWorkspace, resetWorkspace } from '../../gesture/shared/operation-lifecycle.mjs';
@@ -180,6 +183,7 @@ function AppCanvas() {
   const [textTool, setTextTool] = useState('text');
   const [openChromeMenu, setOpenChromeMenu] = useState(null);
   const [draftAnnot, setDraftAnnot] = useState(null);
+  const [annotationTargetId, setAnnotationTargetId] = useState(null);
   const [health, setHealth] = useState(null);
   const [dialog, setDialog] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -886,21 +890,27 @@ function AppCanvas() {
     });
     return {
       activeAnchors,
+      wholeImageSourceId: draftAnnot?.point?.isWholeAsset ? draftAnnot.nodeId : null,
+      annotationTargetId,
       mode, annotationTool, onDelete: deleteNode, onCrop: cropNode, onEditVideo: editVideo,
       onExtractFrame: extractFrame, onExtractSelection: extractSelection, onViewDocument: viewDocument, onVideoMetadata, onMode: setNodeMode, onStroke, onErase,
       onChange: updateText, onStyleChange: updateTextStyle, onAnnotLinkStart, onAnnotLinkMove, onAnnotLinkEnd, onAreaAnnotate,
       onStartMotion: startMotion, onCompleteMotion: stopMotion, onCancelMotion: cancelMotion, onResetMotion: resetMotion,
       onExplain, onToggleLock, onCopy, onClose, onAddConnectedText
     };
-  }, [edges, mode, annotationTool, deleteNode, cropNode, editVideo, extractFrame, extractSelection, viewDocument, onVideoMetadata, setNodeMode, onStroke, onErase, updateText, updateTextStyle, onAnnotLinkStart, onAnnotLinkMove, onAnnotLinkEnd, onAreaAnnotate, startMotion, stopMotion, cancelMotion, resetMotion, onExplain, onToggleLock, onCopy, onClose, onAddConnectedText]);
+  }, [edges, draftAnnot, annotationTargetId, mode, annotationTool, deleteNode, cropNode, editVideo, extractFrame, extractSelection, viewDocument, onVideoMetadata, setNodeMode, onStroke, onErase, updateText, updateTextStyle, onAnnotLinkStart, onAnnotLinkMove, onAnnotLinkEnd, onAreaAnnotate, startMotion, stopMotion, cancelMotion, resetMotion, onExplain, onToggleLock, onCopy, onClose, onAddConnectedText]);
 
   function onAnnotLinkStart(nodeId, point, screenPoint) {
     setDraftAnnot({ nodeId, point, start: screenPoint, current: screenPoint });
   }
-  function onAnnotLinkMove(screenPoint) {
+  function onAnnotLinkMove(sourceId, screenPoint, sourcePoint) {
     if (!draftLineRef.current) return;
     draftLineRef.current.setAttribute('x2', String(screenPoint.x));
     draftLineRef.current.setAttribute('y2', String(screenPoint.y));
+    if (sourcePoint?.isWholeAsset) {
+      const target = resolveAnnotationTarget(nodes, sourceId, flow.screenToFlowPosition(screenPoint), { preciseTarget: true });
+      setAnnotationTargetId(target?.node.id || null);
+    }
   }
   
   function onAddConnectedText(sourceId, sourceHandle, direction = 'right') {
@@ -929,6 +939,7 @@ function AppCanvas() {
 
   function onAnnotLinkEnd(nodeId, point, screenPoint, screenStart) {
     setDraftAnnot(null);
+    setAnnotationTargetId(null);
     const distance = Math.hypot(screenPoint.x - screenStart.x, screenPoint.y - screenStart.y);
     if (distance < 36) return setResult({ error: 'Drag the annotation line to where you want the instruction.' });
     snapshot();
@@ -939,29 +950,15 @@ function AppCanvas() {
     
     // Check if dropped near or inside another asset for Cross-Asset Annotation
     const padding = 60; // 60px near the image
-    const targetNode = nodes.find(n => {
-      if (n.id === nodeId || n.type !== 'asset') return false;
-      const w = n.measured?.width || 362;
-      const h = n.measured?.height || 280;
-      return targetPoint.x >= n.position.x - padding && targetPoint.x <= n.position.x + w + padding &&
-             targetPoint.y >= n.position.y - padding && targetPoint.y <= n.position.y + h + padding;
+    const resolvedTarget = resolveAnnotationTarget(nodes, nodeId, targetPoint, {
+      padding,
+      preciseTarget: point.isWholeAsset === true,
     });
+    const targetNode = resolvedTarget?.node;
 
     if (targetNode) {
       // Cross Asset Drop
-      const w = targetNode.measured?.width || 362;
-      const h = targetNode.measured?.height || 280;
-      const relX = (targetPoint.x - targetNode.position.x) / w;
-      const relY = (targetPoint.y - targetNode.position.y) / h;
-      
-      // If dropped outside the core image (in the padding) or within 10% of the border, treat it as a Whole Asset selection
-      const isWholeAsset = relX < 0.1 || relX > 0.9 || relY < 0.1 || relY > 0.9;
-      
-      // Clamp coordinates for the anchor just in case
-      const clampX = Math.max(0, Math.min(1, relX));
-      const clampY = Math.max(0, Math.min(1, relY));
-      
-      const targetAnchor = { id: `target-${crypto.randomUUID()}`, x: clampX, y: clampY, isWholeAsset };
+      const targetAnchor = { id: `target-${crypto.randomUUID()}`, ...resolvedTarget.anchor };
       
       setNodes(items => items.map(node => {
         if (node.id === nodeId) return { ...node, data: { ...node.data, cueAnchors: [...(node.data.cueAnchors || []), sourceAnchor] } };
@@ -1233,7 +1230,8 @@ function AppCanvas() {
   
   function openSend() {
     const assets = nodes.filter(n => n.type === 'asset');
-    if (!assets.length) return setResult({ error: 'Add at least one Asset before sending intent.' });
+    const eligibility = validateCueEligibility(nodes, edges);
+    if (!eligibility.ok) return setResult({ error: eligibility.error });
     
     const hasAnyInstruction = 
       nodes.some(n => n.type === 'text' && n.data?.text?.trim()) || 
@@ -1241,9 +1239,6 @@ function AppCanvas() {
       nodes.some(n => n.type === 'asset' && ((n.data.strokes?.length > 0) || (n.data.motion?.path?.length > 1)));
 
     if (!hasAnyInstruction) return setResult({ error: 'Please add at least one instruction, drawing, or text note to the workspace before submitting.' });
-
-    const hasEmptyTextNode = nodes.some(n => n.type === 'text' && !n.data?.text?.trim());
-    if (hasEmptyTextNode) return setResult({ error: 'Please fill in all empty text notes before submitting.' });
 
     const hasEmptyEdgeInstruction = edges.some(e => e.type === 'crossAsset' && !e.data?.instruction?.trim());
     if (hasEmptyEdgeInstruction) return setResult({ error: 'Please provide instructions for all point-to-point connections before submitting.' });
@@ -1301,10 +1296,16 @@ function AppCanvas() {
     setBusy(false);
     if (!handoff?.ok) { onPhase?.('error'); setResult({ error: handoff?.error || 'The destination did not accept the intent.' }); setCueAnimation(null); return; }
     const receipt = await chromeMessage({ type: 'handoff-receipt', receipt: handoff });
-    const successMsg = submit ? 'References attached, intent inserted, and submitted.' : 'References attached and intent inserted.';
+    const successMsg = attachments.length
+      ? (submit ? 'References attached, intent inserted, and submitted.' : 'References attached and intent inserted.')
+      : (submit ? 'Text intent inserted and submitted.' : 'Text intent inserted for review.');
     setResult({ success: receipt?.ok ? successMsg : `${successMsg} (Failed to save state cache)`, provider: response.provider });
     onPhase?.('done');
-    setTimeout(() => setCueAnimation(null), 1200);
+    if (shouldCloseWorkspace(handoff, receipt)) {
+      setTimeout(() => chromeMessage({ type: 'complete-workspace', sourceTabId }), 900);
+    } else {
+      setTimeout(() => setCueAnimation(null), 1200);
+    }
   }
 
   useEffect(() => {

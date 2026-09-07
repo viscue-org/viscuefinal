@@ -51,6 +51,14 @@ test('assets state exposes every supported source', () => {
   assert.doesNotMatch(html, /aria-label="Current page"/);
 });
 
+test('annotation menu exposes whole-image linking', () => {
+  const html = renderDock({ openMenu: 'annotate', mode: 'annotate', annotationTool: 'whole' });
+  for (const name of ['Point', 'Whole image', 'Area', 'Draw', 'Erase']) {
+    assert.match(html, new RegExp(`aria-label="${name}"`));
+  }
+  assert.match(html, /aria-label="Whole image"[^>]*aria-pressed="true"/);
+});
+
 test('undo and redo expose disabled state independently', () => {
   const html = renderDock({ openMenu: 'history', canUndo: true, canRedo: false });
   assert.match(html, /aria-label="Undo"/);
