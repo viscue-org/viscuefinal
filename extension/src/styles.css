@@ -1741,3 +1741,38 @@ textarea:focus-visible {
 .dual-slider::-webkit-slider-thumb { pointer-events: auto; -webkit-appearance: none; appearance: none; width: 16px; height: 28px; border-radius: 6px; background: var(--viscue-signal, #5B7593); cursor: ew-resize; border: 2px solid var(--bg-surface); box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
 .dual-slider::-webkit-slider-thumb:hover { background: #4a627d; }
 .dual-slider::-moz-range-thumb { pointer-events: auto; width: 16px; height: 28px; border-radius: 6px; background: var(--viscue-signal, #5B7593); cursor: ew-resize; border: 2px solid var(--bg-surface); }
+.flow-add-btn {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  background: var(--workspace-steel, #50697f);
+  color: white;
+  border: 2px solid white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  transition: transform 0.2s;
+}
+.flow-add-btn:hover {
+  transform: scale(1.1);
+}
+.flow-add-btn.right {
+  top: 50%;
+  right: -36px;
+  transform: translateY(-50%);
+}
+.flow-add-btn.right:hover {
+  transform: translateY(-50%) scale(1.1);
+}
+.flow-add-btn.bottom {
+  bottom: -36px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.flow-add-btn.bottom:hover {
+  transform: translateX(-50%) scale(1.1);
+}

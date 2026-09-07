@@ -24,7 +24,7 @@ export function requiredReferenceIds(graph = {}) {
     if (item) required.add(physicalId(item, itemIds));
   };
   for (const item of graph.items || []) {
-    if (String(item.role || '').toLowerCase() === 'preserve' || item.preserved) add(item.id);
+    if (String(item.role || '').toLowerCase() === 'preserve' || item.preserved || item.annotations?.length > 0) add(item.id);
   }
   for (const cue of graph.cues || []) add(cue.assetId);
   for (const relation of graph.relations || []) {

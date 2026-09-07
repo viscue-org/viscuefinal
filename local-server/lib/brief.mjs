@@ -62,6 +62,16 @@ export function buildCanonicalBrief({ graph = {}, selection = {}, evidence = [] 
     }
   }
 
+  for (const relation of graph.relations || []) {
+    if (relation.type === 'FLOWS_TO') {
+      const source = byId.get(relation.sourceId);
+      const target = byId.get(relation.targetId);
+      if (source?.text && target?.text) {
+        lines.push(`- Flowchart sequence: "${source.text.trim()}" -> "${target.text.trim()}"`);
+      }
+    }
+  }
+
   let hasUnresolved = false;
   for (const op of graph.operations || []) {
     const resolution = validateResolution(op?.resolution);

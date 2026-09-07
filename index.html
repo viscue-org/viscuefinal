@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisCue - Light Mode Empty Workspace</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="workspace">
+        <!-- Main Canvas -->
+        <div class="canvas">
+            <!-- Host Context Label - Top Left -->
+            <div class="host-context">chatgpt.com</div>
+            
+            <!-- Empty State Hero Group - Two Column -->
+            <div class="empty-state">
+                <div class="empty-state-left">
+                    <h1 class="headline">
+                        Show what<br>
+                        you mean
+                    </h1>
+                </div>
+                <div class="empty-state-right">
+                    <p class="helper-copy">
+                        Add a reference to get<br>
+                        started
+                    </p>
+                    <button class="add-here-btn">Add here</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom-Left Utility Control -->
+        <div class="bottom-left-utility">
+            <div class="utility-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="7" height="7"/>
+                    <rect x="14" y="3" width="7" height="7"/>
+                    <rect x="14" y="14" width="7" height="7"/>
+                    <rect x="3" y="14" width="7" height="7"/>
+                </svg>
+            </div>
+            <div class="utility-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 6h18"/>
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                    <path d="M8 6V4c0-1 1-2 2-2h4c0-1 1-2 2-2v2"/>
+                </svg>
+            </div>
+        </div>
+
+        <!-- Main VisCue Toolbar - Bottom Center -->
+        <div class="viscue-toolbar">
+            <!-- Dark Tool Rail -->
+            <div class="tool-rail">
+                <!-- Select (Active) -->
+                <div class="tool-item active">
+                    <div class="active-circle"></div>
+                    <svg class="tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/>
+                        <path d="M13 13l6 6"/>
+                    </svg>
+                    <div class="tool-label">Select</div>
+                </div>
+                
+                <!-- Assets -->
+                <div class="tool-item">
+                    <svg class="tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 5v14M5 12h14"/>
+                    </svg>
+                    <div class="tool-label">Assets</div>
+                </div>
+                
+                <!-- Anote -->
+                <div class="tool-item">
+                    <svg class="tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2l3.09 6.26L22 9.27l-4.5 4.5 1.09 6.23L12 17.77 5.41 20.03 6.5 13.77 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                    <div class="tool-label">Anote</div>
+                </div>
+                
+                <!-- Text -->
+                <div class="tool-item">
+                    <svg class="tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 7V4h16v3"/>
+                        <path d="M9 20h6M12 4v16"/>
+                    </svg>
+                    <div class="tool-label">Text</div>
+                </div>
+            </div>
+
+            <!-- History Cavity -->
+            <div class="history-cavity">
+                <div class="history-item">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 7v6h6"/>
+                        <path d="M3.51 15a9 9 0 1 0 2.13-9.36L3 8"/>
+                    </svg>
+                </div>
+                <div class="history-item">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 7v6h6"/>
+                        <path d="M21 17a9 9 0 0 1-2.13-9.36L21 8"/>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Cue Action -->
+            <div class="cue-action">
+                Cue
+            </div>
+        </div>
+
+        <!-- Bottom-Right System Control Group -->
+        <div class="bottom-right-controls">
+            <!-- Mode + Chevron Group -->
+            <div class="mode-chevron-group">
+                <svg class="mode-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="5"/>
+                    <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                </svg>
+                <svg class="chevron-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="m9 18 6-6-6-6"/>
+                </svg>
+            </div>
+            
+            <!-- Close Button -->
+            <div class="close-button">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="m18 6-12 12M6 6l12 12"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

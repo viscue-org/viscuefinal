@@ -173,11 +173,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'handoff-receipt') {
       try {
         const receipt = message.receipt || {};
-        await chrome.storage.local.set({
+        const updates = {
           'viscue-state-cache': receipt,
           'viscue-last-receipt': receipt,
           [`viscue-receipt-${receipt.executionId || Date.now()}`]: receipt,
-        });
+        };
+        if (receipt.destinationFingerprint) {
+          updates[`viscue-chat-state-${receipt.destinationFingerprint}`] = receipt;
+        }
+        await chrome.storage.local.set(updates);
         const devSettings = await chrome.storage.local.get('viscue-dev-server').catch(() => ({}));
         if (devSettings?.['viscue-dev-server']) {
           const auth = await getAuthHeader();

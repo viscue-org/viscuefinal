@@ -105,8 +105,17 @@ export const TextNode = memo(function TextNode({ id, data, selected }) {
         </div>
       </NodeToolbar>
 
+      <Handle id="top" type="target" position={Position.Top} className="text-handle" />
       <Handle id="target" type="target" position={Position.Left} className="text-handle" />
       <Handle id="source" type="source" position={Position.Right} className="text-handle" />
+      <Handle id="bottom" type="source" position={Position.Bottom} className="text-handle" />
+
+      {selected && context.onAddConnectedText && (
+        <>
+          <button className="flow-add-btn right" onClick={() => context.onAddConnectedText(id, 'source', 'right')} aria-label="Add connected note right"><Plus size={14} /></button>
+          <button className="flow-add-btn bottom" onClick={() => context.onAddConnectedText(id, 'bottom', 'bottom')} aria-label="Add connected note below"><Plus size={14} /></button>
+        </>
+      )}
 
       {isSticky && <div className="sticky-note-heading"><StickyNote size={17} /> <span>S-Note</span></div>}
 

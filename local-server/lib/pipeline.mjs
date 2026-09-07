@@ -87,15 +87,39 @@ export async function runPipeline(request = {}, deps = {}) {
 
   const executionId = `exec_${crypto.randomUUID()}`;
   const status = stages.some(stage => stage.status === 'degraded') ? 'degraded' : 'ok';
+  
+  let finalPrompt = compiled.text;
+  let finalAttachments = canonical.attachments;
+  let provider = compiled.provider || 'deterministic';
+  const newPromptHash = hash(compiled.text);
+
+  if (request.session?.previousState) {
+    const prevState = request.session.previousState;
+    const samePrompt = prevState.promptHash === newPromptHash;
+
+    if (Array.isArray(prevState.attachments)) {
+      const sentHashes = new Set(prevState.attachments.filter(a => a.confirmed).map(a => a.stateHash));
+      finalAttachments = canonical.attachments.filter(a => !sentHashes.has(a.stateHash));
+    }
+    
+    if (samePrompt && finalAttachments.length === 0) {
+      finalPrompt = "Viscue: No visual or instruction updates found since your last submission.";
+      provider = "delta-skip";
+    } else if (samePrompt) {
+      finalPrompt = "Viscue: I updated the visual references. Please reflect the new references in your response.";
+      provider = "delta";
+    }
+  }
+
   return {
     ok: true,
     status,
-    provider: compiled.provider || 'deterministic',
-    final_prompt: compiled.text,
-    prompt_hash: hash(compiled.text),
+    provider,
+    final_prompt: finalPrompt,
+    prompt_hash: newPromptHash,
     executionId,
     execution_id: executionId,
-    attachments: canonical.attachments,
+    attachments: finalAttachments,
     selected_references: policy.selected,
     trimmed_references: policy.trimmed,
     stages,

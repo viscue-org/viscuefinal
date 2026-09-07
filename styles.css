@@ -1,0 +1,52 @@
+/* Import Instrument Sans Font */
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&display=swap');
+
+/* CSS Custom Properties — VisCue Design System v1.0 */
+:root {
+  --viscue-signal: #5F788F;
+  --viscue-ink: #1C1D1F;
+  --viscue-canvas: #F6F4EF;
+  --viscue-paper: #FFFFFF;
+  --viscue-muted: #66686D;
+  --viscue-hairline: #E4E2DC;
+  --viscue-neutral: #D9D8D3;
+  --viscue-active-neutral: #50697F;
+}
+
+/* Reset and Base Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Instrument Sans', ui-sans-serif, -apple-system, sans-serif;
+  background: var(--viscue-canvas);
+  color: var(--viscue-ink);
+  overflow: hidden;
+  width: 100vw;
+  height: 100vh;
+}
+
+/* Main Workspace - Full Viewport Container */
+.workspace {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background: var(--viscue-canvas);
+}
+
+/* Main Canvas */
+.canvas {
+  position: absolute;
+  width: 1681px;
+  height: 935px;
+  background: var(--viscue-canvas);
+  border: 1px solid var(--viscue-hairline);
+  border-radius: 16px;
+  overflow: hidden;
+  transform: translate(-50%, -50%);
+  top: 50%;
+  left: 50%;
+}

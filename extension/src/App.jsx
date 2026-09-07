@@ -75,6 +75,7 @@ const createTextNode = (id, position, variant = 'text') => ({
 });
 const createAnnotationEdge = (source, sourceHandle, target) => ({ id: crypto.randomUUID(), source, sourceHandle, target, targetHandle: 'target', type: 'annotation', markerStart: defaultMarkerStart, markerEnd: defaultMarkerEnd });
 const createCrossAssetEdge = (source, sourceHandle, target, targetHandle) => ({ id: crypto.randomUUID(), source, sourceHandle, target, targetHandle, type: 'crossAsset', markerStart: defaultMarkerStart, markerEnd: defaultMarkerEnd, data: { instructionOpen: false, instruction: '' } });
+const createFlowEdge = (source, target, sourceHandle, targetHandle) => ({ id: crypto.randomUUID(), source, target, sourceHandle, targetHandle, type: 'flow', markerEnd: defaultMarkerEnd });
 
 function chromeMessage(message) {
   if (globalThis.chrome?.runtime?.sendMessage) return chrome.runtime.sendMessage(message);
@@ -123,7 +124,7 @@ function AnnotEdge(props) {
 }
 
 const nodeTypes = { asset: AssetNode, text: TextNode };
-const edgeTypes = { annotation: AnnotEdge, cue: AnnotEdge, crossAsset: CrossAssetEdge };
+const edgeTypes = { annotation: AnnotEdge, cue: AnnotEdge, crossAsset: CrossAssetEdge, flow: AnnotEdge };
 
 
 const CUE_STATUS_CYCLE = ['Processing', 'Understanding', 'Building'];
@@ -889,9 +890,9 @@ function AppCanvas() {
       onExtractFrame: extractFrame, onExtractSelection: extractSelection, onViewDocument: viewDocument, onVideoMetadata, onMode: setNodeMode, onStroke, onErase,
       onChange: updateText, onStyleChange: updateTextStyle, onAnnotLinkStart, onAnnotLinkMove, onAnnotLinkEnd, onAreaAnnotate,
       onStartMotion: startMotion, onCompleteMotion: stopMotion, onCancelMotion: cancelMotion, onResetMotion: resetMotion,
-      onExplain, onToggleLock, onCopy, onClose
+      onExplain, onToggleLock, onCopy, onClose, onAddConnectedText
     };
-  }, [edges, mode, annotationTool, deleteNode, cropNode, editVideo, extractFrame, extractSelection, viewDocument, onVideoMetadata, setNodeMode, onStroke, onErase, updateText, updateTextStyle, onAnnotLinkStart, onAnnotLinkMove, onAnnotLinkEnd, onAreaAnnotate, startMotion, stopMotion, cancelMotion, resetMotion, onExplain, onToggleLock, onCopy, onClose]);
+  }, [edges, mode, annotationTool, deleteNode, cropNode, editVideo, extractFrame, extractSelection, viewDocument, onVideoMetadata, setNodeMode, onStroke, onErase, updateText, updateTextStyle, onAnnotLinkStart, onAnnotLinkMove, onAnnotLinkEnd, onAreaAnnotate, startMotion, stopMotion, cancelMotion, resetMotion, onExplain, onToggleLock, onCopy, onClose, onAddConnectedText]);
 
   function onAnnotLinkStart(nodeId, point, screenPoint) {
     setDraftAnnot({ nodeId, point, start: screenPoint, current: screenPoint });
@@ -902,6 +903,30 @@ function AppCanvas() {
     draftLineRef.current.setAttribute('y2', String(screenPoint.y));
   }
   
+  function onAddConnectedText(sourceId, sourceHandle, direction = 'right') {
+    snapshot();
+    const sourceNode = nodes.find(n => n.id === sourceId);
+    if (!sourceNode) return;
+    
+    const textId = crypto.randomUUID();
+    const targetHandle = direction === 'right' ? 'left' : direction === 'left' ? 'right' : direction === 'bottom' ? 'top' : 'bottom';
+    
+    const offset = { x: 0, y: 0 };
+    if (direction === 'right') offset.x = 280;
+    else if (direction === 'left') offset.x = -280;
+    else if (direction === 'bottom') offset.y = 120;
+    else if (direction === 'top') offset.y = -120;
+
+    const position = {
+      x: sourceNode.position.x + offset.x,
+      y: sourceNode.position.y + offset.y
+    };
+    
+    setNodes(items => [...items.map(node => ({ ...node, selected: false })), createTextNode(textId, position, sourceNode.data.variant)]);
+    setEdges(items => [...items, createFlowEdge(sourceId, textId, sourceHandle, targetHandle)]);
+    setMode('select');
+  }
+
   function onAnnotLinkEnd(nodeId, point, screenPoint, screenStart) {
     setDraftAnnot(null);
     const distance = Math.hypot(screenPoint.x - screenStart.x, screenPoint.y - screenStart.y);
@@ -1195,7 +1220,8 @@ function AppCanvas() {
             { type: 'AT_TIME', sourceId: node.id, targetId: provenance.parentId, timeMs: provenance.timeMs },
           ];
         }),
-        ...crossAssetConnections
+        ...crossAssetConnections,
+        ...edges.filter(e => e.type === 'flow').map(e => ({ type: 'FLOWS_TO', sourceId: e.source, targetId: e.target }))
       ],
       motions: nodes.filter(node => node.data.motion?.path?.length > 1).map(node => ({
         assetId: node.id,
@@ -1244,6 +1270,12 @@ function AppCanvas() {
     const sessionResponse = await chromeMessage({ type: 'active-context', tabId: sourceTabId });
     const sessionCtx = sessionResponse?.context || { sourceTabId, chatId: `tab-${sourceTabId}` };
     sessionCtx.destinationFingerprint = sessionCtx.fingerprint || `${sessionCtx.platform || graph.destination}:${sessionCtx.chatId}`;
+
+    if (globalThis.chrome?.storage?.local) {
+      const stateKey = `viscue-chat-state-${sessionCtx.destinationFingerprint}`;
+      const res = await chrome.storage.local.get(stateKey);
+      sessionCtx.previousState = res[stateKey] || null;
+    }
 
     onPhase?.('compiling');
     const media = {};
