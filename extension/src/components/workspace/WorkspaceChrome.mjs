@@ -24,7 +24,6 @@ import {
   X,
   Export,
   Trash,
-  Broom,
   DownloadSimple
 } from '@phosphor-icons/react';
 import { getSelectedTool } from './workspaceChromeModel.mjs';
@@ -237,7 +236,7 @@ function historyMeta(item) {
   return `${label} · ${date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}`;
 }
 
-export function WorkspaceHistory({ items = [], historyConfig = { autoDeleteHours: 24 }, onHistoryConfigChange = () => {}, onClose = () => {}, onRestore = () => {}, onExport = () => {}, onDelete = () => {}, onClearAll = () => {}, onImport = () => {} }) {
+export function WorkspaceHistory({ items = [], historyConfig = { autoDeleteHours: 24 }, onHistoryConfigChange = () => {}, onClose = () => {}, onRestore = () => {}, onExport = () => {}, onDelete = () => {}, onImport = () => {} }) {
   return h('section', { className: 'workspace-history', role: 'dialog', 'aria-modal': true, 'aria-label': 'History' },
     items.length === 0
       ? h('div', { className: 'workspace-history__empty' },
@@ -269,7 +268,6 @@ export function WorkspaceHistory({ items = [], historyConfig = { autoDeleteHours
     h('div', { className: 'workspace-history__bottom-bar' },
       h('h2', { id: 'workspace-history-title' }, 'History'),
       h('div', { className: 'workspace-history__bottom-actions' },
-        h('button', { type: 'button', className: 'workspace-history__action-btn', 'aria-label': 'Clear all history', title: 'Clear all', onClick: onClearAll }, icon(Broom, 32)),
         h('button', { type: 'button', className: 'workspace-history__action-btn', 'aria-label': 'Import workspace', title: 'Import', onClick: onImport }, icon(DownloadSimple, 32)),
       ),
       h('div', { className: 'workspace-history__close-cutout' },

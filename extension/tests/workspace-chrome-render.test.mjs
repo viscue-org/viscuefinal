@@ -88,14 +88,14 @@ test('history exposes every snapshot and retention action without a clipped popo
     onExport() {},
     onDelete() {},
     onImport() {},
-    onClearAll() {},
   }));
   assert.match(html, /Example 1/);
   assert.match(html, /Restore/);
   assert.match(html, /1 reference/);
-  for (const name of ['Export Example 1', 'Delete Example 1', 'Import workspace', 'Clear all history', 'Close history']) {
+  for (const name of ['Export Example 1', 'Delete Example 1', 'Import workspace', 'Close history']) {
     assert.match(html, new RegExp(`aria-label="${name}"`));
   }
+  assert.doesNotMatch(html, /aria-label="Clear all history"/);
   assert.match(html, /Auto-delete history older than/);
   assert.match(html, /<option value="48" selected="">48 hours<\/option>/);
   assert.doesNotMatch(html, /auto-delete-dropdown/);
