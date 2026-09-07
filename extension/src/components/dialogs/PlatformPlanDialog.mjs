@@ -29,8 +29,8 @@ export function PlatformPlanDialog({ platformName = 'ChatGPT', initialCapability
           onClick: () => setPlan(option.id),
         }, h('strong', null, option.label), h('span', null, `${Math.min(option.budget, definition.providerCeiling)} visual references`)))),
       h('div', { className: 'platform-plan-limit', 'aria-live': 'polite' },
-        h('strong', null, `${policy.limit} visual references`),
-        h('span', null, `Effective limit with your Viscue ${String(viscuePlan || 'free')} plan`)),
+        h('strong', null, `${policy.destinationLimit} visual references`),
+        h('span', null, `Effective limit with your Viscue ${String(viscuePlan || 'free')} plan: ${policy.limit}`)),
       h('footer', null, h('button', { type: 'button', className: 'primary', onClick: () => onSave(capability) }, 'Continue to Workspace')),
     ));
 }

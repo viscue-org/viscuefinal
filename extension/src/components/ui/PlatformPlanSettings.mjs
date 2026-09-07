@@ -21,5 +21,5 @@ export function PlatformPlanSettings({ platformName = 'ChatGPT', capability = {}
         value: normalized.plan,
         onChange: event => onChange(normalizePlatformCapability({ platform: normalized.platform, plan: event.target.value }, normalized.platform)),
       }, ...definition.plans.map(option => h('option', { key: option.id, value: option.id }, option.label)))),
-    h('strong', { className: 'settings-platform-plan__limit' }, `${policy.limit} visual references`));
+    h('strong', { className: 'settings-platform-plan__limit' }, `${policy.destinationLimit} visual references`));
 }
