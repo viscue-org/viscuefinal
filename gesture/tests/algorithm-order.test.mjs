@@ -68,7 +68,7 @@ test('runtime pipeline resolves and binds operation when active model is supplie
       { id: 'node_A', type: 'asset:image', position: { x: 0, y: 0 }, width: 0.3, height: 0.3 },
       { id: 'node_B', type: 'asset:image', position: { x: 0.7, y: 0.7 }, width: 0.3, height: 0.3 },
     ],
-    edges: [], activeTool: 'annotate', canvasMode: 'edit',
+    edges: [], activeTool: 'connect', canvasMode: 'edit',
     graph: { operations: [] },
     model: mockModel,
   });
@@ -76,4 +76,62 @@ test('runtime pipeline resolves and binds operation when active model is supplie
   assert.equal(result.resolution.accepted, true);
   assert.equal(result.resolution.intent, 'connect');
   assert.equal(result.graph.operations.length, 1);
+});
+
+test('cancelled gestures abstain without executing a model prediction', () => {
+  let calls = 0;
+  const result = processGestureCandidate({
+    rawGesture: {
+      gesture_id: 'cancelled', schema_version: 'gesture-runtime/1.0', modifiers: { alt: false, ctrl: false, meta: false, shift: false },
+      strokes: [{ pointer_id: 1, pointer_type: 'touch', button: 0, cancelled: true, points: [{ x: 0.1, y: 0.1, time_ms: 0, pressure: null }] }],
+    },
+    model: () => {
+      calls += 1;
+      return { schema_version: 'gesture-resolution/1.0', family: 'navigation', intent: 'zoom', confidence: 0.99, accepted: true, reason: null, alternatives: [], model_version: 'unsafe/1' };
+    },
+  });
+
+  assert.equal(calls, 0);
+  assert.equal(result.resolution.accepted, false);
+  assert.equal(result.resolution.reason, 'invalid_input');
+  assert.equal(result.operation.unresolved, true);
+});
+
+test('accidental micro-strokes abstain instead of executing high-confidence layout predictions', () => {
+  let calls = 0;
+  const result = processGestureCandidate({
+    rawGesture: {
+      gesture_id: 'noise', schema_version: 'gesture-runtime/1.0', modifiers: { alt: false, ctrl: false, meta: false, shift: false },
+      strokes: [{ pointer_id: 1, pointer_type: 'mouse', button: 0, cancelled: false, points: [
+        { x: 0.5, y: 0.5, time_ms: 0, pressure: null },
+        { x: 0.501, y: 0.501, time_ms: 5, pressure: null },
+      ] }],
+    },
+    model: () => {
+      calls += 1;
+      return { schema_version: 'gesture-resolution/1.0', family: 'layout', intent: 'rough_layout', confidence: 0.99, accepted: true, reason: null, alternatives: [], model_version: 'unsafe/1' };
+    },
+  });
+
+  assert.equal(calls, 0);
+  assert.equal(result.resolution.accepted, false);
+  assert.equal(result.resolution.reason, 'invalid_input');
+});
+
+test('annotation-only UI rejects navigation predictions as out of context', () => {
+  const result = processGestureCandidate({
+    rawGesture: {
+      gesture_id: 'annotation', schema_version: 'gesture-runtime/1.0', modifiers: { alt: false, ctrl: false, meta: false, shift: false },
+      strokes: [{ pointer_id: 1, pointer_type: 'stylus', button: 0, cancelled: false, points: [
+        { x: 0.2, y: 0.4, time_ms: 0, pressure: 0.6 },
+        { x: 0.8, y: 0.5, time_ms: 120, pressure: 0.6 },
+      ] }],
+    },
+    activeTool: 'annotate',
+    model: () => ({ schema_version: 'gesture-resolution/1.0', family: 'navigation', intent: 'zoom', confidence: 0.98, accepted: true, reason: null, alternatives: [], model_version: 'gesture-fusion-v1' }),
+  });
+
+  assert.equal(result.resolution.accepted, false);
+  assert.equal(result.resolution.reason, 'ood');
+  assert.equal(result.operation.unresolved, true);
 });

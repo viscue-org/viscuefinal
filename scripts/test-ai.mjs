@@ -59,7 +59,7 @@ async function main() {
   console.log('--- Testing Bedrock AI Connectivity ---');
   console.log('Region:', process.env.AWS_REGION || 'us-east-1');
   console.log('Auth:', process.env.AWS_BEARER_TOKEN_BEDROCK ? 'Bearer Token' : 'Access Key ID');
-  console.log('Access Key ID:', process.env.AWS_ACCESS_KEY_ID ? `${process.env.AWS_ACCESS_KEY_ID.slice(0, 6)}...` : '(none)');
+  console.log('Credentials configured:', Boolean(process.env.AWS_BEARER_TOKEN_BEDROCK || process.env.AWS_ACCESS_KEY_ID));
 
   console.log('\n1. Testing Compiler (Mistral Large 3 / Bedrock):');
   try {
@@ -122,7 +122,7 @@ async function main() {
     console.error('Amazon Nova Pro failed:', e);
   }
 
-  console.log('\n2c. Testing Multimodal Image Perception - Amazon Nova Lite:');
+  console.log('\n2c. Verifying meaningless Nova Lite image output is rejected:');
   try {
     const novaLiteGateway = new BedrockGateway({
       region: process.env.AWS_REGION || 'us-east-1',
@@ -141,9 +141,10 @@ async function main() {
       dataUrl: tinyPngBase64,
       prompt: 'Identify the objects and layout.'
     });
-    console.log('Amazon Nova Lite Perception response:', novaLiteRes);
+    console.error('Unexpected Nova Lite image acceptance:', novaLiteRes);
+    process.exitCode = 1;
   } catch (e) {
-    console.error('Amazon Nova Lite failed:', e);
+    console.log('Amazon Nova Lite placeholder rejection: OK');
   }
 
   console.log('\n3. Testing Relevance Embeddings (Titan Multimodal):');
@@ -158,9 +159,12 @@ async function main() {
 
   console.log('\n4. Testing /compile HTTP endpoint directly on running backend:');
   try {
+    const localAuthorization = process.env.VISCUE_API_KEY
+      ? { authorization: `Bearer ${process.env.VISCUE_API_KEY}` }
+      : {};
     const compileRes = await fetch('http://127.0.0.1:8787/compile', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...localAuthorization },
       body: JSON.stringify({
         graph: {
           destination: 'ChatGPT',

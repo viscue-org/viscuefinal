@@ -18,7 +18,16 @@ function parseEvidence(response, context) {
   const text = responseText(response).replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
   const value = JSON.parse(text);
   if (!Array.isArray(value.claims)) throw new TypeError('Evidence response requires a claims array.');
-  return value.claims.map(claim => normalizeEvidence(claim, context));
+  const evidence = value.claims
+    .map(claim => normalizeEvidence(claim, context))
+    .filter(claim => {
+      const observation = String(claim.value || '').trim();
+      return observation.length > 2
+        && !/^(?:\.{3}|unknown|none|null|n\/a)$/i.test(observation)
+        && Number(claim.confidence) > 0;
+    });
+  if (evidence.length === 0) throw new TypeError('Evidence response contained no meaningful claims.');
+  return evidence;
 }
 
 function providerName(modelId) {

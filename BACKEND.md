@@ -8,11 +8,12 @@ The local service implements the VICSUC multimodal pipeline described in [`docs/
 2. Reserve every cue, cross-asset, motion, and Preserve dependency. Over-plan required references block before model calls.
 3. Route still-image evidence to Qwen3-VL with one strict-JSON retry and Nova Pro fallback.
 4. Route video to Nova Pro with Nova Lite fallback.
-5. Treat object/layout/OCR observations as evidence with provider, model, asset, region, and confidence provenance. Derive spatial relationships from normalized geometry.
-6. Use Titan multimodal embeddings when accessible; otherwise retain deterministic explicit-intent ordering.
-7. Call the optional commercial font provider only for requested regions. A family becomes exact only above `FONT_MATCH_THRESHOLD`; otherwise it remains a candidate or unknown.
-8. Build a canonical deterministic prompt, optionally improve wording with Mistral, then reverse-check exact filenames, Preserve constraints, coordinates, timestamps, cue coverage, and trimmed-reference exclusion.
-9. Start an execution without marking uploads complete. State is committed only after the content script verifies the destination conversation, attachment readiness, prompt hash, and stable prompt text.
+5. Reject empty, placeholder-only, or zero-confidence provider evidence before a route can report success.
+6. Treat object/layout/OCR observations as evidence with provider, model, asset, region, and confidence provenance. Derive spatial relationships from normalized geometry.
+7. Use Titan multimodal embeddings when accessible; otherwise retain deterministic explicit-intent ordering.
+8. Call the optional commercial font provider only for requested regions. A family becomes exact only above `FONT_MATCH_THRESHOLD`; otherwise it remains a candidate or unknown.
+9. Build a canonical deterministic prompt, optionally improve wording with Mistral, then reverse-check exact filenames, Preserve constraints, coordinates, timestamps, cue coverage, and trimmed-reference exclusion.
+10. Start an execution without marking uploads complete. State is committed only after the content script verifies the destination conversation, attachment readiness, prompt hash, and stable prompt text.
 
 Every optional provider failure creates a `degraded` or `skipped` stage and leaves deterministic compilation usable. A required-reference overflow or receipt-integrity mismatch blocks the affected operation.
 

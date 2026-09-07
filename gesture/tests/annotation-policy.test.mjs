@@ -22,10 +22,10 @@ test('an explicit local resolver creates an operation through the real pipeline'
   const result = resolveAnnotationCandidate({
     rawGesture, nodes: [node], activeTool: 'annotate', canvasMode: 'annotate',
     model: () => ({
-      schema_version: 'gesture-resolution/1.0', family: 'navigation', intent: 'pan', confidence: 0.9,
+      schema_version: 'gesture-resolution/1.0', family: 'markup', intent: 'annotate', confidence: 0.9,
       accepted: true, reason: null, alternatives: [], model_version: 'test-local/1',
     }),
   });
   assert.deepEqual(result.pipeline.order, ['capture', 'geometry', 'features', 'resolve', 'bind', 'graph']);
-  assert.equal(result.operation.intent, 'pan');
+  assert.equal(result.operation.intent, 'annotate');
 });

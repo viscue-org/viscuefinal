@@ -21,6 +21,32 @@ test('malformed nonfinite logits are rejected before producing a resolution', as
   await assert.rejects(runOnnxInference({}, { session }), /logits/i);
 });
 
+test('unknown is never exposed as a semantic alternative', async () => {
+  const logits = Array(30).fill(-10);
+  logits[0] = 10;
+  logits[29] = 9;
+  logits[1] = 8;
+  const session = { run: async () => ({ logits: { data: logits } }) };
+
+  const result = await runOnnxInference({}, { session, calibration: { acceptance_threshold: 0.6, abstention_threshold: 0.4, temperature: 1, model_version: 'test/1' } });
+
+  assert.equal(result.accepted, true);
+  assert.equal(result.alternatives.some(item => item.intent === 'unknown'), false);
+});
+
+test('an unknown top prediction still exposes the strongest semantic alternatives', async () => {
+  const logits = Array(30).fill(-10);
+  logits[29] = 10;
+  logits[0] = 9;
+  logits[1] = 8;
+  const session = { run: async () => ({ logits: { data: logits } }) };
+
+  const result = await runOnnxInference({}, { session, calibration: { acceptance_threshold: 0.6, abstention_threshold: 0.4, temperature: 1, model_version: 'test/1' } });
+
+  assert.equal(result.accepted, false);
+  assert.equal(result.alternatives[0].intent, 'select_region');
+});
+
 test('browser development WASM base resolves to the installed ONNX runtime assets', async () => {
   const base = resolveOrtWasmBase({ moduleUrl: new URL('../runtime/onnx-resolver.mjs', import.meta.url).href });
   const wasm = fileURLToPath(new URL('ort-wasm-simd-threaded.jsep.wasm', base));

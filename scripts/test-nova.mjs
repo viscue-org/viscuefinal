@@ -57,8 +57,9 @@ async function testNovaModels() {
     console.error('✖ Nova Pro FAILED:', err.message);
   }
 
-  // 2. Test Amazon Nova Lite
-  console.log('\n2. Testing Amazon Nova Lite (amazon.nova-lite-v1:0)...');
+  // 2. Nova Lite is retained as the video fallback. A one-pixel image often
+  // produces a placeholder response, which the gateway must reject.
+  console.log('\n2. Verifying Nova Lite placeholder rejection (amazon.nova-lite-v1:0)...');
   const novaLiteGateway = new BedrockGateway({
     region,
     credentials,
@@ -77,10 +78,11 @@ async function testNovaModels() {
       dataUrl: tinyPngBase64,
       prompt: 'Identify visible layout and colors.'
     });
-    console.log('✔ Nova Lite SUCCESS:');
-    console.log(JSON.stringify(resLite, null, 2));
+    console.error('✖ Nova Lite placeholder was incorrectly accepted:');
+    console.error(JSON.stringify(resLite, null, 2));
+    process.exitCode = 1;
   } catch (err) {
-    console.error('✖ Nova Lite FAILED:', err.message);
+    console.log('✔ Nova Lite placeholder rejection SUCCESS');
   }
 }
 

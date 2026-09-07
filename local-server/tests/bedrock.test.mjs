@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { BedrockGateway } from '../lib/bedrock.mjs';
+import { MODEL_ROUTES } from '../lib/contracts.mjs';
 
 const routes = {
   imagePrimary: 'qwen.qwen3-vl-235b-a22b',
@@ -15,6 +16,12 @@ function converse(text) {
   return { status: 200, body: JSON.stringify({ output: { message: { content: [{ text }] } } }) };
 }
 
+test('production defaults route still images through Qwen then Nova Pro', () => {
+  assert.equal(MODEL_ROUTES.imagePrimary, 'qwen.qwen3-vl-235b-a22b');
+  assert.equal(MODEL_ROUTES.imageFallback, 'amazon.nova-pro-v1:0');
+  assert.equal(MODEL_ROUTES.compiler, 'mistral.mistral-large-3-675b-instruct');
+});
+
 test('invalid Qwen evidence retries once and then degrades to Nova image evidence', async () => {
   const calls = [];
   const responses = [converse('not-json'), converse('{bad'), converse('{"claims":[{"type":"object","value":"shoe","confidence":0.8}]}')];
@@ -26,16 +33,37 @@ test('invalid Qwen evidence retries once and then degrades to Nova image evidenc
   assert.deepEqual(calls.map(call => call.modelId), [routes.imagePrimary, routes.imagePrimary, routes.imageFallback]);
 });
 
+test('placeholder or zero-confidence visual evidence is retried instead of reported as success', async () => {
+  const calls = [];
+  const responses = [
+    converse('{"claims":[{"type":"object","value":"...","confidence":0}]}'),
+    converse('{"claims":[]}'),
+    converse('{"claims":[{"type":"layout","value":"green logo on a white tile","confidence":0.92}]}'),
+  ];
+  const gateway = new BedrockGateway({ region: 'us-east-1', routes, request: async input => {
+    calls.push(input);
+    return responses.shift();
+  } });
+
+  const result = await gateway.analyzeImage({ assetId: 'image_1', dataUrl: 'data:image/png;base64,YQ==' });
+
+  assert.equal(result.provider, 'nova-pro');
+  assert.equal(result.status, 'degraded');
+  assert.deepEqual(result.evidence.map(item => item.value), ['green logo on a white tile']);
+  assert.equal(calls.length, 3);
+});
+
 test('video analysis uses Nova and preserves explicit degraded fallback provenance', async () => {
   const calls = [];
   const gateway = new BedrockGateway({ region: 'us-east-1', routes, request: async input => {
     calls.push(input);
     if (input.modelId === routes.videoPrimary) throw new Error('primary unavailable');
-    return converse('{"claims":[]}');
+    return converse('{"claims":[{"type":"layout","value":"speaker centered in frame","confidence":0.9}]}');
   } });
   const result = await gateway.analyzeVideo({ assetId: 'video_1', dataUrl: 'data:video/mp4;base64,YQ==' });
   assert.equal(result.provider, 'nova-lite');
   assert.equal(result.status, 'degraded');
+  assert.deepEqual(result.evidence.map(item => item.value), ['speaker centered in frame']);
   assert.deepEqual(calls.map(call => call.modelId), [routes.videoPrimary, routes.videoFallback]);
 });
 

@@ -6,7 +6,7 @@ import { deriveGeometry } from '../gesture/shared/geometry.mjs';
 import { hitTestGesture } from '../gesture/shared/hit-testing.mjs';
 import { projectRuntimeContext } from '../gesture/shared/context.mjs';
 import { buildModelInputs } from '../gesture/shared/features.mjs';
-import { bindResolvedGesture } from '../gesture/shared/binding.mjs';
+import { processGestureCandidate } from '../gesture/runtime/pipeline.mjs';
 import { runPipeline } from '../local-server/lib/pipeline.mjs';
 import { BedrockGateway } from '../local-server/lib/bedrock.mjs';
 
@@ -202,7 +202,16 @@ async function testGestureModel() {
 
     // Step B: ONNX Inference
     const tInf0 = performance.now();
-    const resolution = await runOnnxInference(inputs, { session });
+    const pipelineResult = await processGestureCandidate({
+      rawGesture: scenario.rawGesture,
+      nodes: scenario.nodes,
+      edges: [],
+      activeTool: 'annotate',
+      canvasMode: 'edit',
+      graph: { operations: [] },
+      model: modelInputs => runOnnxInference(modelInputs, { session }),
+    });
+    const resolution = pipelineResult.resolution;
     const infTime = (performance.now() - tInf0).toFixed(3);
 
     console.log(`[ONNX Inference] Completed in ${infTime} ms:`);
@@ -214,8 +223,7 @@ async function testGestureModel() {
     // Step C: Deterministic Binding
     if (resolution.accepted) {
       try {
-        const boundOp = bindResolvedGesture(resolution, hits.binding);
-        console.log(`[Graph Binding] Bound Operation:`, JSON.stringify(boundOp));
+        console.log(`[Graph Binding] Bound Operation:`, JSON.stringify(pipelineResult.operation));
       } catch (e) {
         console.log(`[Graph Binding] Note: ${e.message}`);
       }

@@ -165,7 +165,7 @@ export async function runOnnxInference(inputs, { session = null, calibration = D
     confidence: top.confidence,
     accepted: isAccepted,
     reason: isAccepted ? null : (top.confidence < (calibration.abstention_threshold ?? DEFAULT_CALIBRATION.abstention_threshold) ? 'low_confidence' : 'ambiguous_intent'),
-    alternatives: Object.freeze(ranked.slice(1, 4)),
+    alternatives: Object.freeze(ranked.filter((candidate, index) => index > 0 && candidate.intent !== 'unknown').slice(0, 3)),
     model_version: calibration.model_version || 'gesture-fusion-v1',
   });
 }
