@@ -34,10 +34,14 @@ function publicCapabilities(capabilities = {}) {
 export function createRequestHandler({ run, receiptStore, font, apiKey, capabilities = {} }) {
   if (typeof run !== 'function') throw new TypeError('Pipeline runner is required.');
   return async (req, res) => {
+    const origin = req.headers.origin;
+    if (origin && !/^chrome-extension:\/\/[a-p]{32}$/.test(origin) && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+      return json(res, 403, { ok: false, error: 'Origin is not allowed.' });
+    }
     setCors(req, res);
     if (req.method === 'OPTIONS') return res.writeHead(204).end();
     
-    if (apiKey && apiKey !== 'test_local_key_88') {
+    if (apiKey) {
       const authHeader = req.headers['authorization'] || '';
       const providedKey = authHeader.replace(/^Bearer\s+/i, '').trim();
       if (providedKey !== apiKey) {

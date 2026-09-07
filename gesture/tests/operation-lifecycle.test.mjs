@@ -1,4 +1,15 @@
 import test from 'node:test';
+import { attachStrokeResolution, collectStrokeOperations } from '../shared/operation-lifecycle.mjs';
+
+test('late model result only enriches its surviving stroke and survives snapshot hydration', () => {
+  const nodes = [{ id: 'a', data: { strokes: [{ gesture: { gesture_id: 'g' } }] } }];
+  const operation = { unresolved: true, resolution: { reason: 'model_unavailable' } };
+  const enriched = attachStrokeResolution(nodes, 'a', 'g', operation);
+  assert.equal(nodes[0].data.strokes[0].operation, undefined);
+  assert.deepEqual(collectStrokeOperations(hydrateWorkspace(createWorkspaceSnapshot(enriched)).nodes), [operation]);
+  assert.deepEqual(attachStrokeResolution([], 'a', 'g', operation), []);
+  assert.deepEqual(attachStrokeResolution(nodes, 'a', 'deleted-gesture', operation), nodes);
+});
 import assert from 'node:assert/strict';
 import { appendGestureOperation, createWorkspaceSnapshot, hydrateWorkspace, resetWorkspace } from '../shared/operation-lifecycle.mjs';
 

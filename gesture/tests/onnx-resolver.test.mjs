@@ -9,6 +9,18 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const modelPath = path.resolve(__dirname, '../runtime/models/gesture-resolver-v1.onnx');
 
+test('inference uses the shipped calibration threshold, not an unsafe lower default', async () => {
+  const session = { run: async () => ({ logits: { data: [Math.log(0.57 * 29 / 0.43), ...Array(29).fill(0)] } }) };
+  const result = await runOnnxInference({}, { session });
+  assert.equal(result.confidence, 0.57);
+  assert.equal(result.accepted, false);
+});
+
+test('malformed nonfinite logits are rejected before producing a resolution', async () => {
+  const session = { run: async () => ({ logits: { data: Array(30).fill(NaN) } }) };
+  await assert.rejects(runOnnxInference({}, { session }), /logits/i);
+});
+
 test('browser development WASM base resolves to the installed ONNX runtime assets', async () => {
   const base = resolveOrtWasmBase({ moduleUrl: new URL('../runtime/onnx-resolver.mjs', import.meta.url).href });
   const wasm = fileURLToPath(new URL('ort-wasm-simd-threaded.jsep.wasm', base));

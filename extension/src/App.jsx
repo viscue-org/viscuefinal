@@ -35,7 +35,7 @@ import { fileToDataUrl, normalizeUrl, isValidUrl, safeHost, renderCropDataUrl, c
 import { buildVicsucRequest } from './utils/vicsuc';
 import { acceptRawGesture } from '../../gesture/runtime/acceptance.mjs';
 import { resolveAnnotationCandidate } from '../../gesture/runtime/annotation-policy.mjs';
-import { appendGestureOperation, createWorkspaceSnapshot, hydrateWorkspace, resetWorkspace } from '../../gesture/shared/operation-lifecycle.mjs';
+import { attachStrokeResolution, collectStrokeOperations, createWorkspaceSnapshot, hydrateWorkspace, resetWorkspace } from '../../gesture/shared/operation-lifecycle.mjs';
 import { createOnnxGestureModel } from '../../gesture/runtime/onnx-resolver.mjs';
 
 const initialNodes = [];
@@ -455,9 +455,13 @@ function AppCanvas() {
   const onStroke = useCallback((id, stroke) => {
     const rawGesture = onGestureCaptured(stroke.gesture);
     if (!rawGesture) return;
-    // Annotation points are normalized to their source asset. Keep that
-    // coordinate system through deterministic local resolution; no model or
-    // network endpoint is invoked from this callback.
+    // Save drawing immediately; local WASM inference may finish asynchronously.
+    snapshot();
+    setNodes(items => items.map(node => node.id === id ? {
+      ...node,
+      data: { ...node.data, strokes: [...(node.data.strokes || []), { ...stroke, gesture: rawGesture }] },
+    } : node));
+    // Annotation points stay normalized to their source asset.
     const sourceNode = nodes.find(node => node.id === id);
     const semantic = resolveAnnotationCandidate({
       rawGesture,
@@ -470,12 +474,9 @@ function AppCanvas() {
       // annotation never manufactures a resolver or emits fallback warnings.
       model: globalThis.__VISCUE_LOCAL_GESTURE_MODEL__,
     });
-    if (semantic.operation) setGestureOperations(operations => appendGestureOperation(operations, semantic.operation));
-    snapshot();
-    setNodes(items => items.map(node => node.id === id ? {
-      ...node,
-      data: { ...node.data, strokes: [...(node.data.strokes || []), { ...stroke, gesture: rawGesture }] },
-    } : node));
+    Promise.resolve(semantic).then(({ operation }) => {
+      if (operation) setNodes(items => attachStrokeResolution(items, id, rawGesture.gesture_id, operation));
+    }).catch(() => { /* Raw drawing remains usable even if local interpretation fails. */ });
   }, [annotationTool, mode, nodes, onGestureCaptured, setNodes, snapshot]);
   const onErase = useCallback((id, point) => {
     snapshot();
@@ -1143,7 +1144,7 @@ function AppCanvas() {
         assetId: node.id,
         path: node.data.motion.path
       })),
-      operations: gestureOperations.map(operation => ({ ...operation })),
+      operations: [...gestureOperations.map(operation => ({ ...operation })), ...collectStrokeOperations(nodes)],
     };
   }
   

@@ -26,3 +26,16 @@ export function hydrateWorkspace(snapshot = {}) {
 export function resetWorkspace() {
   return { nodes: [], edges: [], gestureOperations: [] };
 }
+
+/** Keep asynchronous interpretation owned by its stroke, so erase/undo cannot leave ghost intent. */
+export function attachStrokeResolution(nodes, nodeId, gestureId, operation) {
+  return nodes.map(node => node.id !== nodeId ? node : {
+    ...node,
+    data: { ...node.data, strokes: list(node.data?.strokes).map(stroke =>
+      stroke.gesture?.gesture_id === gestureId ? { ...stroke, operation: clone(operation) } : stroke) },
+  });
+}
+
+export function collectStrokeOperations(nodes) {
+  return nodes.flatMap(node => list(node.data?.strokes).flatMap(stroke => stroke.operation ? [clone(stroke.operation)] : []));
+}

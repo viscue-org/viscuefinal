@@ -4,7 +4,7 @@ import { requireUser } from '../../../../lib/auth/require-user';
 import { getAccountSummary } from '../../../../lib/quota/repository';
 
 export async function GET(request: Request) {
-  const supabase = await createServerClient();
+  const supabase = await createServerClient(request);
   const authHeader = request.headers.get('authorization');
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : undefined;
 

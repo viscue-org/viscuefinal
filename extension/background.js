@@ -138,17 +138,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         });
         sendResponse(result);
       } catch (err) {
-        try {
-          const auth = await getAuthHeader();
-          const response = await fetch(`${API}/compile`, {
-            method: 'POST',
-            headers: { 'content-type': 'application/json', ...auth },
-            body: JSON.stringify(message.payload),
-          });
-          sendResponse(await response.json());
-        } catch {
-          sendResponse({ ok: false, error: err.message, code: err.code });
-        }
+        sendResponse({ ok: false, error: err.message, code: err.code });
       }
       return;
     }

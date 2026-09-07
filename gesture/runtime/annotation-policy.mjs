@@ -12,5 +12,6 @@ export function isResolverConfigured(model) {
 export function resolveAnnotationCandidate({ model = null, ...candidate } = {}) {
   if (!isResolverConfigured(model)) return Object.freeze({ pipeline: null, operation: null });
   const pipeline = processGestureCandidate({ ...candidate, model });
-  return Object.freeze({ pipeline, operation: pipeline.operation });
+  const finish = result => Object.freeze({ pipeline: result, operation: result.operation });
+  return pipeline && typeof pipeline.then === 'function' ? pipeline.then(finish) : finish(pipeline);
 }

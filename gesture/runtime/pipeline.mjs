@@ -20,6 +20,7 @@ export function processGestureCandidate({ rawGesture, nodes = [], edges = [], ac
   const inputs = buildModelInputs({ strokes: rawGesture.strokes, geometry, canvasContext, nodes });
   order.push('features');
   const resolution = resolveGesture(inputs, { model });
+  const finish = resolution => {
   order.push('resolve');
   let operation;
   if (resolution.accepted) {
@@ -35,4 +36,6 @@ export function processGestureCandidate({ rawGesture, nodes = [], edges = [], ac
   const resolvedGraph = { ...graph, operations };
   order.push('graph');
   return Object.freeze({ rawGesture, geometry, hits, canvasContext, inputs, resolution, operation, graph: resolvedGraph, order: Object.freeze(order) });
+  };
+  return resolution && typeof resolution.then === 'function' ? resolution.then(finish) : finish(resolution);
 }

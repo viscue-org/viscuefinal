@@ -27,13 +27,15 @@ export function createAbstention(reason, modelVersion = undefined) {
  */
 export function resolveGesture(inputs, { model = null } = {}) {
   if (typeof model !== 'function') return createAbstention('model_unavailable');
-  const resolution = model(inputs);
+  let resolution;
+  try { resolution = model(inputs); }
+  catch { return createAbstention('model_unavailable'); }
   if (resolution && typeof resolution.then === 'function') {
     return resolution.then(res => {
       const validation = validateResolution(res);
       if (!validation.ok || res.intent === 'unknown') return createAbstention('invalid_input', 'local-model/invalid-output');
       return res;
-    });
+    }).catch(() => createAbstention('model_unavailable'));
   }
   const validation = validateResolution(resolution);
   if (!validation.ok || resolution.intent === 'unknown') return createAbstention('invalid_input', 'local-model/invalid-output');

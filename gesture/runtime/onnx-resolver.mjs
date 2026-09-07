@@ -1,17 +1,13 @@
 import * as ort from 'onnxruntime-web';
 import { FAMILY_BY_INTENT, INTENTS } from '../shared/taxonomy.mjs';
 import { SCHEMA_VERSIONS } from '../shared/contracts.mjs';
+import shippedCalibration from './models/gesture-resolver-v1.calibration.json' with { type: 'json' };
 
 let sessionPromise = null;
 let cachedSession = null;
 let cachedCalibration = null;
 
-const DEFAULT_CALIBRATION = {
-  model_version: 'gesture-fusion-v1',
-  acceptance_threshold: 0.55,
-  abstention_threshold: 0.35,
-  temperature: 1.0,
-};
+const DEFAULT_CALIBRATION = Object.freeze(shippedCalibration);
 
 export function resolveOrtWasmBase({ runtimeGetUrl = null, moduleUrl = import.meta.url } = {}) {
   if (typeof runtimeGetUrl === 'function') return runtimeGetUrl('');
@@ -22,7 +18,7 @@ export function resolveOrtWasmBase({ runtimeGetUrl = null, moduleUrl = import.me
  * Initializes and caches the ONNX InferenceSession.
  * Supports both browser extensions (via chrome.runtime.getURL / fetch) and Node.js environments.
  */
-export async function initOnnxSession({ modelPath = null, calibrationPath = null } = {}) {
+export async function initOnnxSession({ modelPath = null } = {}) {
   if (cachedSession) return cachedSession;
   if (sessionPromise) return sessionPromise;
 
@@ -147,6 +143,9 @@ export async function runOnnxInference(inputs, { session = null, calibration = D
   const results = await activeSession.run(feeds);
   const logitsTensor = results.logits;
   const logits = Array.from(logitsTensor.data);
+  if (logits.length !== INTENTS.length || !logits.every(Number.isFinite)) {
+    throw new TypeError('Model logits must contain one finite value per intent.');
+  }
   const probabilities = softmax(logits, calibration.temperature || 1.0);
 
   // Find top predictions
@@ -155,7 +154,7 @@ export async function runOnnxInference(inputs, { session = null, calibration = D
     .sort((a, b) => b.confidence - a.confidence);
 
   const top = ranked[0];
-  const threshold = calibration.acceptance_threshold || 0.55;
+  const threshold = calibration.acceptance_threshold ?? DEFAULT_CALIBRATION.acceptance_threshold;
   const isAccepted = top.confidence >= threshold && top.intent !== 'unknown';
   const family = isAccepted ? FAMILY_BY_INTENT[top.intent] || null : null;
 
@@ -165,7 +164,7 @@ export async function runOnnxInference(inputs, { session = null, calibration = D
     intent: isAccepted ? top.intent : null,
     confidence: top.confidence,
     accepted: isAccepted,
-    reason: isAccepted ? null : (top.confidence < (calibration.abstention_threshold || 0.35) ? 'low_confidence' : 'ambiguous_intent'),
+    reason: isAccepted ? null : (top.confidence < (calibration.abstention_threshold ?? DEFAULT_CALIBRATION.abstention_threshold) ? 'low_confidence' : 'ambiguous_intent'),
     alternatives: Object.freeze(ranked.slice(1, 4)),
     model_version: calibration.model_version || 'gesture-fusion-v1',
   });

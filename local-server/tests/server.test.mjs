@@ -11,6 +11,25 @@ async function withServer(handler, run) {
   finally { await new Promise(resolve => server.close(resolve)); }
 }
 
+test('every configured API key is enforced, including the formerly special test value', async () => {
+  const handler = createRequestHandler({ apiKey: 'test_local_key_88', run: async () => ({ ok: true }) });
+  await withServer(handler, async base => {
+    const response = await fetch(`${base}/health`);
+    assert.equal(response.status, 401);
+    assert.equal((await fetch(`${base}/health`, { headers: { authorization: 'Bearer test_local_key_88' } })).status, 200);
+  });
+});
+
+test('foreign website origins cannot invoke the local tool even without an API key', async () => {
+  let invoked = false;
+  const handler = createRequestHandler({ run: async () => { invoked = true; return { ok: true }; } });
+  await withServer(handler, async base => {
+    const response = await fetch(`${base}/compile`, { method: 'POST', headers: { origin: 'https://attacker.example', 'content-type': 'text/plain' }, body: '{}' });
+    assert.equal(response.status, 403);
+    assert.equal(invoked, false);
+  });
+});
+
 test('capabilities expose route readiness without credentials and blocked compile returns 422', async () => {
   const handler = createRequestHandler({
     receiptStore: new ReceiptStore(),
