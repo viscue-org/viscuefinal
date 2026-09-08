@@ -103,46 +103,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ ok: true, dataUrl, url: tab.url, title: tab.title });
       return;
     }
-    if (message.type === 'capture-url') {
-      const targetUrl = message.url;
-      const tabs = await chrome.tabs.query({});
-      let tab = tabs.find(t => t.url && (t.url.startsWith(targetUrl) || t.url.replace(/\/$/, '') === targetUrl.replace(/\/$/, '')));
-      let created = false;
-      if (!tab) {
-        tab = await chrome.tabs.create({ url: targetUrl, active: false });
-        created = true;
-        await new Promise((resolve) => {
-          const listener = (tabId, info) => {
-            if (tabId === tab.id && (info.status === 'complete' || info.title)) {
-              chrome.tabs.onUpdated.removeListener(listener);
-              resolve();
-            }
-          };
-          chrome.tabs.onUpdated.addListener(listener);
-          setTimeout(resolve, 3500);
-        });
-      }
-      
-      const [previous] = await chrome.tabs.query({ active: true, windowId: tab.windowId });
-      let dataUrl;
-      try {
-        await chrome.tabs.update(tab.id, { active: true });
-        await new Promise(resolve => setTimeout(resolve, 280));
-        dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png' });
-      } finally {
-        if (created) {
-          await chrome.tabs.remove(tab.id).catch(() => {});
-        }
-        if (previous?.id && previous.id !== tab.id) {
-          await chrome.tabs.update(previous.id, { active: true }).catch(() => {});
-        }
-      }
-      sendResponse({ ok: true, dataUrl, url: tab.url, title: tab.title });
-      return;
-    }
     if (message.type === 'active-context') {
-      const tab = message.tabId ? await chrome.tabs.get(message.tabId) : (await chrome.tabs.query({ active: true, lastFocusedWindow: true }))[0];
-      sendResponse({ ok: true, context: detectContext(tab) });
+      const tab = message.tabId ? await chrome.tabs.get(message.tabId).catch(() => null) : (await chrome.tabs.query({ active: true, lastFocusedWindow: true }))[0];
+      let liveContext = null;
+      if (tab?.id) {
+        try {
+          const res = await chrome.tabs.sendMessage(tab.id, { type: 'get-chat-context' });
+          if (res?.ok && res.context) {
+            liveContext = {
+              ...res.context,
+              title: tab.title || res.context.platform,
+              tabId: tab.id,
+              fingerprint: res.context.destinationFingerprint,
+            };
+          }
+        } catch {}
+      }
+      sendResponse({ ok: true, context: liveContext || detectContext(tab || {}) });
       return;
     }
     if (message.type === 'compile') {
@@ -168,17 +145,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return;
     }
     if (message.type === 'handoff') {
-      const tab = message.tabId ? await chrome.tabs.get(message.tabId) : (await chrome.tabs.query({ active: true, lastFocusedWindow: true }))[0];
+      const tab = message.tabId ? await chrome.tabs.get(message.tabId).catch(() => null) : (await chrome.tabs.query({ active: true, lastFocusedWindow: true }))[0];
       if (!tab?.id) throw new Error('Open the destination AI chat before sending intent.');
       try {
-        // Re-detect the live fingerprint from the tab's current URL so that
-        // navigation that occurred during compilation does not cause a false
-        // "destination conversation changed" mismatch in content.js.
-        const liveCtx = detectContext(tab);
-        const liveFingerprint = liveCtx.fingerprint || message.destinationFingerprint;
+        let liveCtx = null;
+        try {
+          const res = await chrome.tabs.sendMessage(tab.id, { type: 'get-chat-context' });
+          if (res?.ok && res.context) liveCtx = res.context;
+        } catch {}
+        if (!liveCtx) liveCtx = detectContext(tab);
+        const liveFingerprint = liveCtx.destinationFingerprint || liveCtx.fingerprint || message.destinationFingerprint;
         sendResponse(await chrome.tabs.sendMessage(tab.id, {
           type: 'handoff', prompt: message.prompt, attachments: message.attachments || [], submit: Boolean(message.submit),
-          executionId: message.executionId, destinationFingerprint: liveFingerprint, promptHash: message.promptHash
+          executionId: message.executionId, destinationFingerprint: liveFingerprint, promptHash: message.promptHash, tabId: tab.id
         }));
       } catch (err) {
         sendResponse({ ok: false, error: 'Could not connect to the page. Make sure you are on a supported AI chat (ChatGPT, Claude, etc.) and refresh the page if needed.' });
@@ -188,14 +167,44 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'handoff-receipt') {
       try {
         const receipt = message.receipt || {};
-        const updates = {
-          'viscue-state-cache': receipt,
-          'viscue-last-receipt': receipt,
-          [`viscue-receipt-${receipt.executionId || Date.now()}`]: receipt,
+        const destFp = receipt.destination_fingerprint || receipt.destinationFingerprint || '';
+        const tabId = receipt.tabId || message.tabId;
+        const chatId = receipt.chatId || (destFp ? destFp.split(':').slice(1).join(':') : null);
+        const platform = receipt.platform || (destFp ? destFp.split(':')[0] : null);
+
+        // Maintain cumulative list of confirmed attachment hashes per chat
+        const chatKey = destFp ? `viscue-chat-state-${destFp}` : null;
+        const existingData = chatKey ? await chrome.storage.local.get(chatKey) : {};
+        const priorReceipt = existingData[chatKey] || {};
+        const priorSentHashes = priorReceipt.sent_attachment_hashes || priorReceipt.attachment_state_hashes || [];
+        const newHashes = receipt.attachment_state_hashes || [];
+        const cumulativeSentHashes = [...new Set([...priorSentHashes, ...newHashes])];
+
+        const enrichedReceipt = {
+          ...receipt,
+          destinationFingerprint: destFp,
+          destination_fingerprint: destFp,
+          chatId,
+          tabId,
+          platform,
+          sent_attachment_hashes: cumulativeSentHashes,
         };
-        if (receipt.destinationFingerprint) {
-          updates[`viscue-chat-state-${receipt.destinationFingerprint}`] = receipt;
+
+        const updates = {
+          'viscue-state-cache': enrichedReceipt,
+          'viscue-last-receipt': enrichedReceipt,
+          [`viscue-receipt-${receipt.execution_id || receipt.executionId || Date.now()}`]: enrichedReceipt,
+        };
+        if (destFp) {
+          updates[`viscue-chat-state-${destFp}`] = enrichedReceipt;
         }
+        if (platform && chatId) {
+          updates[`viscue-chat-state-${platform}:${chatId}`] = enrichedReceipt;
+        }
+        if (tabId) {
+          updates[`viscue-tab-state-${tabId}`] = enrichedReceipt;
+        }
+
         await chrome.storage.local.set(updates);
         const devSettings = await chrome.storage.local.get('viscue-dev-server').catch(() => ({}));
         if (devSettings?.['viscue-dev-server']) {
@@ -203,10 +212,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           await fetch(`${API}/handoff-receipt`, {
             method: 'POST',
             headers: { 'content-type': 'application/json', ...auth },
-            body: JSON.stringify(receipt),
+            body: JSON.stringify(enrichedReceipt),
           }).catch(() => {});
         }
-        sendResponse({ ok: true, cached: true, receiptId: receipt.executionId });
+        sendResponse({ ok: true, cached: true, receiptId: receipt.execution_id || receipt.executionId });
       } catch (err) {
         sendResponse({ ok: true, cached: false, warning: err.message });
       }
@@ -266,16 +275,16 @@ async function openWorkspace(sourceTab) {
 }
 
 function detectContext(tab = {}) {
-  const url = tab.url || '';
-  const platform = url.includes('gemini.google') ? 'Gemini' : url.includes('claude.ai') ? 'Claude' :
-    url.includes('copilot.microsoft') ? 'Copilot' : url.includes('perplexity') ? 'Perplexity' :
-    url.includes('grok.com') ? 'Grok' : 'ChatGPT';
-  
-  const parsed = new URL(url || 'https://chatgpt.com');
-  let chatId = parsed.pathname;
-  if (platform === 'ChatGPT' && parsed.pathname.includes('/c/')) chatId = parsed.pathname.split('/c/')[1];
-  else if (platform === 'Gemini' && parsed.pathname.includes('/app/')) chatId = parsed.pathname.split('/app/')[1];
-  else if (platform === 'Claude' && parsed.pathname.includes('/chat/')) chatId = parsed.pathname.split('/chat/')[1];
-  
-  return { platform, url, title: tab.title || platform, tabId: tab.id, chatId: `${platform}:${chatId}`, fingerprint: `${platform}:${parsed.pathname}` };
+  const parsed = parsePlatformChatContext(tab?.url || '');
+  return {
+    platform: parsed.platform,
+    url: tab?.url || parsed.url,
+    title: tab?.title || parsed.platform,
+    tabId: tab?.id,
+    chatId: `${parsed.platform}:${parsed.chatId}`,
+    rawChatId: parsed.chatId,
+    fingerprint: parsed.destinationFingerprint,
+    destinationFingerprint: parsed.destinationFingerprint,
+    isNewChat: parsed.isNewChat,
+  };
 }

@@ -17,6 +17,7 @@
     "web:build": "pnpm --dir web build"
   },
   "devDependencies": {
+    "puppeteer": "^25.10.0",
     "vite": "^7.1.3"
   },
   "dependencies": {

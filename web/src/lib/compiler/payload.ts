@@ -21,7 +21,11 @@ const graph = z.object({
 const schema = z.object({
   graph: graph.optional(), prompt: text.optional(),
   media: z.record(z.object({ kind: z.string(), dataUrl: z.string().max(4_000_000) })).default({}),
-  session: z.object({ chatId: z.string().max(1000).optional(), destinationFingerprint: z.string().max(2000).optional() }).default({}),
+  session: z.object({
+    chatId: z.string().max(1000).optional(),
+    destinationFingerprint: z.string().max(2000).optional(),
+    previousState: z.record(z.unknown()).optional(),
+  }).passthrough().default({}),
   platformCapability: z.object({ platform: z.string().max(100), plan: z.string().max(100) }).passthrough().default({ platform: 'chatgpt', plan: 'free' }),
 }).refine(value => value.graph || value.prompt?.trim(), 'A graph or instruction is required');
 

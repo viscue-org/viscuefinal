@@ -52,13 +52,13 @@
   --vc-space-12: 48px;
   --vc-space-16: 64px;
 
-  /* Radius System (Section 7) */
-  --vc-radius-xs: 6px;
-  --vc-radius-sm: 8px;
-  --vc-radius-input: 10px;
-  --vc-radius-button: 10px;
-  --vc-radius-card: 14px;
-  --vc-radius-panel: 20px;
+  /* Radius System (Section 7) - Matched to logo squircle */
+  --vc-radius-xs: 12px;
+  --vc-radius-sm: 16px;
+  --vc-radius-input: 16px;
+  --vc-radius-button: 22px;
+  --vc-radius-card: 28px;
+  --vc-radius-panel: 36px;
   --vc-radius-full: 999px;
 
   /* Motion System (Section 26) */

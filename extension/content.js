@@ -20,14 +20,60 @@
   function addEntry(){const existing=document.getElementById(entryId);if(!shouldClaimEntry(existing))return;const composer=queryFirst(adapter.composer);if(!composer)return;existing?.remove();const button=document.createElement('button');button.id=entryId;button.type='button';button.dataset.viscueExtensionId=extensionId;button.dataset.viscueVersion=extensionVersion;button.textContent='Open Viscue';button.setAttribute('aria-label','Open Viscue visual workspace');button.title='Open the Viscue visual intent workspace';button.addEventListener('click',()=>{Promise.resolve(chrome.runtime.sendMessage({type:'open-workspace'})).then(response=>{if(response?.ok===false&&!response.authenticated){button.textContent='Viscue needs attention';button.title=response.error||'Open the Viscue extension and sign in.'}}).catch(()=>{button.textContent='Reload Viscue';button.title='Reload the Viscue extension from chrome://extensions.'})});document.body?.append(button)}
   addEntry();new MutationObserver(addEntry).observe(document.documentElement,{childList:true,subtree:true});
 
+  function extractLiveChatContext() {
+    const pathname = location.pathname;
+    let chatId = '';
+    if (platform === 'Gemini') {
+      const m = pathname.match(/\/app(?:\/u\/\d+)?\/([a-zA-Z0-9_-]+)/);
+      chatId = m ? m[1] : (pathname.startsWith('/app') ? 'new' : pathname);
+    } else if (platform === 'Claude') {
+      const m = pathname.match(/\/(?:chat|project)\/([a-zA-Z0-9_-]+)/);
+      chatId = m ? m[1] : (pathname === '/new' || pathname === '/' ? 'new' : pathname);
+    } else if (platform === 'Copilot') {
+      const qChat = new URLSearchParams(location.search).get('conversationId');
+      const m = pathname.match(/\/(?:chats|sl)\/([a-zA-Z0-9_-]+)/);
+      chatId = qChat || (m ? m[1] : (pathname === '/' ? 'new' : pathname));
+    } else if (platform === 'Perplexity') {
+      const m = pathname.match(/\/(?:search|q)\/([a-zA-Z0-9_-]+)/);
+      chatId = m ? m[1] : (pathname === '/' || pathname === '/search/new' ? 'new' : pathname);
+    } else if (platform === 'Grok') {
+      const qChat = new URLSearchParams(location.search).get('conversation');
+      const m = pathname.match(/\/c\/([a-zA-Z0-9_-]+)/);
+      chatId = qChat || (m ? m[1] : (pathname === '/' ? 'new' : pathname));
+    } else {
+      const m = pathname.match(/\/c\/([a-zA-Z0-9_-]+)/);
+      chatId = m ? m[1] : (pathname === '/' ? 'new' : pathname);
+    }
+    chatId = String(chatId || '').replace(/^\/+|\/+$/g, '').trim() || 'new';
+    const destinationFingerprint = `${platform}:${chatId === 'new' ? pathname : chatId}`;
+    return {
+      platform,
+      url: location.href,
+      pathname,
+      chatId,
+      destinationFingerprint,
+      isNewChat: chatId === 'new',
+    };
+  }
+
   chrome.runtime.onMessage.addListener((message,_sender,sendResponse)=>{
+    if(message.type==='get-chat-context'){sendResponse({ok:true,context:extractLiveChatContext()});return true}
     if(message.type==='insert-prompt'){insertPrompt(message.prompt).then(ok=>sendResponse(ok?{ok:true}:{ok:false,error:'Destination composer was not found.'}));return true}
     if(message.type==='handoff'){runHandoff(message).then(sendResponse).catch(error=>sendResponse({ok:false,error:error.message}));return true}
   });
 
-  async function runHandoff({prompt,attachments=[],submit=false,executionId,destinationFingerprint,promptHash}){
-    const actualDestination=`${platform}:${location.pathname}`;
-    if(destinationFingerprint&&destinationFingerprint!==actualDestination)throw new Error('The destination conversation changed after compilation. Nothing was attached or submitted.');
+  async function runHandoff({prompt,attachments=[],submit=false,executionId,destinationFingerprint,promptHash,tabId}){
+    const liveCtx = extractLiveChatContext();
+    const actualDestination = liveCtx.destinationFingerprint;
+    const pathDestination = `${platform}:${location.pathname}`;
+    const isMatch = !destinationFingerprint ||
+      destinationFingerprint === actualDestination ||
+      destinationFingerprint === pathDestination ||
+      (destinationFingerprint.endsWith(':new') || destinationFingerprint.endsWith(':/') || destinationFingerprint.endsWith(':/app') || destinationFingerprint.endsWith(':/new'));
+    if(!isMatch){
+      console.warn('[Viscue handoff] destination mismatch', { destinationFingerprint, actualDestination, pathDestination });
+      throw new Error('The destination conversation changed after compilation. Nothing was attached or submitted.');
+    }
     if(promptHash){
       const computedNorm=await sha256(normalizeForHash(prompt));
       const computedRaw=await sha256(prompt);
@@ -51,10 +97,22 @@
     await insertAndVerifyPrompt(composer,prompt);
     console.info('[Viscue handoff] prompt verified',{platform,characters:prompt.length});
     const confirmedAttachments=attachments.map(item=>({...item,confirmed:true}));
-    if(!submit)return{ok:true,attached,...globalThis.ViscueHandoff.buildReceipt({executionId,destinationFingerprint,promptHash,attachments:confirmedAttachments,promptVerified:true,submitted:false})};
+    const finalReceipt = {
+      ...globalThis.ViscueHandoff.buildReceipt({executionId,destinationFingerprint:liveCtx.destinationFingerprint,promptHash,attachments:confirmedAttachments,promptVerified:true,submitted:Boolean(submit)}),
+      tabId,
+      chatId: liveCtx.chatId,
+      platform,
+    };
+    if(!submit)return{ok:true,attached,...finalReceipt};
     const sendButton=await waitFor(()=>{const button=queryFirst(adapter.send);return button&&!button.disabled?button:null},15000,'The destination Send button did not become ready.');
     if(!composerContainsPrompt(composer,prompt))throw new Error('The destination editor lost the instruction before submission. Nothing was sent.');
-    sendButton.click();console.info('[Viscue handoff] submit clicked',{platform});return{ok:true,attached,...globalThis.ViscueHandoff.buildReceipt({executionId,destinationFingerprint,promptHash,attachments:confirmedAttachments,promptVerified:true,submitted:true})};
+    sendButton.click();
+    console.info('[Viscue handoff] submit clicked',{platform});
+    await delay(350);
+    const postSubmitCtx = extractLiveChatContext();
+    finalReceipt.destination_fingerprint = postSubmitCtx.destinationFingerprint;
+    finalReceipt.chatId = postSubmitCtx.chatId;
+    return{ok:true,attached,...finalReceipt};
   }
   async function insertPrompt(prompt){const composer=queryFirst(adapter.composer);if(!composer)return false;await insertAndVerifyPrompt(composer,prompt);return true}
   async function insertAndVerifyPrompt(composer,text){

@@ -26,7 +26,7 @@ function operationEndpoints(intent) {
   return [];
 }
 
-export function buildCanonicalBrief({ graph = {}, selection = {}, evidence = [] } = {}) {
+export function buildCanonicalBrief({ graph = {}, selection = {}, evidence = [], alreadyAttached = [] } = {}) {
   const byId = new Map((graph.items || []).map(item => [item.id, item]));
   const selected = selection.selected || [];
   const trimmed = selection.trimmed || [];
@@ -34,6 +34,10 @@ export function buildCanonicalBrief({ graph = {}, selection = {}, evidence = [] 
   const trimmedLogical = trimmed.flatMap(item => item.logicalItems?.length ? item.logicalItems : [item]);
   const selectedIds = new Set(selectedLogical.map(item => item.id));
   const lines = ['Use the selected clean references as an explicit visual specification.'];
+  if (Array.isArray(alreadyAttached) && alreadyAttached.length > 0) {
+    const priorNames = alreadyAttached.map(a => `“${a.name}”`).join(', ');
+    lines.push(`(Note: ${priorNames} was already attached in prior turns of this conversation and will not be re-uploaded.)`);
+  }
   const coverageIds = [];
   const protectedFacts = [];
   const cueInstructions = new Set((graph.cues || []).map(cue => cue.instruction?.trim().toLowerCase()).filter(Boolean));

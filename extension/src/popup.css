@@ -8,10 +8,10 @@
   --mist: #e9eff3;
   --paper: #ffffff;
   --soft: #d6d7d8;
-  --radius-compact: 10px;
-  --radius-control: 14px;
-  --radius-card: 18px;
-  --radius-container: 24px;
+  --radius-compact: 16px;
+  --radius-control: 22px;
+  --radius-card: 28px;
+  --radius-container: 36px;
 }
 
 * { box-sizing: border-box; }
@@ -769,7 +769,7 @@ button { font: inherit; }
 .settings-card {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: var(--radius-card);
+  border-radius: 18px;
   padding: 16px;
   margin-bottom: 16px;
 }
@@ -861,7 +861,7 @@ button { font: inherit; }
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: #FFFFFF;
   padding: 6px 12px;
-  border-radius: var(--radius-compact);
+  border-radius: 10px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -920,7 +920,7 @@ button { font: inherit; }
   color: #17222D;
   border: 0;
   padding: 5px 14px;
-  border-radius: var(--radius-compact);
+  border-radius: 10px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;

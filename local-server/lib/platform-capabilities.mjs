@@ -75,3 +75,62 @@ export function effectiveReferenceLimit({ viscuePlan = 'free', capability = {} }
     capability: destination.capability,
   });
 }
+
+export function parsePlatformChatContext(urlStr = '') {
+  let parsed;
+  try { parsed = new URL(urlStr || 'https://chatgpt.com'); }
+  catch { parsed = new URL('https://chatgpt.com'); }
+
+  const host = parsed.hostname.toLowerCase();
+  const pathname = parsed.pathname;
+  let platform = 'ChatGPT';
+  let platformId = 'chatgpt';
+  let chatId = '';
+
+  if (host.includes('gemini.google')) {
+    platform = 'Gemini';
+    platformId = 'gemini';
+    const m = pathname.match(/\/app(?:\/u\/\d+)?\/([a-zA-Z0-9_-]+)/);
+    chatId = m ? m[1] : (pathname.startsWith('/app') ? 'new' : pathname);
+  } else if (host.includes('claude.ai')) {
+    platform = 'Claude';
+    platformId = 'claude';
+    const m = pathname.match(/\/(?:chat|project)\/([a-zA-Z0-9_-]+)/);
+    chatId = m ? m[1] : (pathname === '/new' || pathname === '/' ? 'new' : pathname);
+  } else if (host.includes('copilot.microsoft')) {
+    platform = 'Copilot';
+    platformId = 'copilot';
+    const qChat = parsed.searchParams.get('conversationId');
+    const m = pathname.match(/\/(?:chats|sl)\/([a-zA-Z0-9_-]+)/);
+    chatId = qChat || (m ? m[1] : (pathname === '/' ? 'new' : pathname));
+  } else if (host.includes('perplexity')) {
+    platform = 'Perplexity';
+    platformId = 'perplexity';
+    const m = pathname.match(/\/(?:search|q)\/([a-zA-Z0-9_-]+)/);
+    chatId = m ? m[1] : (pathname === '/' || pathname === '/search/new' ? 'new' : pathname);
+  } else if (host.includes('grok.com') || host.includes('x.com')) {
+    platform = 'Grok';
+    platformId = 'grok';
+    const qChat = parsed.searchParams.get('conversation');
+    const m = pathname.match(/\/c\/([a-zA-Z0-9_-]+)/);
+    chatId = qChat || (m ? m[1] : (pathname === '/' ? 'new' : pathname));
+  } else {
+    platform = 'ChatGPT';
+    platformId = 'chatgpt';
+    const m = pathname.match(/\/c\/([a-zA-Z0-9_-]+)/);
+    chatId = m ? m[1] : (pathname === '/' ? 'new' : pathname);
+  }
+
+  chatId = String(chatId || '').replace(/^\/+|\/+$/g, '').trim() || 'new';
+
+  return Object.freeze({
+    platform,
+    platformId,
+    url: parsed.href,
+    pathname: parsed.pathname,
+    chatId,
+    destinationFingerprint: `${platform}:${chatId === 'new' ? parsed.pathname : chatId}`,
+    isNewChat: chatId === 'new',
+  });
+}
+

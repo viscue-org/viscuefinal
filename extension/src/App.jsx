@@ -1309,9 +1309,16 @@ function AppCanvas() {
     sessionCtx.destinationFingerprint = sessionCtx.fingerprint || `${sessionCtx.platform || graph.destination}:${sessionCtx.chatId}`;
 
     if (globalThis.chrome?.storage?.local) {
-      const stateKey = `viscue-chat-state-${sessionCtx.destinationFingerprint}`;
-      const res = await chrome.storage.local.get(stateKey);
-      sessionCtx.previousState = res[stateKey] || null;
+      const keys = [
+        `viscue-chat-state-${sessionCtx.destinationFingerprint}`,
+        sessionCtx.platform && sessionCtx.chatId ? `viscue-chat-state-${sessionCtx.platform}:${sessionCtx.chatId}` : null,
+        sourceTabId ? `viscue-tab-state-${sourceTabId}` : null,
+      ].filter(Boolean);
+      const res = await chrome.storage.local.get(keys);
+      sessionCtx.previousState = res[`viscue-chat-state-${sessionCtx.destinationFingerprint}`] ||
+        (sessionCtx.platform && sessionCtx.chatId ? res[`viscue-chat-state-${sessionCtx.platform}:${sessionCtx.chatId}`] : null) ||
+        (sourceTabId ? res[`viscue-tab-state-${sourceTabId}`] : null) ||
+        null;
     }
 
     onPhase?.('compiling');
@@ -1338,9 +1345,19 @@ function AppCanvas() {
     setBusy(false);
     if (!handoff?.ok) { onPhase?.('error'); setResult({ error: handoff?.error || 'The destination did not accept the intent.' }); setCueAnimation(null); return; }
     const receipt = await chromeMessage({ type: 'handoff-receipt', receipt: handoff });
-    const successMsg = attachments.length
-      ? (submit ? 'References attached, intent inserted, and submitted.' : 'References attached and intent inserted.')
-      : (submit ? 'Text intent inserted and submitted.' : 'Text intent inserted for review.');
+    const prevAttachedCount = (sessionCtx.previousState?.sent_attachment_hashes || sessionCtx.previousState?.attachment_state_hashes || []).length;
+    let successMsg;
+    if (attachments.length) {
+      successMsg = submit
+        ? `Attached ${attachments.length} new reference${attachments.length === 1 ? '' : 's'}${prevAttachedCount ? ` (${prevAttachedCount} prior reference${prevAttachedCount === 1 ? '' : 's'} already in chat)` : ''}, inserted intent, and submitted.`
+        : `Attached ${attachments.length} new reference${attachments.length === 1 ? '' : 's'}${prevAttachedCount ? ` (${prevAttachedCount} prior reference${prevAttachedCount === 1 ? '' : 's'} already in chat)` : ''} and inserted intent.`;
+    } else if (prevAttachedCount) {
+      successMsg = submit
+        ? `Refinement sent (referencing ${prevAttachedCount} prior reference${prevAttachedCount === 1 ? '' : 's'} without duplicate uploads).`
+        : `Refinement prepared (referencing ${prevAttachedCount} prior reference${prevAttachedCount === 1 ? '' : 's'} without duplicate uploads).`;
+    } else {
+      successMsg = submit ? 'Text intent inserted and submitted.' : 'Text intent inserted for review.';
+    }
     setResult({ success: receipt?.ok ? successMsg : `${successMsg} (Failed to save state cache)`, provider: response.provider });
     onPhase?.('done');
     if (shouldCloseWorkspace(handoff, receipt)) {

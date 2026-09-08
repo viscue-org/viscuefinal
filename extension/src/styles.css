@@ -89,19 +89,19 @@
   --color-focus: #5B7593;
   --color-connection-active: #5B7593;
 
-  /* ── Radius System ── */
-  --radius-xs: 6px;
-  --radius-sm: 10px;
-  --radius-md: 14px;
-  --radius-lg: 18px;
-  --radius-xl: 24px;
+  /* 💠 Radius System (Squircle / Logo-inspired) 💠 */
+  --radius-xs: 12px;
+  --radius-sm: 16px;
+  --radius-md: 22px;
+  --radius-lg: 28px;
+  --radius-xl: 36px;
   --radius-full: 999px;
 
-  /* ── Logo-Inspired Standard Corner Radius System ── */
-  --radius-container: var(--radius-xl); /* 24px: Pop-ups, outer dialogs, modals */
-  --radius-card: var(--radius-lg);      /* 18px: Cards, panels, surfaces */
-  --radius-action: var(--radius-md);    /* 14px: Buttons, actions, interactive pills */
-  --radius-control: var(--radius-sm);   /* 10px: Inputs, selects, chips, badges */
+  /* 💠 Logo-Inspired Standard Corner Radius System 💠 */
+  --radius-container: var(--radius-xl); /* 36px: Pop-ups, outer dialogs, modals */
+  --radius-card: var(--radius-lg);      /* 28px: Cards, panels, surfaces */
+  --radius-action: var(--radius-md);    /* 22px: Buttons, actions, interactive pills */
+  --radius-control: var(--radius-sm);   /* 16px: Inputs, selects, chips, badges */
 
   /* ── Viscue Signature Eye-Blink & Brand Animation System ── */
   --blink-duration: 4.2s;

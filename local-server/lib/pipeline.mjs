@@ -19,13 +19,21 @@ function explicitScores(graph = {}) {
   return scores;
 }
 
-async function collectEvidence(selected, media, bedrock) {
+async function collectEvidence(selected, media, bedrock, priorEvidence = []) {
   if (!bedrock) {
     return {
       stages: [createStage('perception', 'skipped', { warning: 'Bedrock perception is not configured.' })],
       evidence: [],
     };
   }
+  const priorByAsset = new Map();
+  for (const ev of (Array.isArray(priorEvidence) ? priorEvidence : [])) {
+    if (ev?.assetId) {
+      if (!priorByAsset.has(ev.assetId)) priorByAsset.set(ev.assetId, []);
+      priorByAsset.get(ev.assetId).push(ev);
+    }
+  }
+
   const itemResults = await Promise.all(selected.map(async item => {
     const source = media[item.id];
     if (!source?.dataUrl) {
@@ -34,13 +42,21 @@ async function collectEvidence(selected, media, bedrock) {
         evidence: [],
       };
     }
+    // Differential perception: if this asset was already analyzed and unchanged, reuse evidence
+    if (priorByAsset.has(item.id) && priorByAsset.get(item.id).length > 0) {
+      const cachedEvidence = priorByAsset.get(item.id);
+      return {
+        stage: createStage(`perception.${item.id}`, 'ok', { provider: 'cached', evidence_count: cachedEvidence.length }),
+        evidence: cachedEvidence,
+      };
+    }
     try {
       const analyze = item.kind === 'video' ? bedrock.analyzeVideo?.bind(bedrock) : bedrock.analyzeImage?.bind(bedrock);
       if (!analyze) throw new Error('Model route is unavailable.');
       const result = await analyze({ assetId: item.id, dataUrl: source.dataUrl, prompt: 'Report only directly visible objects, layout, OCR, and typography evidence. Unknown facts must remain unknown.' });
       return {
         stage: createStage(`perception.${item.id}`, result.status || 'ok', { provider: result.provider, model: result.model, evidence_count: result.evidence?.length || 0 }),
-        evidence: result.evidence || [],
+        evidence: (result.evidence || []).map(e => ({ ...e, assetId: item.id })),
       };
     } catch {
       return {
@@ -95,8 +111,15 @@ export async function runPipeline(request = {}, deps = {}) {
     return { ok: false, status: 'blocked', error: policy.summary, stages, selected_references: [], trimmed_references: policy.trimmed };
   }
 
+  const prevState = request.session?.previousState || null;
+  const sentHashes = new Set([
+    ...(Array.isArray(prevState?.sent_attachment_hashes) ? prevState.sent_attachment_hashes : []),
+    ...(Array.isArray(prevState?.attachment_state_hashes) ? prevState.attachment_state_hashes : []),
+    ...(Array.isArray(prevState?.attachments) ? prevState.attachments.filter(a => a.confirmed !== false).map(a => a.stateHash || a.hash) : []),
+  ].filter(Boolean));
+
   const [perceptionResult, titanStage, fontResult] = await Promise.all([
-    collectEvidence(policy.selected, request.media || {}, deps.bedrock),
+    collectEvidence(policy.selected, request.media || {}, deps.bedrock, prevState?.evidence || []),
     runRelevance(graph, deps.bedrock),
     runFontIdentification(request, deps.font),
   ]);
@@ -107,7 +130,13 @@ export async function runPipeline(request = {}, deps = {}) {
 
   const evidence = [...perceptionResult.evidence, ...fontResult.evidence];
 
-  const canonical = buildCanonicalBrief({ graph, evidence, selection: policy });
+  // Identify attachments that were already confirmed in this chat session
+  const preliminaryBrief = buildCanonicalBrief({ graph, evidence, selection: policy });
+  const alreadyAttached = (preliminaryBrief.attachments || []).filter(a => sentHashes.has(a.stateHash) || (a.hash && sentHashes.has(a.hash)));
+  const finalAttachments = (preliminaryBrief.attachments || []).filter(a => !sentHashes.has(a.stateHash) && (!a.hash || !sentHashes.has(a.hash)));
+
+  // Build canonical brief with refinement context about existing references
+  const canonical = buildCanonicalBrief({ graph, evidence, selection: policy, alreadyAttached });
   let compiled = { status: 'degraded', provider: 'deterministic', text: canonical.prompt, warning: { reason: 'Compiler not configured.' } };
   if (deps.bedrock?.compilePrompt) compiled = await deps.bedrock.compilePrompt(canonical);
   const verified = verifyProtectedFacts(compiled.text, canonical);
@@ -118,27 +147,15 @@ export async function runPipeline(request = {}, deps = {}) {
   const executionId = `exec_${crypto.randomUUID()}`;
   const status = stages.some(stage => stage.status === 'degraded') ? 'degraded' : 'ok';
   
+  // Real compiled AI prompt or verified deterministic brief - NEVER replace with dummy skip text!
   let finalPrompt = compiled.text;
-  let finalAttachments = canonical.attachments;
   let provider = compiled.provider || 'deterministic';
-  const canonicalPromptHash = hash(canonical.prompt);
 
-  if (request.session?.previousState) {
-    const prevState = request.session.previousState;
-    const samePrompt = prevState.promptHash === canonicalPromptHash || prevState.promptHash === hash(compiled.text);
-
-    if (Array.isArray(prevState.attachments)) {
-      const sentHashes = new Set(prevState.attachments.filter(a => a.confirmed).map(a => a.stateHash));
-      finalAttachments = canonical.attachments.filter(a => !sentHashes.has(a.stateHash));
-    }
-    
-    if (samePrompt && finalAttachments.length === 0) {
-      finalPrompt = "Viscue: No visual or instruction updates found since your last submission.";
-      provider = "delta-skip";
-    } else if (samePrompt) {
-      finalPrompt = "Viscue: I updated the visual references. Please reflect the new references in your response.";
-      provider = "delta";
-    }
+  if (alreadyAttached.length > 0) {
+    stages.push(createStage('refine.deduplication', 'ok', {
+      reused_attachments: alreadyAttached.length,
+      new_attachments: finalAttachments.length,
+    }));
   }
 
   const newPromptHash = hash(finalPrompt);
