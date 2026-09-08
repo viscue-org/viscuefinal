@@ -58,14 +58,20 @@ export function formatPoint(cue = {}, evidenceList = []) {
     const cx = x + width / 2;
     const cy = y + height / 2;
     const region = compassRegion(cx, cy);
-    if (matchedObject) return `the ${region} region (at "${matchedObject}")`;
-    return `the ${region} region`;
+    const xPct = Math.round(x * 100);
+    const yPct = Math.round(y * 100);
+    const x2Pct = Math.round((x + width) * 100);
+    const y2Pct = Math.round((y + height) * 100);
+    const coords = `[${xPct}%, ${yPct}% to ${x2Pct}%, ${y2Pct}%]`;
+    if (matchedObject) return `the ${region} region ${coords} (at "${matchedObject}")`;
+    return `the ${region} region ${coords}`;
   }
   const px = Number(cue.x || 0);
   const py = Number(cue.y || 0);
   const region = compassRegion(px, py);
-  if (matchedObject) return `the ${region} area (at "${matchedObject}")`;
-  return `the ${region} area`;
+  const coords = `[${Math.round(px * 100)}%, ${Math.round(py * 100)}%]`;
+  if (matchedObject) return `the ${region} area at ${coords} (at "${matchedObject}")`;
+  return `the ${region} area at ${coords}`;
 }
 
 function stateHash(item) {
@@ -142,7 +148,7 @@ export function buildCanonicalBrief({ graph = {}, selection = {}, evidence = [],
             }, evidence);
         const instruction = relation.instruction?.trim() || 'Connect and apply';
         const punct = /[.!?:]$/.test(instruction) ? '' : '.';
-        lines.push(`- On "${sourceAsset.name}" (Target: ${sourceLoc}): ${instruction}${punct} Using reference "${targetAsset.name}" (${targetLoc}).`);
+        lines.push(`- On "${sourceAsset.name}" at ${sourceLoc}: ${instruction}${punct} Using reference "${targetAsset.name}" (${targetLoc}).`);
         protectedFacts.push({ id: `name:${sourceAsset.id}`, text: sourceAsset.name });
         protectedFacts.push({ id: `name:${targetAsset.id}`, text: targetAsset.name });
       }

@@ -26,6 +26,7 @@ test('canonical brief preserves exact filenames, coordinates, regions, and times
   assert.match(brief.prompt, /00:12\.840/);
   // Coordinates are now described as compass region only to avoid literal AI bounding box overlays
   assert.match(brief.prompt, /center area/);
+  assert.match(brief.prompt, /\[45%, 42%\]/);
   assert.match(brief.prompt, /Preserve exactly/);
 });
 
@@ -145,7 +146,7 @@ test('canonical brief compiles CROSS_ASSET_ANNOTATION relations correctly', () =
     graph,
     selection: { selected: graph.items, trimmed: [] },
   });
-  assert.match(brief.prompt, /On "UI_Mockup\.png" \(Target: the bottom-center area\): place image there\. Using reference "Photo\.png" \(the whole reference\)\./);
+  assert.match(brief.prompt, /On "UI_Mockup\.png" at the bottom-center area at \[50%, 80%\]: place image there\. Using reference "Photo\.png" \(the whole reference\)\./);
   assert.ok(brief.protectedFacts.some(f => f.text === 'UI_Mockup.png'));
   assert.ok(brief.protectedFacts.some(f => f.text === 'Photo.png'));
 });
