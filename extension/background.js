@@ -2,6 +2,7 @@ import { signIn, signOut, getSession, getAccessToken, handleWorkspaceAccess } fr
 import { apiFetch } from './api/client.mjs';
 import { VISCUE_WEB_URL } from './api/config.mjs';
 import { isWorkspaceUrl } from './api/workspaceCompletion.mjs';
+import { parsePlatformChatContext } from '../local-server/lib/platform-capabilities.mjs';
 
 const API = 'http://127.0.0.1:8787';
 const ONBOARDING_KEY = 'viscue-onboarding-complete';

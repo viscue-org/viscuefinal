@@ -24,7 +24,8 @@ test('canonical brief preserves exact filenames, coordinates, regions, and times
   const brief = buildCanonicalBrief(fixture());
   assert.match(brief.prompt, /Demo\.mp4/);
   assert.match(brief.prompt, /00:12\.840/);
-  assert.match(brief.prompt, /45% across/);
+  // Coordinates are now described as compass region only to avoid literal AI bounding box overlays
+  assert.match(brief.prompt, /center area/);
   assert.match(brief.prompt, /Preserve exactly/);
 });
 

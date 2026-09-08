@@ -3,11 +3,11 @@ import { z } from 'zod';
 const id = z.string().min(1).max(256);
 const text = z.string().max(100_000);
 const item = z.object({
-  id, name: z.string().max(1000), kind: z.enum(['image', 'video', 'video_frame', 'document', 'webpage', 'note']),
+  id, name: z.string().max(1000).default(''), kind: z.enum(['image', 'video', 'video_frame', 'document', 'webpage', 'note', 'webpage_crop', 'document_page']),
   text: text.optional(), role: z.string().max(100).optional(), hash: z.string().max(256).optional(),
   intentional: z.boolean().default(true), preserved: z.boolean().optional(),
   annotations: z.array(z.record(z.unknown())).max(10000).optional(),
-  provenance: z.object({ parentId: id.optional() }).passthrough().optional(),
+  provenance: z.object({ parentId: id.optional() }).passthrough().nullable().optional(),
 }).passthrough();
 const cue = z.object({
   id, assetId: id, instruction: text, noteId: id.optional(),
@@ -24,7 +24,7 @@ const schema = z.object({
   session: z.object({
     chatId: z.string().max(1000).optional(),
     destinationFingerprint: z.string().max(2000).optional(),
-    previousState: z.record(z.unknown()).optional(),
+    previousState: z.record(z.unknown()).nullable().optional(),
   }).passthrough().default({}),
   platformCapability: z.object({ platform: z.string().max(100), plan: z.string().max(100) }).passthrough().default({ platform: 'chatgpt', plan: 'free' }),
 }).refine(value => value.graph || value.prompt?.trim(), 'A graph or instruction is required');

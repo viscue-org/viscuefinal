@@ -8,12 +8,64 @@ export function formatTime(seconds) {
   return `${String(minutes).padStart(2, '0')}:${String(Math.floor(remaining / 1000)).padStart(2, '0')}.${String(remaining % 1000).padStart(3, '0')}`;
 }
 
-export function formatPoint(cue = {}) {
+function compassRegion(x, y) {
+  // Divide image into a 3x3 grid for human-readable spatial description
+  const col = x < 0.33 ? 'left' : x > 0.67 ? 'right' : 'center';
+  const row = y < 0.33 ? 'top' : y > 0.67 ? 'bottom' : 'middle';
+  if (row === 'middle' && col === 'center') return 'center';
+  if (row === 'middle') return col;
+  if (col === 'center') return row + '-center';
+  return `${row}-${col}`;
+}
+
+export function formatPoint(cue = {}, evidenceList = []) {
+  let matchedObject = null;
+  if (evidenceList && evidenceList.length > 0) {
+    const cueAssetId = cue.assetId;
+    let cx, cy;
+    if (cue.isArea && cue.area) {
+      cx = cue.area.x + cue.area.width / 2;
+      cy = cue.area.y + cue.area.height / 2;
+    } else {
+      cx = Number(cue.x || 0);
+      cy = Number(cue.y || 0);
+    }
+    
+    const matches = [];
+    for (const ev of evidenceList) {
+      if (ev.provenance?.asset_id === cueAssetId && ev.bbox) {
+        const [bx1, by1, bx2, by2] = ev.bbox;
+        if (cx >= bx1 && cx <= bx2 && cy >= by1 && cy <= by2) {
+          if (ev.value && typeof ev.value === 'string') {
+            matches.push(ev);
+          }
+        }
+      }
+    }
+    
+    if (matches.length > 0) {
+      matches.sort((a, b) => {
+        const areaA = (a.bbox[2] - a.bbox[0]) * (a.bbox[3] - a.bbox[1]);
+        const areaB = (b.bbox[2] - b.bbox[0]) * (b.bbox[3] - b.bbox[1]);
+        return areaA - areaB;
+      });
+      matchedObject = matches[0].value;
+    }
+  }
+
   if (cue.isArea && cue.area) {
     const { x = 0, y = 0, width = 0, height = 0 } = cue.area;
-    return `region from ${Math.round(x * 100)}%, ${Math.round(y * 100)}% to ${Math.round((x + width) * 100)}%, ${Math.round((y + height) * 100)}%`;
+    const cx = x + width / 2;
+    const cy = y + height / 2;
+    const region = compassRegion(cx, cy);
+    if (matchedObject) return `the ${region} region (at "${matchedObject}")`;
+    return `the ${region} region`;
   }
-  return `around ${Math.round(Number(cue.x || 0) * 100)}% across and ${Math.round(Number(cue.y || 0) * 100)}% down`;
+  const px = Number(cue.x || 0);
+  const py = Number(cue.y || 0);
+  const region = compassRegion(px, py);
+  if (matchedObject) return `the ${region} area (at "${matchedObject}")`;
+  return `the ${region} area`;
 }
 
 function stateHash(item) {
@@ -49,10 +101,11 @@ export function buildCanonicalBrief({ graph = {}, selection = {}, evidence = [],
     if (!asset || !cue.instruction?.trim()) continue;
     coverageIds.push(cue.id);
     const timestamp = cue.timeMs == null ? '' : ` at ${formatTime(cue.timeMs / 1000)}`;
-    const target = cue.isWholeAsset ? 'the whole reference' : formatPoint(cue);
+    const target = cue.isWholeAsset ? 'the whole reference' : formatPoint(cue, evidence);
     const instructionText = cue.instruction.trim();
     const punct = /[.!?:]$/.test(instructionText) ? '' : '.';
-    lines.push(`- ${instructionText}${punct} Apply to ${target} on “${asset.name}”${timestamp}.`);
+    // Use clear imperative phrasing so AI understands the spatial target
+    lines.push(`- On "${asset.name}"${timestamp}: ${instructionText}${punct} (Target: ${target}.)`);
     protectedFacts.push({ id: `name:${asset.id}`, text: asset.name });
     if (cue.timeMs != null) protectedFacts.push({ id: `time:${cue.id}`, text: formatTime(cue.timeMs / 1000) });
   }
