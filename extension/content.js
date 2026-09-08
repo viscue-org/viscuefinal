@@ -10,9 +10,14 @@
   };
   const platform=location.hostname.includes('gemini.google')?'Gemini':location.hostname.includes('claude.ai')?'Claude':location.hostname.includes('copilot.microsoft')?'Copilot':location.hostname.includes('perplexity')?'Perplexity':location.hostname.includes('grok.com')?'Grok':'ChatGPT';
   const adapter=adapters[platform];
+  const extensionId=chrome.runtime.id||'viscue';
+  const extensionVersion=chrome.runtime.getManifest?.().version||'0.0.0';
 
   function queryFirst(selectors){for(const selector of selectors){const element=document.querySelector(selector);if(element)return element}return null}
-  function addEntry(){if(document.getElementById(entryId))return;const composer=queryFirst(adapter.composer);if(!composer)return;const button=document.createElement('button');button.id=entryId;button.type='button';button.textContent='Open Viscue';button.title='Open the Viscue visual intent workspace';button.addEventListener('click',()=>chrome.runtime.sendMessage({type:'open-workspace'}));const parent=composer.closest('form')||composer.parentElement;parent?.append(button)}
+  function compareVersions(left,right){const a=String(left||'0').split('.').map(Number),b=String(right||'0').split('.').map(Number);for(let i=0;i<Math.max(a.length,b.length);i++){const delta=(a[i]||0)-(b[i]||0);if(delta)return delta}return 0}
+  function ownsEntry(element){return element?.dataset?.viscueExtensionId===extensionId}
+  function shouldClaimEntry(element){if(!element)return true;if(ownsEntry(element))return false;const ownerId=element.dataset?.viscueExtensionId;if(!ownerId)return true;const versionOrder=compareVersions(extensionVersion,element.dataset?.viscueVersion);return versionOrder>0||(versionOrder===0&&extensionId.localeCompare(ownerId)<0)}
+  function addEntry(){const existing=document.getElementById(entryId);if(!shouldClaimEntry(existing))return;const composer=queryFirst(adapter.composer);if(!composer)return;existing?.remove();const button=document.createElement('button');button.id=entryId;button.type='button';button.dataset.viscueExtensionId=extensionId;button.dataset.viscueVersion=extensionVersion;button.textContent='Open Viscue';button.title='Open the Viscue visual intent workspace';button.addEventListener('click',()=>{Promise.resolve(chrome.runtime.sendMessage({type:'open-workspace'})).then(response=>{if(response?.ok===false&&!response.authenticated){button.textContent='Viscue needs attention';button.title=response.error||'Open the Viscue extension and sign in.'}}).catch(()=>{button.textContent='Reload Viscue';button.title='Reload the Viscue extension from chrome://extensions.'})});const parent=composer.closest('form')||composer.parentElement;parent?.append(button)}
   addEntry();new MutationObserver(addEntry).observe(document.documentElement,{childList:true,subtree:true});
 
   chrome.runtime.onMessage.addListener((message,_sender,sendResponse)=>{
