@@ -111,7 +111,24 @@ export async function runPipeline(request = {}, deps = {}) {
     return { ok: false, status: 'blocked', error: policy.summary, stages, selected_references: [], trimmed_references: policy.trimmed };
   }
 
-  const prevState = request.session?.previousState || null;
+  const isNewChat = Boolean(
+    request.session?.isNewChat === true ||
+    request.session?.chatId === 'new' ||
+    request.session?.chatId === 'ChatGPT:new' ||
+    request.session?.chatId === 'Claude:new' ||
+    request.session?.chatId === 'Gemini:new' ||
+    request.session?.chatId === 'Copilot:new' ||
+    request.session?.chatId === 'Perplexity:new' ||
+    request.session?.chatId === 'Grok:new' ||
+    (typeof request.session?.destinationFingerprint === 'string' && (
+      request.session.destinationFingerprint.endsWith(':new') ||
+      request.session.destinationFingerprint.endsWith(':/') ||
+      request.session.destinationFingerprint.endsWith(':/app') ||
+      request.session.destinationFingerprint.endsWith(':/new')
+    ))
+  );
+
+  const prevState = isNewChat ? null : (request.session?.previousState || null);
   const sentHashes = new Set([
     ...(Array.isArray(prevState?.sent_attachment_hashes) ? prevState.sent_attachment_hashes : []),
     ...(Array.isArray(prevState?.attachment_state_hashes) ? prevState.attachment_state_hashes : []),

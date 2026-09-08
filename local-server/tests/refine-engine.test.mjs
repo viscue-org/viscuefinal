@@ -207,3 +207,42 @@ test('re-editing workspace compiles real AI prompt and does not skip or emit dum
   // Hash is accurate
   assert.equal(reEditResult.prompt_hash, hash(reEditResult.final_prompt));
 });
+
+test('a new chat always uploads all references even if previously uploaded in another chat or session', async () => {
+  const item = { id: 'asset_1', kind: 'image', name: '1ecafd53cf6f0ce13e246962b7311673.jpg', hash: 'dog_hash', intentional: true, role: 'Reference' };
+  const media = { asset_1: { dataUrl: 'data:image/jpeg;base64,DOG=', kind: 'image' } };
+
+  // First: Imagine this image was previously attached in an old conversation or tab state
+  const oldConversationHash = crypto.createHash('sha256').update('dog_hash::0').digest('hex');
+
+  const newChatReq = {
+    graph: {
+      destination: 'ChatGPT',
+      items: [item],
+      cues: [{ id: 'cue_1', assetId: 'asset_1', instruction: 'replace it as cat', x: 0.5, y: 0.5 }],
+    },
+    media,
+    profile: { plan: 'free' },
+    session: {
+      chatId: 'new',
+      isNewChat: true,
+      destinationFingerprint: 'ChatGPT:/',
+      previousState: {
+        destination_fingerprint: 'ChatGPT:/',
+        sent_attachment_hashes: [oldConversationHash],
+      },
+    },
+  };
+
+  const newChatResult = await runPipeline(newChatReq, {});
+  assert.equal(newChatResult.ok, true);
+  // In a new chat, the reference MUST be attached!
+  assert.equal(newChatResult.attachments.length, 1);
+  assert.equal(newChatResult.attachments[0].id, 'asset_1');
+  assert.equal(newChatResult.attachments[0].name, '1ecafd53cf6f0ce13e246962b7311673.jpg');
+
+  // The prompt MUST NOT say it was already attached in prior turns!
+  assert.doesNotMatch(newChatResult.final_prompt, /already attached in prior turns/);
+  assert.doesNotMatch(newChatResult.final_prompt, /will not be re-uploaded/);
+});
+

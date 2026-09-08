@@ -172,14 +172,29 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const tabId = receipt.tabId || message.tabId;
         const chatId = receipt.chatId || (destFp ? destFp.split(':').slice(1).join(':') : null);
         const platform = receipt.platform || (destFp ? destFp.split(':')[0] : null);
+        const isNewChat = Boolean(
+          receipt.isNewChat ||
+          chatId === 'new' ||
+          chatId === '/' ||
+          !chatId ||
+          destFp.endsWith(':new') ||
+          destFp.endsWith(':/') ||
+          destFp.endsWith(':/app') ||
+          destFp.endsWith(':/new')
+        );
 
-        // Maintain cumulative list of confirmed attachment hashes per chat
-        const chatKey = destFp ? `viscue-chat-state-${destFp}` : null;
-        const existingData = chatKey ? await chrome.storage.local.get(chatKey) : {};
-        const priorReceipt = existingData[chatKey] || {};
-        const priorSentHashes = priorReceipt.sent_attachment_hashes || priorReceipt.attachment_state_hashes || [];
-        const newHashes = receipt.attachment_state_hashes || [];
-        const cumulativeSentHashes = [...new Set([...priorSentHashes, ...newHashes])];
+        // Only maintain cumulative confirmed attachment hashes for real persistent chats
+        let cumulativeSentHashes = [];
+        const realChatKey = (!isNewChat && platform && chatId) ? `viscue-chat-state-${platform}:${chatId}` : null;
+        if (realChatKey) {
+          const existingData = await chrome.storage.local.get(realChatKey);
+          const priorReceipt = existingData[realChatKey] || {};
+          const priorSentHashes = priorReceipt.sent_attachment_hashes || priorReceipt.attachment_state_hashes || [];
+          const newHashes = receipt.attachment_state_hashes || [];
+          cumulativeSentHashes = [...new Set([...priorSentHashes, ...newHashes])];
+        } else {
+          cumulativeSentHashes = receipt.attachment_state_hashes || [];
+        }
 
         const enrichedReceipt = {
           ...receipt,
@@ -188,6 +203,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           chatId,
           tabId,
           platform,
+          isNewChat,
           sent_attachment_hashes: cumulativeSentHashes,
         };
 
@@ -196,17 +212,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           'viscue-last-receipt': enrichedReceipt,
           [`viscue-receipt-${receipt.execution_id || receipt.executionId || Date.now()}`]: enrichedReceipt,
         };
-        if (destFp) {
-          updates[`viscue-chat-state-${destFp}`] = enrichedReceipt;
-        }
-        if (platform && chatId) {
-          updates[`viscue-chat-state-${platform}:${chatId}`] = enrichedReceipt;
-        }
-        if (tabId) {
-          updates[`viscue-tab-state-${tabId}`] = enrichedReceipt;
+        if (realChatKey) {
+          updates[realChatKey] = enrichedReceipt;
+          if (destFp) updates[`viscue-chat-state-${destFp}`] = enrichedReceipt;
         }
 
         await chrome.storage.local.set(updates);
+
+        // Clean up any stale generic new-chat keys so new chats always start clean
+        await chrome.storage.local.remove([
+          'viscue-chat-state-ChatGPT:/',
+          'viscue-chat-state-ChatGPT:new',
+          'viscue-chat-state-Claude:/new',
+          'viscue-chat-state-Gemini:/app',
+          'viscue-chat-state-Perplexity:/',
+          'viscue-chat-state-Grok:/',
+          `viscue-tab-state-${tabId}`
+        ]).catch(() => {});
         const devSettings = await chrome.storage.local.get('viscue-dev-server').catch(() => ({}));
         if (devSettings?.['viscue-dev-server']) {
           const auth = await getAuthHeader();
