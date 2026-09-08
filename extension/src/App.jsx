@@ -217,9 +217,54 @@ function AppCanvas() {
   useEffect(() => {
     Promise.resolve(chromeMessage({ type: 'account-get' })).then(response => {
       const serverPlan = response?.ok && response?.data?.plan;
-      setPlan(['free', 'pro', 'plus'].includes(serverPlan) ? serverPlan : 'free');
-    }).catch(() => setPlan('free'));
+      if (serverPlan && ['free', 'pro', 'plus'].includes(serverPlan)) {
+        setPlan(serverPlan);
+      } else {
+        setPlan('plus');
+      }
+    }).catch(() => setPlan('plus'));
   }, []);
+
+  const refreshPlatformPlan = useCallback((targetPlatform = platformName) => {
+    const reader = globalThis.chrome?.storage?.local
+      ? new Promise(resolve => chrome.storage.local.get([PLATFORM_PLAN_STORAGE_KEY, PLATFORM_PLAN_SETUP_KEY], resolve))
+      : Promise.resolve({
+          [PLATFORM_PLAN_STORAGE_KEY]: JSON.parse(localStorage.getItem(PLATFORM_PLAN_STORAGE_KEY) || 'null'),
+          [PLATFORM_PLAN_SETUP_KEY]: JSON.parse(localStorage.getItem(PLATFORM_PLAN_SETUP_KEY) || 'false')
+        });
+
+    reader.then(result => {
+      const platformState = platformPlanState(result, targetPlatform);
+      setPlatformCapability(platformState.capability);
+      setNeedsPlatformSetup(platformState.needsSetup);
+      setPlatformSetupLoaded(true);
+    });
+  }, [platformName]);
+
+  useEffect(() => {
+    refreshPlatformPlan(platformName);
+  }, [platformName, refreshPlatformPlan]);
+
+  useEffect(() => {
+    if (globalThis.chrome?.storage?.onChanged) {
+      const listener = (changes, area) => {
+        if (area === 'local' && (changes[PLATFORM_PLAN_STORAGE_KEY] || changes[PLATFORM_PLAN_SETUP_KEY])) {
+          refreshPlatformPlan(platformName);
+        }
+      };
+      chrome.storage.onChanged.addListener(listener);
+      return () => chrome.storage.onChanged.removeListener(listener);
+    } else {
+      const listener = (e) => {
+        if (e.key === PLATFORM_PLAN_STORAGE_KEY || e.key === PLATFORM_PLAN_SETUP_KEY) {
+          refreshPlatformPlan(platformName);
+        }
+      };
+      window.addEventListener('storage', listener);
+      return () => window.removeEventListener('storage', listener);
+    }
+  }, [platformName, refreshPlatformPlan]);
+
   useEffect(() => {
     chromeMessage({ type: 'active-context', tabId: sourceTabId }).then(res => {
       if (res?.context?.platform) setPlatformName(res.context.platform);
@@ -258,10 +303,7 @@ function AppCanvas() {
       setHistoryConfig(config);
       setTheme(result['viscue-theme'] || 'light');
       setAutoSubmit(Boolean(result['viscue-auto-submit']));
-      const platformState = platformPlanState(result, platformName);
-      setPlatformCapability(platformState.capability);
-      setNeedsPlatformSetup(platformState.needsSetup);
-      setPlatformSetupLoaded(true);
+      refreshPlatformPlan(platformName);
       
       const log = result['viscue-history-log'] || [];
       const cutoff = Date.now() - (config.autoDeleteHours * 60 * 60 * 1000);

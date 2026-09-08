@@ -69,3 +69,17 @@ test('optional references are reported as trimmed and cannot reappear in final w
   assert.deepEqual(result.trimmed_references.map(item => item.id), ['asset_2']);
   assert.doesNotMatch(result.final_prompt, /Image 2\.png/);
 });
+
+test('prompt_hash matches sha256 of final_prompt when AI compiler returns compiled text', async () => {
+  const crypto = await import('node:crypto');
+  const compiledText = 'AI compiled instruction: Keep the red object. Apply to around 40% across and 50% down on “Image 0.png”.';
+  const bedrock = {
+    compilePrompt: async () => ({ status: 'ok', provider: 'bedrock', text: compiledText }),
+  };
+  const result = await runPipeline(requestWith(1, 'plus'), { bedrock });
+  assert.equal(result.ok, true);
+  assert.equal(result.final_prompt, compiledText);
+  const expectedHash = crypto.createHash('sha256').update(compiledText).digest('hex');
+  assert.equal(result.prompt_hash, expectedHash);
+});
+

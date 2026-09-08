@@ -91,11 +91,11 @@ export async function runPipeline(request = {}, deps = {}) {
   let finalPrompt = compiled.text;
   let finalAttachments = canonical.attachments;
   let provider = compiled.provider || 'deterministic';
-  const newPromptHash = hash(canonical.prompt);
+  const canonicalPromptHash = hash(canonical.prompt);
 
   if (request.session?.previousState) {
     const prevState = request.session.previousState;
-    const samePrompt = prevState.promptHash === newPromptHash;
+    const samePrompt = prevState.promptHash === canonicalPromptHash || prevState.promptHash === hash(compiled.text);
 
     if (Array.isArray(prevState.attachments)) {
       const sentHashes = new Set(prevState.attachments.filter(a => a.confirmed).map(a => a.stateHash));
@@ -110,6 +110,8 @@ export async function runPipeline(request = {}, deps = {}) {
       provider = "delta";
     }
   }
+
+  const newPromptHash = hash(finalPrompt);
 
   return {
     ok: true,
