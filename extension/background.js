@@ -14,7 +14,7 @@ async function showAccountPopup() {
 }
 
 async function authenticateAndShowPopup() {
-  const session = await signIn({ webUrl: VISCUE_WEB_URL });
+  const session = await signIn({ webUrl: VISCUE_WEB_URL, forceLogin: true });
   await showAccountPopup();
   return session;
 }
@@ -65,7 +65,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'open-workspace') {
       const result = await handleWorkspaceAccess({
         getAccessToken: () => getAccessToken(),
-        authenticate: () => signIn(),
+        authenticate: () => signIn({ webUrl: VISCUE_WEB_URL, forceLogin: true }),
         openWorkspace: () => openWorkspace(sender.tab),
         showPopup: showAccountPopup,
       });

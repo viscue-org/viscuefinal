@@ -135,7 +135,14 @@ async function waitForOAuthCallback(tabs, authTabId, redirectUri, timeoutMs = 30
       tabs.onRemoved?.removeListener?.(handleRemoved);
     };
     const handleUpdated = (tabId, changeInfo) => {
-      if (!changeInfo.url?.startsWith(redirectUri)) return;
+      if (!changeInfo.url) return;
+      try {
+        const actualUrl = new URL(changeInfo.url);
+        const expectedUrl = new URL(redirectUri);
+        if (actualUrl.hostname !== expectedUrl.hostname) return;
+      } catch {
+        return;
+      }
       cleanup();
       resolve({ callbackUrl: changeInfo.url, callbackTabId: tabId });
     };
@@ -183,10 +190,10 @@ export async function signIn(
     state
   )}&scope=openid%20email%20profile`;
 
-  const forceLogin = Boolean((await storage?.get?.('viscue_force_login'))?.viscue_force_login);
+  const forceLogin = Boolean(config.forceLogin || (await storage?.get?.('viscue_force_login'))?.viscue_force_login);
   if (forceLogin) {
     authUrl += '&prompt=login';
-    await storage?.remove?.('viscue_force_login');
+    if (storage?.remove) await storage.remove('viscue_force_login');
   }
 
   if (!browserApi?.tabs) throw new Error('Chrome tabs API is not available');
