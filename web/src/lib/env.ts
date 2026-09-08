@@ -4,7 +4,10 @@ const publicEnvSchema = z.object({
   NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z
     .string()
-    .min(1),
+    .min(1)
+    .refine(val => !/service(?:_role)?/i.test(val), {
+      message: 'Service role key cannot be used as public publishable key',
+    }),
   NEXT_PUBLIC_SITE_URL: z.string().min(1),
 });
 

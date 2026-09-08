@@ -146,7 +146,7 @@ export function ConsentCard({
             textAlign: 'center',
           }}
         >
-          Connecting to extension... If nothing happens,{' '}
+          Connecting to Viscue extension... This tab will close automatically. If not,{' '}
           <a
             href={redirectUrl}
             style={{ color: '#FF7D60', textDecoration: 'underline', fontWeight: 600 }}

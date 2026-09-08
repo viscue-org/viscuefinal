@@ -36,4 +36,15 @@ describe('accountView Model', () => {
     assert.strictEqual(view.state, 'exhausted');
     assert.strictEqual(view.count, '0/9');
   });
+
+  it('renders authenticated state immediately from session when summary is still null', () => {
+    const view = accountView(null, {
+      accessToken: 'valid-token',
+      user: { email: 'witne@gmail.com', plan: 'plus' },
+    });
+
+    assert.strictEqual(view.state, 'ready');
+    assert.strictEqual(view.email, 'witne@gmail.com');
+    assert.strictEqual(view.plan, 'plus');
+  });
 });

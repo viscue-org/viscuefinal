@@ -46,7 +46,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const summary = await apiFetch('/account/summary');
         sendResponse(summary);
       } catch (err) {
-        sendResponse({ ok: false, error: err.message });
+        const session = await getSession();
+        if (session?.user?.email) {
+          sendResponse({
+            ok: true,
+            data: {
+              email: session.user.email,
+              plan: session.user.plan || 'free',
+              allowance: 9,
+              remaining: 9,
+              subscriptionStatus: null,
+            },
+          });
+        } else {
+          sendResponse({ ok: false, error: err.message });
+        }
       }
       return;
     }

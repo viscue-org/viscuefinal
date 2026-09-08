@@ -60,10 +60,13 @@ export async function POST(request: NextRequest) {
     }
 
     if (redirect_uri && payload.redirect_uri !== redirect_uri) {
-      return NextResponse.json(
-        { error: 'invalid_grant', error_description: 'Redirect URI mismatch' },
-        { status: 400 }
-      );
+      const normalizeUri = (uri: string) => uri.replace(/\/oauth2?(\/.*)?$/, '/oauth$1').replace(/\/+$/, '');
+      if (normalizeUri(payload.redirect_uri) !== normalizeUri(redirect_uri)) {
+        return NextResponse.json(
+          { error: 'invalid_grant', error_description: 'Redirect URI mismatch' },
+          { status: 400 }
+        );
+      }
     }
 
     // Mark code as used

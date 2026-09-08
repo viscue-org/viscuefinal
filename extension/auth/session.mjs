@@ -129,23 +129,42 @@ export async function handleWorkspaceAccess({
 async function waitForOAuthCallback(tabs, authTabId, redirectUri, timeoutMs = 300000) {
   return new Promise((resolve, reject) => {
     let timer;
+    let finished = false;
     const cleanup = () => {
+      finished = true;
       if (timer) clearTimeout(timer);
       tabs.onUpdated?.removeListener?.(handleUpdated);
       tabs.onRemoved?.removeListener?.(handleRemoved);
     };
-    const handleUpdated = (tabId, changeInfo) => {
-      if (!changeInfo.url) return;
+
+    const checkUrl = (url, tabId) => {
+      if (!url || finished) return false;
       try {
-        const actualUrl = new URL(changeInfo.url);
+        const actualUrl = new URL(url);
         const expectedUrl = new URL(redirectUri);
-        if (actualUrl.hostname !== expectedUrl.hostname) return;
+        const isChromiumApp = actualUrl.hostname.endsWith('.chromiumapp.org');
+        const matchesHostname = actualUrl.hostname === expectedUrl.hostname || isChromiumApp;
+        if (!matchesHostname) return false;
+
+        const hasCode = actualUrl.searchParams.has('code');
+        const hasError = actualUrl.searchParams.has('error');
+        if (!hasCode && !hasError) return false;
+
+        cleanup();
+        resolve({ callbackUrl: url, callbackTabId: tabId });
+        return true;
       } catch {
-        return;
+        return false;
       }
-      cleanup();
-      resolve({ callbackUrl: changeInfo.url, callbackTabId: tabId });
     };
+
+    const handleUpdated = (tabId, changeInfo, tab) => {
+      const candidateUrl = changeInfo?.url || tab?.url;
+      if (candidateUrl) {
+        checkUrl(candidateUrl, tabId);
+      }
+    };
+
     const handleRemoved = tabId => {
       if (tabId !== authTabId) return;
       cleanup();
@@ -161,6 +180,13 @@ async function waitForOAuthCallback(tabs, authTabId, redirectUri, timeoutMs = 30
 
     tabs.onUpdated?.addListener?.(handleUpdated);
     tabs.onRemoved?.addListener?.(handleRemoved);
+
+    // Check if the tab already reached the callback URL
+    if (authTabId && tabs.get) {
+      tabs.get(authTabId).then(tab => {
+        if (tab?.url) checkUrl(tab.url, authTabId);
+      }).catch(() => {});
+    }
   });
 }
 
@@ -245,16 +271,37 @@ export async function signIn(
   const { callbackUrl, callbackTabId } = callbackResult;
   if (storage?.remove) await storage.remove(PENDING_AUTH_KEY).catch(() => {});
 
+  // Close owned auth tabs IMMEDIATELY so user never sees DNS_PROBE_FINISHED_NXDOMAIN
+  const tabsToClose = [...new Set([authTab.id, callbackTabId].filter(Number.isInteger))];
+  if (tabsToClose.length && browserApi.tabs?.remove) {
+    await browserApi.tabs.remove(tabsToClose).catch(() => {});
+  }
+
+  // Restore focus to source tab/window immediately
+  if (sourceTab?.windowId && browserApi.windows?.update) {
+    await browserApi.windows.update(sourceTab.windowId, { focused: true }).catch(() => {});
+  }
+  if (sourceTab?.id && browserApi.tabs?.update) {
+    await browserApi.tabs.update(sourceTab.id, { active: true }).catch(() => {});
+  }
+
   const parsed = safeOAuthCallback(callbackUrl, state);
   if (!parsed.ok) {
     throw new Error(`Authentication error: ${parsed.error}`);
   }
 
+  // Use the actual redirect URI from callbackUrl (e.g. .../oauth or .../oauth2) to ensure exact match with token
+  let tokenRedirectUri = redirectUri;
+  try {
+    const callbackEndpoint = new URL(callbackUrl);
+    tokenRedirectUri = `${callbackEndpoint.origin}${callbackEndpoint.pathname}`;
+  } catch {}
+
   const tokenRequest = buildOAuthTokenRequest({
     webUrl,
     supabaseUrl,
     clientId,
-    redirectUri,
+    redirectUri: tokenRedirectUri,
     code: parsed.code,
     verifier,
   });
@@ -273,20 +320,6 @@ export async function signIn(
   };
 
   await setSession(session, storage);
-
-  // Restore focus to source tab/window
-  if (sourceTab?.windowId && browserApi.windows?.update) {
-    await browserApi.windows.update(sourceTab.windowId, { focused: true }).catch(() => {});
-  }
-  if (sourceTab?.id && browserApi.tabs?.update) {
-    await browserApi.tabs.update(sourceTab.id, { active: true }).catch(() => {});
-  }
-
-  // Close owned auth tabs
-  const tabsToClose = [...new Set([authTab.id, callbackTabId].filter(Number.isInteger))];
-  if (tabsToClose.length && browserApi.tabs?.remove) {
-    await browserApi.tabs.remove(tabsToClose).catch(() => {});
-  }
 
   return session;
 }

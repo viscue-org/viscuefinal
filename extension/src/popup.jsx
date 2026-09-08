@@ -19,12 +19,14 @@ import {
   skipOnboarding,
 } from './onboardingModel.mjs';
 import { accountView } from './accountModel.mjs';
+import { STORAGE_KEY } from '../auth/session.mjs';
 import { normalizePlatformCapability } from '../../local-server/lib/platform-capabilities.mjs';
 import { PLATFORM_PLAN_SETUP_KEY, PLATFORM_PLAN_STORAGE_KEY, platformPlanState } from './platformPlanModel.mjs';
 import { PlatformPlanSettings } from './components/ui/PlatformPlanSettings.mjs';
 import './popup.css';
 
 const ONBOARDING_KEY = 'viscue-onboarding-complete';
+const CACHED_SUMMARY_KEY = 'viscue_cached_account_summary';
 
 const readSetting = (key, fallback) => {
   if (globalThis.chrome?.storage?.local) {
@@ -244,6 +246,7 @@ function StandardPopup() {
   const [activeView, setActiveView] = useState('home');
   const [autoSubmit, setAutoSubmit] = useState(false);
   const [summary, setSummary] = useState(null);
+  const [session, setSession] = useState(null);
   const [authBusy, setAuthBusy] = useState(false);
   const [billingBusy, setBillingBusy] = useState(null);
   const [platformName, setPlatformName] = useState('ChatGPT');
@@ -257,8 +260,10 @@ function StandardPopup() {
         if (generationRef.current !== reqGen) return;
         if (res?.ok && res?.data && !res.signedOut) {
           setSummary(res.data);
+          writeSetting(CACHED_SUMMARY_KEY, res.data);
         } else {
           setSummary(null);
+          writeSetting(CACHED_SUMMARY_KEY, null);
         }
       });
     }
@@ -266,6 +271,17 @@ function StandardPopup() {
 
   useEffect(() => {
     readSetting('viscue-auto-submit', false).then(setAutoSubmit);
+    readSetting(STORAGE_KEY, null).then(sess => {
+      if (sess?.user?.email) {
+        setSession(sess);
+      }
+    });
+    readSetting(CACHED_SUMMARY_KEY, null).then(cached => {
+      if (cached?.email) {
+        setSummary(cached);
+      }
+    });
+
     Promise.all([
       readSetting(PLATFORM_PLAN_STORAGE_KEY, null),
       readSetting(PLATFORM_PLAN_SETUP_KEY, false),
@@ -286,7 +302,37 @@ function StandardPopup() {
       }
     };
     document.addEventListener('visibilitychange', onVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+
+    let removeStorageListener = null;
+    if (globalThis.chrome?.storage?.onChanged) {
+      const storageListener = (changes, area) => {
+        if (area === 'local') {
+          if (changes[STORAGE_KEY]) {
+            const newSession = changes[STORAGE_KEY].newValue;
+            if (newSession?.user?.email) {
+              setSession(newSession);
+              fetchSummary();
+            } else {
+              setSession(null);
+              setSummary(null);
+            }
+          }
+          if (changes[CACHED_SUMMARY_KEY]) {
+            const newSummary = changes[CACHED_SUMMARY_KEY].newValue;
+            if (newSummary) {
+              setSummary(newSummary);
+            }
+          }
+        }
+      };
+      chrome.storage.onChanged.addListener(storageListener);
+      removeStorageListener = () => chrome.storage.onChanged.removeListener(storageListener);
+    }
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      if (removeStorageListener) removeStorageListener();
+    };
   }, [fetchSummary]);
 
   const updatePlatformCapability = capability => {
@@ -309,11 +355,14 @@ function StandardPopup() {
   const handleLogout = () => {
     generationRef.current++;
     setSummary(null);
+    setSession(null);
+    writeSetting(CACHED_SUMMARY_KEY, null);
     setAuthBusy(true);
     if (globalThis.chrome?.runtime?.sendMessage) {
       chrome.runtime.sendMessage({ type: 'auth-sign-out' }, () => {
         setAuthBusy(false);
         setSummary(null);
+        setSession(null);
       });
     } else {
       setAuthBusy(false);
@@ -325,7 +374,12 @@ function StandardPopup() {
     if (globalThis.chrome?.runtime?.sendMessage) {
       chrome.runtime.sendMessage({ type: 'auth-sign-in' }, res => {
         setAuthBusy(false);
-        if (res?.ok) fetchSummary();
+        if (res?.ok) {
+          if (res?.session?.user?.email) {
+            setSession(res.session);
+          }
+          fetchSummary();
+        }
       });
     } else {
       setAuthBusy(false);
@@ -343,7 +397,7 @@ function StandardPopup() {
     }
   };
 
-  const view = accountView(summary);
+  const view = accountView(summary, session);
   const planLabel = { free: 'Free', pro: 'Pro', plus: 'Plus' }[view.plan] ?? 'Free';
 
   return (
