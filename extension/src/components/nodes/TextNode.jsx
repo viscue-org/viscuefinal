@@ -39,8 +39,12 @@ export const TextNode = memo(function TextNode({ id, data, selected }) {
   useEffect(() => {
     const field = textareaRef.current;
     if (!field) return;
+    const prevScrollTop = field.scrollTop;
     field.style.height = '0px';
     field.style.height = `${Math.max(isSticky ? 124 : 56, field.scrollHeight)}px`;
+    if (prevScrollTop > 0) {
+      field.scrollTop = prevScrollTop;
+    }
     updateNodeInternals(id);
   }, [data.text, id, isSticky, style.fontSize, updateNodeInternals]);
 

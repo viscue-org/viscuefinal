@@ -775,7 +775,8 @@ textarea:focus-visible {
 
 .edge-instruction-container { position: relative; background: color-mix(in srgb, var(--bg-surface) 90%, transparent); backdrop-filter: blur(12px); border-radius: var(--radius-lg); box-shadow: 0 8px 32px rgba(0,0,0,0.08); border: 1px solid var(--border-strong); padding: 6px; display: flex; align-items: center; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
 .edge-instruction-container.selected { border-color: var(--brand); box-shadow: 0 0 0 1px var(--brand), 0 12px 40px rgba(91,117,147,0.15); }
-.edge-instruction { width: 210px; min-height: 48px; background: transparent; border: none; outline: none; resize: none; font-family: var(--font-body); font-size: 14px; font-weight: 500; color: var(--text-primary); padding: 8px 6px; line-height: 1.45; letter-spacing: -0.01em; }
+.edge-instruction { width: 210px; min-height: 48px; max-height: 220px; background: transparent; border: none; outline: none; resize: none; font-family: var(--font-body); font-size: 14px; font-weight: 500; color: var(--text-primary); padding: 8px 6px; line-height: 1.45; letter-spacing: -0.01em; overflow-y: auto; overflow-x: hidden; scrollbar-width: none !important; -ms-overflow-style: none !important; overflow-wrap: break-word; word-break: break-word; }
+.edge-instruction::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
 .edge-instruction::placeholder { color: var(--text-muted); font-weight: 400; }
 .edge-instruction-actions { position: absolute; right: -12px; top: -6px; bottom: -6px; display: flex; flex-direction: column; justify-content: space-between; padding: 0; opacity: 0; transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1); pointer-events: none; transform: translateX(-4px); }
 .edge-instruction-container:hover .edge-instruction-actions, .edge-instruction-container:focus-within .edge-instruction-actions { opacity: 1; pointer-events: all; transform: translateX(0); }
@@ -813,7 +814,7 @@ textarea:focus-visible {
 .text-node textarea { 
   width: 260px; 
   min-height: 60px; 
-  max-height: 220px; 
+  max-height: 380px; 
   padding: 4px; 
   border: 0; 
   outline: 0; 
@@ -824,7 +825,12 @@ textarea:focus-visible {
   font-size: 16px; 
   line-height: 1.5; 
   font-weight: 500; 
-  overflow: hidden; 
+  overflow-y: auto; 
+  overflow-x: hidden; 
+  scrollbar-width: none !important; 
+  -ms-overflow-style: none !important; 
+  overflow-wrap: break-word; 
+  word-break: break-word; 
   transition: background-color var(--duration-fast) var(--ease-ambient), box-shadow var(--duration-fast) var(--ease-ambient);
   border-radius: var(--radius-sm);
 }
@@ -856,13 +862,27 @@ textarea:focus-visible {
   letter-spacing: .01em;
 }
 
+.text-node textarea::-webkit-scrollbar,
+.sticky-note textarea::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
 .sticky-note textarea {
   width: 256px;
   min-height: 124px;
+  max-height: 380px;
   font-size: 16px;
   line-height: 24px;
   font-weight: 500;
   resize: vertical;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .dark .sticky-note { border-color: #7A4135; }

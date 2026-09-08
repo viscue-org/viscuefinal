@@ -65,7 +65,7 @@ export function CrossAssetEdge({
             <div className={`edge-instruction-container ${selected ? 'selected' : ''}`}>
               <textarea 
                 autoFocus
-                className="edge-instruction"
+                className="edge-instruction nodrag nowheel"
                 value={data.instruction || ''}
                 onChange={(e) => data.onChangeInstruction(id, e.target.value)}
                 placeholder="Type your instruction..."
