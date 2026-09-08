@@ -105,7 +105,7 @@ export class BedrockGateway {
     if (!this.routes.compiler) return { status: 'degraded', provider: 'deterministic', text: canonical.prompt, warning: { reason: 'Compiler model is not configured.' } };
     try {
       const body = {
-        system: [{ text: 'Rewrite the supplied deterministic visual instruction for clarity. Do not remove, rename, infer, score, or add references. Return only the instruction.' }],
+        system: [{ text: 'You are a visual intent prompt compiler. Polish and organize the supplied visual instructions for clarity and precision for downstream AI generation models. Strictly preserve the user\'s intended actions, references, and spatial targets. Never invent labels, hashes, or non-existent entities. Keep all referenced filenames in exact double quotes. Return only the compiled instructions.' }],
         messages: [{ role: 'user', content: [{ text: canonical.prompt }] }],
         inferenceConfig: { maxTokens: 1400, temperature: 0 },
       };

@@ -102,14 +102,11 @@ export function buildCanonicalBrief({ graph = {}, selection = {}, evidence = [],
     coverageIds.push(cue.id);
     const timestamp = cue.timeMs == null ? '' : ` at ${formatTime(cue.timeMs / 1000)}`;
     const target = cue.isWholeAsset ? 'the whole reference' : formatPoint(cue, evidence);
-    const rawIntent = JSON.stringify([cue.x, cue.y, cue.area, cue.instruction]);
-    const cueHash = crypto.createHash('sha256').update(rawIntent).digest('hex').slice(0, 6);
-    const instructionText = cue.instruction.trim() + ` #${cueHash}`;
+    const instructionText = cue.instruction.trim();
     const punct = /[.!?:]$/.test(instructionText) ? '' : '.';
     // Use clear imperative phrasing so AI understands the spatial target
     lines.push(`- On "${asset.name}"${timestamp}: ${instructionText}${punct} (Target: ${target}.)`);
     protectedFacts.push({ id: `name:${asset.id}`, text: asset.name });
-    protectedFacts.push({ id: `hash:${cue.id}`, text: `#${cueHash}` });
     if (cue.timeMs != null) protectedFacts.push({ id: `time:${cue.id}`, text: formatTime(cue.timeMs / 1000) });
   }
 
@@ -123,11 +120,49 @@ export function buildCanonicalBrief({ graph = {}, selection = {}, evidence = [],
   }
 
   for (const relation of graph.relations || []) {
-    if (relation.type === 'FLOWS_TO') {
+    if (relation.type === 'CROSS_ASSET_ANNOTATION') {
+      const sourceAsset = byId.get(relation.sourceAssetId) || selected.find(item => item.id === relation.sourceAssetId);
+      const targetAsset = byId.get(relation.targetAssetId) || selected.find(item => item.id === relation.targetAssetId);
+      if (sourceAsset && targetAsset) {
+        const sourceLoc = formatPoint({
+          x: relation.sourceX,
+          y: relation.sourceY,
+          isArea: relation.sourceIsArea,
+          area: relation.sourceArea,
+          assetId: relation.sourceAssetId
+        }, evidence);
+        const targetLoc = relation.targetIsWholeAsset
+          ? 'the whole reference'
+          : formatPoint({
+              x: relation.targetX,
+              y: relation.targetY,
+              isArea: relation.targetIsArea,
+              area: relation.targetArea,
+              assetId: relation.targetAssetId
+            }, evidence);
+        const instruction = relation.instruction?.trim() || 'Connect and apply';
+        const punct = /[.!?:]$/.test(instruction) ? '' : '.';
+        lines.push(`- On "${sourceAsset.name}" (Target: ${sourceLoc}): ${instruction}${punct} Using reference "${targetAsset.name}" (${targetLoc}).`);
+        protectedFacts.push({ id: `name:${sourceAsset.id}`, text: sourceAsset.name });
+        protectedFacts.push({ id: `name:${targetAsset.id}`, text: targetAsset.name });
+      }
+    } else if (relation.type === 'FLOWS_TO') {
       const source = byId.get(relation.sourceId);
       const target = byId.get(relation.targetId);
-      if (source?.text && target?.text) {
-        lines.push(`- Flowchart sequence: "${source.text.trim()}" -> "${target.text.trim()}"`);
+      if (source && target) {
+        if (source.text && target.text) {
+          lines.push(`- Flowchart sequence: "${source.text.trim()}" -> "${target.text.trim()}"`);
+        } else if (source.text && target.name) {
+          lines.push(`- Note "${source.text.trim()}" directs to "${target.name}".`);
+          protectedFacts.push({ id: `name:${target.id}`, text: target.name });
+        } else if (source.name && target.text) {
+          lines.push(`- Reference "${source.name}" leads to note "${target.text.trim()}".`);
+          protectedFacts.push({ id: `name:${source.id}`, text: source.name });
+        } else if (source.name && target.name) {
+          lines.push(`- Sequence: "${source.name}" -> "${target.name}".`);
+          protectedFacts.push({ id: `name:${source.id}`, text: source.name });
+          protectedFacts.push({ id: `name:${target.id}`, text: target.name });
+        }
       }
     }
   }

@@ -124,3 +124,48 @@ test('brief warns instead of rendering a connect operation with one repeated end
   assert.doesNotMatch(brief.prompt, /connect from “Only\.png” to “Only\.png”/);
   assert.match(brief.prompt, /Some gesture intents were unresolved or abstained/);
 });
+
+test('canonical brief compiles CROSS_ASSET_ANNOTATION relations correctly', () => {
+  const graph = {
+    items: [
+      { id: 'asset_ui', kind: 'image', name: 'UI_Mockup.png', hash: 'h1' },
+      { id: 'asset_photo', kind: 'image', name: 'Photo.png', hash: 'h2' },
+    ],
+    relations: [{
+      type: 'CROSS_ASSET_ANNOTATION',
+      sourceAssetId: 'asset_ui',
+      targetAssetId: 'asset_photo',
+      instruction: 'place image there',
+      sourceX: 0.5,
+      sourceY: 0.8,
+      targetIsWholeAsset: true,
+    }],
+  };
+  const brief = buildCanonicalBrief({
+    graph,
+    selection: { selected: graph.items, trimmed: [] },
+  });
+  assert.match(brief.prompt, /On "UI_Mockup\.png" \(Target: the bottom-center area\): place image there\. Using reference "Photo\.png" \(the whole reference\)\./);
+  assert.ok(brief.protectedFacts.some(f => f.text === 'UI_Mockup.png'));
+  assert.ok(brief.protectedFacts.some(f => f.text === 'Photo.png'));
+});
+
+test('canonical brief compiles FLOWS_TO between notes and assets', () => {
+  const graph = {
+    items: [
+      { id: 'note_1', kind: 'note', text: 'Step 1: Check header' },
+      { id: 'asset_1', kind: 'image', name: 'Header.png', hash: 'h1' },
+    ],
+    relations: [{
+      type: 'FLOWS_TO',
+      sourceId: 'note_1',
+      targetId: 'asset_1',
+    }],
+  };
+  const brief = buildCanonicalBrief({
+    graph,
+    selection: { selected: [graph.items[1]], trimmed: [] },
+  });
+  assert.match(brief.prompt, /Note "Step 1: Check header" directs to "Header\.png"/);
+  assert.ok(brief.protectedFacts.some(f => f.text === 'Header.png'));
+});
