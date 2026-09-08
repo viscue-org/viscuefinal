@@ -216,10 +216,14 @@ function AppCanvas() {
   useEffect(() => { chromeMessage({ type: 'health' }).then(setHealth); }, []);
   useEffect(() => {
     Promise.resolve(chromeMessage({ type: 'account-get' })).then(response => {
-      const serverPlan = response?.ok && response?.data?.plan;
-      if (serverPlan && ['free', 'pro', 'plus'].includes(serverPlan)) {
-        setPlan(serverPlan);
+      if (response?.ok && response?.data?.plan) {
+        // Signed-in user: enforce their actual Viscue subscription plan
+        const serverPlan = response.data.plan;
+        setPlan(['free', 'pro', 'plus'].includes(serverPlan) ? serverPlan : 'plus');
       } else {
+        // Not signed in or no plan data: use 'plus' so the destination
+        // platform plan (set in Settings) governs the limit, not a
+        // hard 2-ref Viscue free cap that would ignore the user's setting.
         setPlan('plus');
       }
     }).catch(() => setPlan('plus'));
@@ -1233,13 +1237,13 @@ function AppCanvas() {
     return {
       destination: params.get('destination') || 'AI chat',
       items: nodes.map(node => node.type === 'text'
-        ? { id: node.id, kind: 'note', noteType: node.data.variant === 'sticky' ? 'sticky' : 'text', name: node.data.variant === 'sticky' ? 'Sticky note' : 'Text', text: node.data.text, intentional: Boolean(node.data.text.trim()) }
+        ? { id: node.id, kind: 'note', noteType: node.data.variant === 'sticky' ? 'sticky' : 'text', name: node.data.variant === 'sticky' ? 'Sticky note' : 'Text', text: node.data.text || '', intentional: Boolean(node.data.text?.trim()) }
         : {
-          id: node.id, kind: node.data.derivedKind || node.data.kind, visualKind: node.data.kind,
-          name: node.data.name, url: node.data.url, role: node.data.role,
+          id: node.id, kind: node.data.derivedKind === 'video_frame' ? 'video_frame' : (node.data.kind || 'image'), visualKind: node.data.kind || 'image',
+          name: node.data.name || 'Visual Reference', url: node.data.url, role: node.data.role,
           hash: node.data.provenance?.contentHash || node.data.hash || node.data.name, intentional: true,
           annotations: node.data.strokes || [], temporalRange: node.data.temporalRange,
-          video: node.data.video, provenance: node.data.provenance,
+          video: node.data.video, provenance: node.data.provenance || undefined,
           detached: Boolean(node.data.provenance?.detached),
           preserved: Boolean(node.data.locked),
         }),
@@ -1318,7 +1322,7 @@ function AppCanvas() {
       sessionCtx.previousState = res[`viscue-chat-state-${sessionCtx.destinationFingerprint}`] ||
         (sessionCtx.platform && sessionCtx.chatId ? res[`viscue-chat-state-${sessionCtx.platform}:${sessionCtx.chatId}`] : null) ||
         (sourceTabId ? res[`viscue-tab-state-${sourceTabId}`] : null) ||
-        null;
+        undefined;
     }
 
     onPhase?.('compiling');

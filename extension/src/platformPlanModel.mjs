@@ -26,8 +26,8 @@ function countPhysicalVisuals(nodes = []) {
   return physicalIds.size;
 }
 
-export function preflightVisualAddition({ nodes = [], candidates = [], limit = 2 } = {}) {
-  const safeLimit = Number.isInteger(limit) && limit > 0 ? limit : 2;
+export function preflightVisualAddition({ nodes = [], candidates = [], limit = 10 } = {}) {
+  const safeLimit = Number.isInteger(limit) && limit > 0 ? limit : 10;
   const current = countPhysicalVisuals(nodes);
   const after = countPhysicalVisuals([...nodes, ...candidates]);
   return Object.freeze({
