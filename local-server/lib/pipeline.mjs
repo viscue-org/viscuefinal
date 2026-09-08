@@ -19,29 +19,70 @@ function explicitScores(graph = {}) {
   return scores;
 }
 
-async function collectEvidence(selected, media, bedrock, stages) {
-  const evidence = [];
+async function collectEvidence(selected, media, bedrock) {
   if (!bedrock) {
-    stages.push(createStage('perception', 'skipped', { warning: 'Bedrock perception is not configured.' }));
-    return evidence;
+    return {
+      stages: [createStage('perception', 'skipped', { warning: 'Bedrock perception is not configured.' })],
+      evidence: [],
+    };
   }
-  for (const item of selected) {
+  const itemResults = await Promise.all(selected.map(async item => {
     const source = media[item.id];
     if (!source?.dataUrl) {
-      stages.push(createStage(`perception.${item.id}`, 'skipped', { warning: 'No bounded perception media was supplied.' }));
-      continue;
+      return {
+        stage: createStage(`perception.${item.id}`, 'skipped', { warning: 'No bounded perception media was supplied.' }),
+        evidence: [],
+      };
     }
     try {
       const analyze = item.kind === 'video' ? bedrock.analyzeVideo?.bind(bedrock) : bedrock.analyzeImage?.bind(bedrock);
       if (!analyze) throw new Error('Model route is unavailable.');
       const result = await analyze({ assetId: item.id, dataUrl: source.dataUrl, prompt: 'Report only directly visible objects, layout, OCR, and typography evidence. Unknown facts must remain unknown.' });
-      evidence.push(...(result.evidence || []));
-      stages.push(createStage(`perception.${item.id}`, result.status || 'ok', { provider: result.provider, model: result.model, evidence_count: result.evidence?.length || 0 }));
+      return {
+        stage: createStage(`perception.${item.id}`, result.status || 'ok', { provider: result.provider, model: result.model, evidence_count: result.evidence?.length || 0 }),
+        evidence: result.evidence || [],
+      };
     } catch {
-      stages.push(createStage(`perception.${item.id}`, 'degraded', { warning: 'Visual perception failed; user-authored intent remains authoritative.' }));
+      return {
+        stage: createStage(`perception.${item.id}`, 'degraded', { warning: 'Visual perception failed; user-authored intent remains authoritative.' }),
+        evidence: [],
+      };
     }
+  }));
+
+  return {
+    stages: itemResults.map(r => r.stage),
+    evidence: itemResults.flatMap(r => r.evidence),
+  };
+}
+
+async function runRelevance(graph, bedrock) {
+  if (!bedrock?.embedReference) {
+    return createStage('relevance.titan', 'skipped', { warning: 'Titan relevance is not configured.' });
   }
-  return evidence;
+  try {
+    await bedrock.embedReference({ text: (graph.cues || []).map(cue => cue.instruction).join(' ') });
+    return createStage('relevance.titan', 'ok', { provider: 'titan' });
+  } catch {
+    return createStage('relevance.titan', 'degraded', { warning: 'Titan relevance unavailable; explicit intent and stable ordering were used.' });
+  }
+}
+
+async function runFontIdentification(request, font) {
+  if (Array.isArray(request.font_requests) && request.font_requests.length && font) {
+    const stages = [];
+    const evidence = [];
+    for (const fontRequest of request.font_requests) {
+      const result = await font.identify(fontRequest);
+      evidence.push({ type: 'font', value: result.exact_match?.name || null, candidates: result.candidates, observation_kind: result.exact_match ? 'observed' : 'unknown', confidence: result.exact_match?.score || 0 });
+      stages.push(createStage(`font.${fontRequest.assetId || 'region'}`, result.status, { exact_match: result.exact_match?.name || null, warning: result.warning }));
+    }
+    return { stages, evidence };
+  }
+  return {
+    stages: [createStage('font.identification', 'skipped', { warning: 'No font-identification region requested.' })],
+    evidence: [],
+  };
 }
 
 export async function runPipeline(request = {}, deps = {}) {
@@ -54,28 +95,17 @@ export async function runPipeline(request = {}, deps = {}) {
     return { ok: false, status: 'blocked', error: policy.summary, stages, selected_references: [], trimmed_references: policy.trimmed };
   }
 
-  const evidence = await collectEvidence(policy.selected, request.media || {}, deps.bedrock, stages);
+  const [perceptionResult, titanStage, fontResult] = await Promise.all([
+    collectEvidence(policy.selected, request.media || {}, deps.bedrock),
+    runRelevance(graph, deps.bedrock),
+    runFontIdentification(request, deps.font),
+  ]);
 
-  if (deps.bedrock?.embedReference) {
-    try {
-      await deps.bedrock.embedReference({ text: (graph.cues || []).map(cue => cue.instruction).join(' ') });
-      stages.push(createStage('relevance.titan', 'ok', { provider: 'titan' }));
-    } catch {
-      stages.push(createStage('relevance.titan', 'degraded', { warning: 'Titan relevance unavailable; explicit intent and stable ordering were used.' }));
-    }
-  } else {
-    stages.push(createStage('relevance.titan', 'skipped', { warning: 'Titan relevance is not configured.' }));
-  }
+  stages.push(...perceptionResult.stages);
+  stages.push(titanStage);
+  stages.push(...fontResult.stages);
 
-  if (Array.isArray(request.font_requests) && request.font_requests.length && deps.font) {
-    for (const fontRequest of request.font_requests) {
-      const result = await deps.font.identify(fontRequest);
-      evidence.push({ type: 'font', value: result.exact_match?.name || null, candidates: result.candidates, observation_kind: result.exact_match ? 'observed' : 'unknown', confidence: result.exact_match?.score || 0 });
-      stages.push(createStage(`font.${fontRequest.assetId || 'region'}`, result.status, { exact_match: result.exact_match?.name || null, warning: result.warning }));
-    }
-  } else {
-    stages.push(createStage('font.identification', 'skipped', { warning: 'No font-identification region requested.' }));
-  }
+  const evidence = [...perceptionResult.evidence, ...fontResult.evidence];
 
   const canonical = buildCanonicalBrief({ graph, evidence, selection: policy });
   let compiled = { status: 'degraded', provider: 'deterministic', text: canonical.prompt, warning: { reason: 'Compiler not configured.' } };

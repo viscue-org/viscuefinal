@@ -1316,9 +1316,9 @@ function AppCanvas() {
 
     onPhase?.('compiling');
     const media = {};
-    for (const item of graph.items || []) {
+    await Promise.all((graph.items || []).map(async item => {
       const node = nodes.find(n => n.id === item.id);
-      if (!node?.data?.dataUrl) continue;
+      if (!node?.data?.dataUrl) return;
       if (['image', 'video_frame', 'webpage'].includes(item.kind)) {
         try {
           media[item.id] = { kind: item.kind, dataUrl: await downscaleDataUrl(node.data.dataUrl, 768, 0.78), provenance: item.provenance || null };
@@ -1326,7 +1326,7 @@ function AppCanvas() {
       } else if (item.kind === 'video' && node.data.dataUrl.length <= 8_000_000) {
         media[item.id] = { kind: 'video', dataUrl: node.data.dataUrl, temporalRange: item.temporalRange || null };
       }
-    }
+    }));
     const response = await chromeMessage({ type: 'compile', payload: buildVicsucRequest(graph, media, { plan }, sessionCtx, platformCapability) });
     if (!response?.ok) { setBusy(false); onPhase?.('error'); setResult({ error: response?.error || 'Compilation failed.' }); setCueAnimation(null); return; }
 
