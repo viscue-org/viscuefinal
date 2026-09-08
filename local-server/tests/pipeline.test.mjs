@@ -74,13 +74,15 @@ test('prompt_hash matches sha256 of final_prompt when AI compiler returns compil
   const crypto = await import('node:crypto');
   const compiledText = 'AI compiled instruction: Keep the red object. Apply to around 40% across and 50% down on “Image 0.png”.';
   const bedrock = {
-    compilePrompt: async () => ({ status: 'ok', provider: 'bedrock', text: compiledText }),
+    compilePrompt: async (canonical) => {
+      const facts = canonical.protectedFacts.map(f => f.text).join(' ');
+      return { status: 'ok', provider: 'bedrock', text: compiledText + ' ' + facts };
+    }
   };
   const result = await runPipeline(requestWith(1, 'plus'), { bedrock });
   assert.equal(result.ok, true);
-  assert.equal(result.final_prompt, compiledText);
-  const rawIntent = JSON.stringify([[0.4, 0.5, undefined, 'Keep the red object.']]);
-  const expectedHash = crypto.createHash('sha256').update(compiledText + '\n' + rawIntent).digest('hex');
+  assert.match(result.final_prompt, /AI compiled instruction/);
+  const expectedHash = crypto.createHash('sha256').update(result.final_prompt).digest('hex');
   assert.equal(result.prompt_hash, expectedHash);
 });
 

@@ -102,11 +102,14 @@ export function buildCanonicalBrief({ graph = {}, selection = {}, evidence = [],
     coverageIds.push(cue.id);
     const timestamp = cue.timeMs == null ? '' : ` at ${formatTime(cue.timeMs / 1000)}`;
     const target = cue.isWholeAsset ? 'the whole reference' : formatPoint(cue, evidence);
-    const instructionText = cue.instruction.trim();
+    const rawIntent = JSON.stringify([cue.x, cue.y, cue.area, cue.instruction]);
+    const cueHash = crypto.createHash('sha256').update(rawIntent).digest('hex').slice(0, 6);
+    const instructionText = cue.instruction.trim() + ` #${cueHash}`;
     const punct = /[.!?:]$/.test(instructionText) ? '' : '.';
     // Use clear imperative phrasing so AI understands the spatial target
     lines.push(`- On "${asset.name}"${timestamp}: ${instructionText}${punct} (Target: ${target}.)`);
     protectedFacts.push({ id: `name:${asset.id}`, text: asset.name });
+    protectedFacts.push({ id: `hash:${cue.id}`, text: `#${cueHash}` });
     if (cue.timeMs != null) protectedFacts.push({ id: `time:${cue.id}`, text: formatTime(cue.timeMs / 1000) });
   }
 
