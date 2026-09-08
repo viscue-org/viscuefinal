@@ -49,7 +49,7 @@ export function buildCanonicalBrief({ graph = {}, selection = {}, evidence = [] 
     const instructionText = cue.instruction.trim();
     const punct = /[.!?:]$/.test(instructionText) ? '' : '.';
     lines.push(`- ${instructionText}${punct} Apply to ${target} on “${asset.name}”${timestamp}.`);
-    protectedFacts.push({ id: `cue:${cue.id}`, text: instructionText }, { id: `name:${asset.id}`, text: asset.name });
+    protectedFacts.push({ id: `name:${asset.id}`, text: asset.name });
     if (cue.timeMs != null) protectedFacts.push({ id: `time:${cue.id}`, text: formatTime(cue.timeMs / 1000) });
   }
 

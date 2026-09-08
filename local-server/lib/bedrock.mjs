@@ -57,7 +57,7 @@ export class BedrockGateway {
       ? { video: { format: media.format, source: { bytes: media.bytes } } }
       : { image: { format: media.format, source: { bytes: media.bytes } } };
     const body = {
-      messages: [{ role: 'user', content: [mediaContent, { text: `${input.prompt || 'Return only visible facts.'}\nReturn strict JSON: {"claims":[{"type":"object|layout|ocr|relation","value":"...","bbox":[0,0,1,1] or null,"confidence":0.0}]}. Semantic relations are hypotheses, not facts.` }] }],
+      messages: [{ role: 'user', content: [mediaContent, { text: `${input.prompt || 'Return only visible facts.'}\nReturn strict JSON only, with no markdown. Choose exactly one type for each claim from: object, layout, ocr, relation. Use specific observed values, never schema alternatives or placeholders. Example shape: {"claims":[{"type":"object","value":"specific visible fact","bbox":[0.0,0.0,1.0,1.0],"confidence":0.9}]}. Use null when no bounding box applies. Semantic relations are hypotheses, not facts.` }] }],
       inferenceConfig: { maxTokens: 700, temperature: 0 },
     };
     const response = await this.#call(modelId, body);

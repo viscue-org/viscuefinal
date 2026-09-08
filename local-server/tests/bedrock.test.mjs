@@ -53,6 +53,26 @@ test('placeholder or zero-confidence visual evidence is retried instead of repor
   assert.equal(calls.length, 3);
 });
 
+test('visual request prevents Nova from copying schema alternatives as placeholders', async () => {
+  let calls = 0;
+  const gateway = new BedrockGateway({ region: 'us-east-1', routes: { ...routes, imagePrimary: routes.imageFallback }, request: async input => {
+    calls += 1;
+    const instruction = input.body.messages[0].content.find(part => part.text)?.text || '';
+    const hasConcreteSchema = instruction.includes('Choose exactly one type')
+      && instruction.includes('"type":"object"')
+      && !instruction.includes('"type":"object|layout|ocr|relation"');
+    return hasConcreteSchema
+      ? converse('{"claims":[{"type":"object","value":"red logo on a black background","bbox":[0.1,0.1,0.9,0.9],"confidence":0.98}]}')
+      : converse('{"claims":[{"type":"object|layout|ocr|relation","value":"...","bbox":null,"confidence":0.0}]}');
+  } });
+
+  const result = await gateway.analyzeImage({ assetId: 'image_1', dataUrl: 'data:image/png;base64,YQ==' });
+
+  assert.equal(result.provider, 'nova-pro');
+  assert.deepEqual(result.evidence.map(item => item.value), ['red logo on a black background']);
+  assert.equal(calls, 1);
+});
+
 test('video analysis uses Nova and preserves explicit degraded fallback provenance', async () => {
   const calls = [];
   const gateway = new BedrockGateway({ region: 'us-east-1', routes, request: async input => {
