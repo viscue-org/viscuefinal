@@ -151,6 +151,14 @@ async function waitForOAuthCallback(tabs, authTabId, redirectUri, timeoutMs = 30
         if (!hasCode && !hasError) return false;
 
         cleanup();
+
+        // CRITICAL: Close the callback tab IMMEDIATELY before the DNS lookup fires
+        // so the user never sees chromiumapp.org DNS_PROBE_FINISHED_NXDOMAIN.
+        const tabsToClose = [...new Set([authTabId, tabId].filter(Number.isInteger))];
+        if (tabsToClose.length && tabs.remove) {
+          tabs.remove(tabsToClose).catch(() => {});
+        }
+
         resolve({ callbackUrl: url, callbackTabId: tabId });
         return true;
       } catch {
@@ -159,6 +167,8 @@ async function waitForOAuthCallback(tabs, authTabId, redirectUri, timeoutMs = 30
     };
 
     const handleUpdated = (tabId, changeInfo, tab) => {
+      // Prefer changeInfo.url — it fires as soon as Chrome begins navigating,
+      // BEFORE the DNS lookup, giving us the earliest possible close opportunity.
       const candidateUrl = changeInfo?.url || tab?.url;
       if (candidateUrl) {
         checkUrl(candidateUrl, tabId);
@@ -181,7 +191,7 @@ async function waitForOAuthCallback(tabs, authTabId, redirectUri, timeoutMs = 30
     tabs.onUpdated?.addListener?.(handleUpdated);
     tabs.onRemoved?.addListener?.(handleRemoved);
 
-    // Check if the tab already reached the callback URL
+    // Check if the tab already reached the callback URL (e.g. service worker restart)
     if (authTabId && tabs.get) {
       tabs.get(authTabId).then(tab => {
         if (tab?.url) checkUrl(tab.url, authTabId);
@@ -271,13 +281,15 @@ export async function signIn(
   const { callbackUrl, callbackTabId } = callbackResult;
   if (storage?.remove) await storage.remove(PENDING_AUTH_KEY).catch(() => {});
 
-  // Close owned auth tabs IMMEDIATELY so user never sees DNS_PROBE_FINISHED_NXDOMAIN
+  // Tab was already closed inside waitForOAuthCallback. Do a best-effort
+  // second close for any tabs that may not have been caught (e.g. redirected
+  // to a different tab ID). This is a no-op if they are already gone.
   const tabsToClose = [...new Set([authTab.id, callbackTabId].filter(Number.isInteger))];
   if (tabsToClose.length && browserApi.tabs?.remove) {
     await browserApi.tabs.remove(tabsToClose).catch(() => {});
   }
 
-  // Restore focus to source tab/window immediately
+  // Restore focus to source tab/window
   if (sourceTab?.windowId && browserApi.windows?.update) {
     await browserApi.windows.update(sourceTab.windowId, { focused: true }).catch(() => {});
   }

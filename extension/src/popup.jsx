@@ -375,9 +375,11 @@ function StandardPopup() {
       chrome.runtime.sendMessage({ type: 'auth-sign-in' }, res => {
         setAuthBusy(false);
         if (res?.ok) {
-          if (res?.session?.user?.email) {
-            setSession(res.session);
-          }
+          // Re-read session directly from storage for instant, reliable update
+          chrome.storage.local.get('viscue_oauth_session', result => {
+            const stored = result?.viscue_oauth_session;
+            if (stored?.user?.email) setSession(stored);
+          });
           fetchSummary();
         }
       });
@@ -622,7 +624,11 @@ function Popup() {
 
   const startViscue = async () => {
     if (globalThis.chrome?.runtime?.sendMessage) {
-      chrome.runtime.sendMessage({ type: 'auth-sign-in' });
+      // Wait for sign-in to complete before marking onboarding done,
+      // so StandardPopup mounts with a live session already in storage.
+      chrome.runtime.sendMessage({ type: 'auth-sign-in' }, async () => {
+        await completeOnboarding();
+      });
       return;
     }
     // Fallback for non-extension environments
