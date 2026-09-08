@@ -1,3 +1,45 @@
-#viscue-composer-entry { appearance:none; border:1px solid rgba(163,230,53,.7); background:#182014; color:#e9f7c8; border-radius:999px; padding:7px 10px; margin:6px; font:600 12px/1 system-ui,sans-serif; cursor:pointer; letter-spacing:.01em; }
-#viscue-composer-entry:hover { background:#27351d; border-color:#bef264; }
+#viscue-composer-entry {
+  all: initial;
+  appearance: none !important;
+  position: fixed !important;
+  right: max(18px, env(safe-area-inset-right)) !important;
+  bottom: max(92px, calc(env(safe-area-inset-bottom) + 72px)) !important;
+  z-index: 2147483646 !important;
+  box-sizing: border-box !important;
+  min-height: 44px !important;
+  padding: 0 17px !important;
+  border: 1px solid #7890aa !important;
+  border-radius: 999px !important;
+  background: linear-gradient(145deg, #5b7593, #405973) !important;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, .28), inset 0 1px rgba(255, 255, 255, .18) !important;
+  color: #fff !important;
+  font: 650 13px/1 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  letter-spacing: .01em !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease !important;
+}
 
+#viscue-composer-entry:hover {
+  background: linear-gradient(145deg, #6984a2, #49647f) !important;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, .34), inset 0 1px rgba(255, 255, 255, .2) !important;
+  transform: translateY(-2px) !important;
+}
+
+#viscue-composer-entry:active { transform: translateY(0) scale(.98) !important; }
+
+#viscue-composer-entry:focus-visible {
+  outline: 3px solid rgba(91, 117, 147, .42) !important;
+  outline-offset: 3px !important;
+}
+
+@media (max-width: 640px) {
+  #viscue-composer-entry {
+    right: max(12px, env(safe-area-inset-right)) !important;
+    bottom: max(82px, calc(env(safe-area-inset-bottom) + 66px)) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #viscue-composer-entry { transition: none !important; }
+}

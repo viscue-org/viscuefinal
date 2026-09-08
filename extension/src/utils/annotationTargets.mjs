@@ -1,7 +1,10 @@
 const clamp01 = value => Math.max(0, Math.min(1, value));
 
 export function annotationSourcePoint(tool, point = {}) {
-  if (tool !== 'whole') return { ...point };
+  const cornerThreshold = 0.12;
+  const isCorner = (point.x <= cornerThreshold || point.x >= 1 - cornerThreshold)
+    && (point.y <= cornerThreshold || point.y >= 1 - cornerThreshold);
+  if (tool !== 'whole' && !(tool === 'annotate' && isCorner)) return { ...point };
   return {
     x: 0.5,
     y: 0.5,

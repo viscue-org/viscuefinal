@@ -10,6 +10,30 @@ test('whole-image annotation stores the source as the entire image', () => {
     isWholeAsset: true,
   });
 });
+
+test('point annotation started in any image corner selects the whole image', () => {
+  const corners = [
+    { x: 0.05, y: 0.05 },
+    { x: 0.95, y: 0.05 },
+    { x: 0.05, y: 0.95 },
+    { x: 0.95, y: 0.95 },
+  ];
+
+  for (const point of corners) {
+    assert.deepEqual(annotationSourcePoint('annotate', point), {
+      x: 0.5,
+      y: 0.5,
+      isWholeAsset: true,
+    });
+  }
+});
+
+test('point annotation away from a corner keeps its precise source point', () => {
+  assert.deepEqual(annotationSourcePoint('annotate', { x: 0.5, y: 0.05 }), {
+    x: 0.5,
+    y: 0.05,
+  });
+});
 test('whole-image source can point to a precise location on another asset', () => {
   const target = resolveAnnotationTarget([
     { id: 'source', type: 'asset', position: { x: 0, y: 0 }, measured: { width: 200, height: 100 } },
