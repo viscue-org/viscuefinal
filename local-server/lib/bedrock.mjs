@@ -65,29 +65,57 @@ export class BedrockGateway {
   }
 
   async analyzeImage(input) {
+    const startTime = performance.now();
     const attempts = [this.routes.imagePrimary, this.routes.imagePrimary, this.routes.imageFallback];
     let lastError;
     for (const [index, modelId] of attempts.entries()) {
       try {
         const evidence = await this.#visual(modelId, input, 'image');
-        return { status: index === 0 ? 'ok' : 'degraded', provider: providerName(modelId), model: modelId, evidence };
+        const duration_ms = Math.round(performance.now() - startTime);
+        const fallback = index === 2;
+        const fallback_from = fallback ? this.routes.imagePrimary : null;
+        return {
+          status: index === 0 ? 'ok' : 'degraded',
+          provider: providerName(modelId),
+          model: modelId,
+          duration_ms,
+          evidence,
+          fallback,
+          fallback_from,
+          attempt: index + 1,
+        };
       } catch (error) { lastError = error; }
     }
     throw new Error(`Image perception unavailable: ${lastError?.message || 'unknown failure'}`);
   }
 
   async analyzeVideo(input) {
+    const startTime = performance.now();
     let lastError;
-    for (const [index, modelId] of [this.routes.videoPrimary, this.routes.videoFallback].entries()) {
+    const attempts = [this.routes.videoPrimary, this.routes.videoFallback];
+    for (const [index, modelId] of attempts.entries()) {
       try {
         const evidence = await this.#visual(modelId, input, 'video');
-        return { status: index === 0 ? 'ok' : 'degraded', provider: providerName(modelId), model: modelId, evidence };
+        const duration_ms = Math.round(performance.now() - startTime);
+        const fallback = index === 1;
+        const fallback_from = fallback ? this.routes.videoPrimary : null;
+        return {
+          status: index === 0 ? 'ok' : 'degraded',
+          provider: providerName(modelId),
+          model: modelId,
+          duration_ms,
+          evidence,
+          fallback,
+          fallback_from,
+          attempt: index + 1,
+        };
       } catch (error) { lastError = error; }
     }
     throw new Error(`Video perception unavailable: ${lastError?.message || 'unknown failure'}`);
   }
 
   async embedReference({ text, dataUrl } = {}) {
+    const startTime = performance.now();
     try {
       const body = { inputText: String(text || '').slice(0, 2048) };
       if (dataUrl) body.inputImage = dataPart(dataUrl).bytes;
@@ -95,14 +123,26 @@ export class BedrockGateway {
       const parsed = typeof response.body === 'string' ? JSON.parse(response.body) : response.body;
       const embedding = parsed.embedding || parsed.embeddings?.[0]?.embedding;
       if (!Array.isArray(embedding)) throw new TypeError('Missing embedding.');
-      return { status: 'ok', provider: 'titan', model: this.routes.relevance, embedding };
+      const duration_ms = Math.round(performance.now() - startTime);
+      return { status: 'ok', provider: 'titan', model: this.routes.relevance, embedding, duration_ms };
     } catch {
       throw new Error('Titan relevance unavailable.');
     }
   }
 
   async compilePrompt(canonical) {
-    if (!this.routes.compiler) return { status: 'degraded', provider: 'deterministic', text: canonical.prompt, warning: { reason: 'Compiler model is not configured.' } };
+    const startTime = performance.now();
+    if (!this.routes.compiler) {
+      return {
+        status: 'degraded',
+        provider: 'deterministic',
+        text: canonical.prompt,
+        duration_ms: 0,
+        fallback: true,
+        fallback_from: 'unconfigured',
+        warning: { reason: 'Compiler model is not configured.' },
+      };
+    }
     try {
       const body = {
         system: [{ text: 'You are a visual intent prompt compiler for image and design AI tools (ChatGPT, Claude, Gemini). Compile the user\'s visual workspace directives into concise, direct, and natural instructions for image generation or editing.\nRULES:\n1. Do NOT generate bureaucratic section headers (e.g., no "Reference Specification", no "Modification Action", no "Target File / Action / Constraints" forms).\n2. Output clear, concise bullet points describing the exact visual modifications to perform.\n3. Strictly preserve the user\'s intended actions, references, coordinates/percentages (e.g., [50%, 45%]), and spatial targets.\n4. When multiple images are referenced or connected, explicitly name each image in double quotes and state the transfer or modification relationship clearly.\n5. Keep all referenced filenames in exact double quotes.\n6. Never invent labels, reference hashes, or non-existent entities.\n7. Return only the compiled instructions without conversational filler.' }],
@@ -110,11 +150,38 @@ export class BedrockGateway {
         inferenceConfig: { maxTokens: 1400, temperature: 0 },
       };
       const candidate = responseText(await this.#call(this.routes.compiler, body));
+      const duration_ms = Math.round(performance.now() - startTime);
       const verification = verifyProtectedFacts(candidate, canonical);
-      if (!candidate || !verification.ok) return { status: 'degraded', provider: 'deterministic', text: canonical.prompt, warning: verification };
-      return { status: 'ok', provider: 'bedrock-mistral', text: candidate };
+      if (!candidate || !verification.ok) {
+        return {
+          status: 'degraded',
+          provider: 'deterministic',
+          text: canonical.prompt,
+          duration_ms,
+          fallback: true,
+          fallback_from: this.routes.compiler,
+          warning: verification,
+        };
+      }
+      return {
+        status: 'ok',
+        provider: 'bedrock-mistral',
+        model: this.routes.compiler,
+        duration_ms,
+        text: candidate,
+        fallback: false,
+      };
     } catch {
-      return { status: 'degraded', provider: 'deterministic', text: canonical.prompt, warning: { reason: 'Compiler unavailable.' } };
+      const duration_ms = Math.round(performance.now() - startTime);
+      return {
+        status: 'degraded',
+        provider: 'deterministic',
+        text: canonical.prompt,
+        duration_ms,
+        fallback: true,
+        fallback_from: this.routes.compiler,
+        warning: { reason: 'Compiler unavailable.' },
+      };
     }
   }
 

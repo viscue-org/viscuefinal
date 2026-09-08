@@ -1,9 +1,10 @@
 import React, { useState, useRef } from 'react';
-import { X, Timer, FilmStrip, ArrowElbowRightDown, SpinnerGap, PaperPlaneTilt, FileText, ArrowLeft, ArrowRight, ListDashes } from '@phosphor-icons/react';
+import { X, Timer, FilmStrip, ArrowElbowRightDown, SpinnerGap, PaperPlaneTilt, FileText, ArrowLeft, ArrowRight, ListDashes, CheckCircle, Warning, ShieldCheck } from '@phosphor-icons/react';
 import ReactCrop from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { normalizeUrl, captureVideoFrame, formatTime, parseDocxContent, renderDocxPageToCanvas } from '../../utils/helpers';
 import { stageLabel } from '../../utils/vicsuc';
+import { normalizeExecutionLedger } from '../../../../local-server/lib/execution-ledger.mjs';
 
 export function Modal({ children, close, wide = false, className = '' }) {
   return (
@@ -358,31 +359,137 @@ export function ConfirmDialog({ title, body, confirm, close, action }) {
   );
 }
 
+function LedgerStageItem({ stage }) {
+  return (
+    <div className={`ledger-item ledger-item--${stage.status}`}>
+      <div className="ledger-item__top">
+        <span className={`status-chip status-chip--${stage.status}`}>
+          {stage.status.toUpperCase()}
+        </span>
+        <strong className="ledger-item__name">{stage.name.replaceAll('.', ' ')}</strong>
+        {stage.provider && <span className="provider-tag">{stage.provider}</span>}
+        {stage.model && <span className="model-tag">{stage.model.split(':')?.[0] || stage.model}</span>}
+        {stage.duration_ms !== null && stage.duration_ms !== undefined && (
+          <span className="duration-tag">{stage.duration_ms}ms</span>
+        )}
+      </div>
+      {stage.fallback && (
+        <div className="fallback-alert">
+          Fallback route used{stage.fallback_from ? ` (from ${stage.fallback_from})` : ''}
+        </div>
+      )}
+      {stage.message && <p className="ledger-item__message">{stage.message}</p>}
+    </div>
+  );
+}
+
 export function SendDialog({ graph, plan = 'free', review, busy, submit, setSubmit, close, action, referencePolicy }) { 
+  const [showPrompt, setShowPrompt] = useState(false);
   const assets = graph.items.filter(item => item.kind !== 'note').length; 
   const annotations = graph.cues.length; 
   const motions = graph.motions.length; 
   const defaultLimits = { free: 2, pro: 10, plus: 20 };
   const effectiveLimit = referencePolicy?.limit ?? defaultLimits[plan] ?? 2;
-  const selected = review?.selected_references?.length;
+  const selected = review?.selected_references?.length ?? 0;
   const trimmed = review?.trimmed_references || [];
+
+  const ledger = review?.ledger || normalizeExecutionLedger(review?.stages || []);
+  const trust = review?.trust || ledger.trust || { banner: 'Deterministic only', level: 'deterministic', message: 'Executed using deterministic rules and verified intent.' };
+  const groups = ledger.groups || { visual: [], relevance: [], compilation: [], safety: [] };
+  const isBlocked = trust.level === 'blocked';
+
   return (
-    <Modal close={close} wide>
-      <header><div><small>Final review</small><h2>Send visual intent</h2></div><button onClick={close} disabled={busy} aria-label="Close dialog"><X size={18} /></button></header>
+    <Modal close={close} wide className="send-review-modal">
+      <header>
+        <div>
+          <small>Final review</small>
+          <h2>Send visual intent</h2>
+        </div>
+        <button onClick={close} disabled={busy} aria-label="Close dialog"><X size={18} /></button>
+      </header>
+
+      {/* Trust Banner */}
+      <div className={`trust-banner trust-banner--${trust.level}`} role="status" aria-live="polite">
+        <div className="trust-banner__header">
+          <span className="trust-banner__pill">{trust.banner}</span>
+          {ledger.total_duration_ms > 0 && (
+            <span className="trust-banner__timing">{(ledger.total_duration_ms / 1000).toFixed(1)}s elapsed</span>
+          )}
+        </div>
+        <p className="trust-banner__message">{trust.message}</p>
+      </div>
+
       <div className="review-grid">
         <div><strong>{assets}</strong><span>Assets</span></div>
         <div><strong>{annotations}</strong><span>Annotations</span></div>
         <div><strong>{motions}</strong><span>Motions</span></div>
         <div><strong>{graph.items.filter(item => item.kind === 'note' && item.intentional).length}</strong><span>Text notes</span></div>
       </div>
+
       <div className="vicsuc-plan-summary">
         <strong>{plan[0].toUpperCase() + plan.slice(1)} plan</strong>
         <span>{review ? `${selected} selected of ${effectiveLimit} allowed` : `Up to ${effectiveLimit} physical references`}</span>
       </div>
-      {review && <div className="vicsuc-stage-review" aria-label="VICSUC execution stages">
-        {review.stages?.map(stage => <div key={stage.name} className={`stage-${stage.status}`}><span>{stage.name.replaceAll('.', ' ')}</span><strong>{stageLabel(stage)}</strong></div>)}
-        {trimmed.length > 0 && <p><strong>{trimmed.length} optional reference{trimmed.length === 1 ? '' : 's'} trimmed:</strong> {trimmed.map(item => item.name).join(', ')}</p>}
-      </div>}
+
+      {trimmed.length > 0 && (
+        <div className="trimmed-notice" role="alert">
+          <strong>{trimmed.length} optional reference{trimmed.length === 1 ? '' : 's'} trimmed:</strong> {trimmed.map(item => item.name).join(', ')}
+        </div>
+      )}
+
+      {/* Grouped Execution Ledger */}
+      {review && (
+        <div className="execution-ledger" aria-label="Stage Execution Ledger">
+          <div className="ledger-section-title">Execution Ledger</div>
+          
+          {groups.visual?.length > 0 && (
+            <div className="ledger-group">
+              <div className="ledger-group__label">Visual Understanding</div>
+              {groups.visual.map(stage => <LedgerStageItem key={stage.name} stage={stage} />)}
+            </div>
+          )}
+
+          {groups.relevance?.length > 0 && (
+            <div className="ledger-group">
+              <div className="ledger-group__label">Relevance</div>
+              {groups.relevance.map(stage => <LedgerStageItem key={stage.name} stage={stage} />)}
+            </div>
+          )}
+
+          {groups.compilation?.length > 0 && (
+            <div className="ledger-group">
+              <div className="ledger-group__label">Instruction Compilation</div>
+              {groups.compilation.map(stage => <LedgerStageItem key={stage.name} stage={stage} />)}
+            </div>
+          )}
+
+          {groups.safety?.length > 0 && (
+            <div className="ledger-group">
+              <div className="ledger-group__label">Safety & Reverse Verification</div>
+              {groups.safety.map(stage => <LedgerStageItem key={stage.name} stage={stage} />)}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Prompt Preview Toggle */}
+      {review?.final_prompt && (
+        <div className="prompt-preview-container">
+          <button
+            type="button"
+            className="prompt-preview-toggle"
+            onClick={() => setShowPrompt(prev => !prev)}
+            aria-expanded={showPrompt}
+          >
+            <span>{showPrompt ? 'Hide' : 'Inspect'} Compiled Prompt</span>
+            <ListDashes size={16} />
+          </button>
+          {showPrompt && (
+            <pre className="prompt-preview-content">{review.final_prompt}</pre>
+          )}
+        </div>
+      )}
+
       <div className="sequence">
         <div><span>1</span><p><strong>{assets ? 'Attach references' : 'Text-only intent'}</strong><small>{assets ? 'Wait for every upload to finish' : 'No visual attachment required'}</small></p></div>
         <ArrowElbowRightDown size={18} />
@@ -390,14 +497,22 @@ export function SendDialog({ graph, plan = 'free', review, busy, submit, setSubm
         <ArrowElbowRightDown size={18} />
         <div><span>3</span><p><strong>{submit ? 'Submit to AI' : 'Leave for review'}</strong><small>You control final submission</small></p></div>
       </div>
+
       <label className="submit-toggle">
-        <input type="checkbox" checked={submit} onChange={e => setSubmit(e.target.checked)} />
+        <input type="checkbox" checked={submit} onChange={e => setSubmit(e.target.checked)} disabled={busy || isBlocked} />
         <span><strong>Submit automatically</strong><small>Turn off to review the final prompt in chat first.</small></span>
       </label>
+
       <footer>
         <button className="secondary" onClick={close} disabled={busy}>Cancel</button>
-        <button className="primary send" onClick={action} disabled={busy}>
-          {busy ? <><SpinnerGap className="spin" size={18} /> Preparing…</> : <><PaperPlaneTilt size={18} weight="fill" /> {review ? (submit ? 'Attach, then submit' : 'Attach and insert') : 'Prepare VICSUC review'}</>}
+        <button className="primary send" onClick={action} disabled={busy || isBlocked}>
+          {busy ? (
+            <><SpinnerGap className="spin" size={18} /> Sending…</>
+          ) : isBlocked ? (
+            'Action Required'
+          ) : (
+            <><PaperPlaneTilt size={18} weight="fill" /> {submit ? 'Confirm & Submit' : 'Confirm & Insert'}</>
+          )}
         </button>
       </footer>
     </Modal>

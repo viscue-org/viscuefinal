@@ -3,6 +3,7 @@ import { createStage } from './contracts.mjs';
 import { enforceReferencePlan } from './policy.mjs';
 import { buildCanonicalBrief, verifyProtectedFacts } from './brief.mjs';
 import { effectiveReferenceLimit } from './platform-capabilities.mjs';
+import { normalizeExecutionLedger } from './execution-ledger.mjs';
 
 const normalizeForHash = value => String(value || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
 const hash = value => crypto.createHash('sha256').update(normalizeForHash(value)).digest('hex');
@@ -55,7 +56,15 @@ async function collectEvidence(selected, media, bedrock, priorEvidence = []) {
       if (!analyze) throw new Error('Model route is unavailable.');
       const result = await analyze({ assetId: item.id, dataUrl: source.dataUrl, prompt: 'Report only directly visible objects, layout, OCR, and typography evidence. Unknown facts must remain unknown.' });
       return {
-        stage: createStage(`perception.${item.id}`, result.status || 'ok', { provider: result.provider, model: result.model, evidence_count: result.evidence?.length || 0 }),
+        stage: createStage(`perception.${item.id}`, result.status || 'ok', {
+          provider: result.provider,
+          model: result.model,
+          duration_ms: result.duration_ms,
+          evidence_count: result.evidence?.length || 0,
+          fallback: result.fallback,
+          fallback_from: result.fallback_from,
+          attempt: result.attempt,
+        }),
         evidence: (result.evidence || []).map(e => ({ ...e, assetId: item.id })),
       };
     } catch {
@@ -77,8 +86,8 @@ async function runRelevance(graph, bedrock) {
     return createStage('relevance.titan', 'skipped', { warning: 'Titan relevance is not configured.' });
   }
   try {
-    await bedrock.embedReference({ text: (graph.cues || []).map(cue => cue.instruction).join(' ') });
-    return createStage('relevance.titan', 'ok', { provider: 'titan' });
+    const result = await bedrock.embedReference({ text: (graph.cues || []).map(cue => cue.instruction).join(' ') });
+    return createStage('relevance.titan', 'ok', { provider: 'titan', model: result?.model, duration_ms: result?.duration_ms });
   } catch {
     return createStage('relevance.titan', 'degraded', { warning: 'Titan relevance unavailable; explicit intent and stable ordering were used.' });
   }
@@ -108,7 +117,17 @@ export async function runPipeline(request = {}, deps = {}) {
   const policy = enforceReferencePlan(graph, { ...referencePolicy, plan: request.profile?.plan || 'free' }, explicitScores(graph));
   stages.push(createStage('plan.selection', policy.status, { summary: policy.summary, limit: policy.limit, constrained_by: policy.constrainedBy, required_ids: policy.requiredIds }));
   if (policy.status === 'blocked') {
-    return { ok: false, status: 'blocked', error: policy.summary, stages, selected_references: [], trimmed_references: policy.trimmed };
+    const ledger = normalizeExecutionLedger(stages);
+    return {
+      ok: false,
+      status: 'blocked',
+      error: policy.summary,
+      stages,
+      ledger,
+      trust: ledger.trust,
+      selected_references: [],
+      trimmed_references: policy.trimmed,
+    };
   }
 
   const isNewChat = Boolean(
@@ -158,7 +177,14 @@ export async function runPipeline(request = {}, deps = {}) {
   if (deps.bedrock?.compilePrompt) compiled = await deps.bedrock.compilePrompt(canonical);
   const verified = verifyProtectedFacts(compiled.text, canonical);
   if (!verified.ok) compiled = { status: 'degraded', provider: 'deterministic', text: canonical.prompt, warning: verified };
-  stages.push(createStage('prompt.compile', compiled.status || 'degraded', { provider: compiled.provider || 'deterministic', warning: compiled.warning }));
+  stages.push(createStage('prompt.compile', compiled.status || 'degraded', {
+    provider: compiled.provider || 'deterministic',
+    model: compiled.model || null,
+    duration_ms: compiled.duration_ms || null,
+    fallback: Boolean(compiled.fallback),
+    fallback_from: compiled.fallback_from || null,
+    warning: compiled.warning,
+  }));
   stages.push(createStage('prompt.reverse_verification', 'ok', { protected_facts: canonical.protectedFacts.length, cue_coverage: canonical.coverageIds.length }));
 
   const executionId = `exec_${crypto.randomUUID()}`;
@@ -176,6 +202,7 @@ export async function runPipeline(request = {}, deps = {}) {
   }
 
   const newPromptHash = hash(finalPrompt);
+  const ledger = normalizeExecutionLedger(stages);
 
   return {
     ok: true,
@@ -189,6 +216,8 @@ export async function runPipeline(request = {}, deps = {}) {
     selected_references: policy.selected,
     trimmed_references: policy.trimmed,
     stages,
+    ledger,
+    trust: ledger.trust,
     evidence,
     summary: canonical.summary,
   };

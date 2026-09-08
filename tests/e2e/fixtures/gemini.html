@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Gemini Mock Host</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 20px; }
+    rich-textarea div[contenteditable="true"] { min-height: 48px; border: 1px solid #ccc; padding: 8px; border-radius: 6px; }
+    .attachment-card { display: inline-block; padding: 4px 8px; background: #e5e7eb; border-radius: 4px; margin: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Gemini Mock Interface</h1>
+  <form id="chat-form">
+    <div id="attachments" aria-live="polite"></div>
+    <rich-textarea>
+      <div contenteditable="true" role="textbox" aria-label="Enter a prompt here"></div>
+    </rich-textarea>
+    <input id="file-input" type="file" multiple style="display:none">
+    <button type="button" aria-label="Send message" disabled>Send</button>
+  </form>
+
+  <script>
+    window.__VISCUE_EVENTS = [];
+    const promptEl = document.querySelector('rich-textarea div[contenteditable="true"]');
+    const fileInput = document.getElementById('file-input');
+    const sendBtn = document.querySelector('button[aria-label="Send message"]');
+    const attachmentsContainer = document.getElementById('attachments');
+    const isRejectMode = new URLSearchParams(location.search).has('reject');
+
+    function updateSendState() {
+      const text = (promptEl.innerText || promptEl.textContent || '').trim();
+      const hasText = Boolean(text);
+      const hasAttachments = attachmentsContainer.children.length > 0;
+      sendBtn.disabled = !(hasText || hasAttachments);
+    }
+
+    new MutationObserver(updateSendState).observe(promptEl, { childList: true, subtree: true, characterData: true });
+    ['input', 'change', 'keyup'].forEach(ev => promptEl.addEventListener(ev, () => {
+      const text = (promptEl.innerText || promptEl.textContent || '').trim();
+      window.__VISCUE_EVENTS.push({ type: 'prompt-input', text });
+      if (isRejectMode) {
+        setTimeout(() => { promptEl.innerText = ''; updateSendState(); }, 40);
+      } else {
+        updateSendState();
+      }
+    }));
+
+    fileInput.addEventListener('change', () => {
+      for (const file of fileInput.files) {
+        window.__VISCUE_EVENTS.push({ type: 'file-attached', name: file.name, size: file.size });
+        const card = document.createElement('div');
+        card.className = 'attachment-card';
+        card.dataset.testid = 'attachment-preview';
+        card.textContent = file.name;
+        attachmentsContainer.appendChild(card);
+      }
+      updateSendState();
+    });
+
+    sendBtn.addEventListener('click', () => {
+      const text = (promptEl.innerText || promptEl.textContent || '').trim();
+      window.__VISCUE_EVENTS.push({
+        type: 'submit',
+        prompt: text,
+        attachmentsCount: attachmentsContainer.children.length
+      });
+      promptEl.innerText = '';
+      attachmentsContainer.innerHTML = '';
+      updateSendState();
+    });
+  </script>
+</body>
+</html>

@@ -19,6 +19,7 @@ import {
   WebDialog, CropDialog, VideoDialog, NewCanvasDialog, 
   HistoryDialog, ConfirmDialog, SendDialog, DocumentDialog, HostClosedDialog
 } from './components/dialogs/Dialogs';
+import { GestureLabDialog } from './components/dialogs/GestureLabDialog';
 
 import {
   WorkspaceCommandDock,
@@ -203,6 +204,7 @@ function AppCanvas() {
   const [gestureOperations, setGestureOperations] = useState([]);
   const [platformName, setPlatformName] = useState(() => new URLSearchParams(location.search).get('destination') || 'ChatGPT');
   const [cueAnimation, setCueAnimation] = useState(null); // null | { phase, nodeRects, submitRef }
+  const preparedCompilationRef = useRef(null);
   const fileInput = useRef(null);
   const zipInput = useRef(null);
   const fileKind = useRef('image');
@@ -211,6 +213,10 @@ function AppCanvas() {
   const params = useMemo(() => new URLSearchParams(location.search), []);
   const sourceTabId = Number(params.get('sourceTab')) || null;
   const referencePolicy = useMemo(() => effectiveReferenceLimit({ viscuePlan: plan, capability: platformCapability }), [plan, platformCapability]);
+
+  useEffect(() => {
+    preparedCompilationRef.current = null;
+  }, [nodes, edges, gestureOperations]);
 
   usePersistentWorkspace(nodes, edges, gestureOperations, setNodes, setEdges, setGestureOperations);
   useEffect(() => { chromeMessage({ type: 'health' }).then(setHealth); }, []);
@@ -1301,88 +1307,186 @@ function AppCanvas() {
     }
 
     setResult(null);
-    setCueAnimation({ phase: 'fly', submit: autoSubmit });
+    prepareVisualIntent(autoSubmit);
   }
   
-  async function compileAndSend(submit, onPhase) {
-    if (busy) return; setBusy(true);
-    saveToPersistentHistory(nodes, edges);
-    const graph = buildGraph();
-    const sessionResponse = await chromeMessage({ type: 'active-context', tabId: sourceTabId });
-    const sessionCtx = sessionResponse?.context || { sourceTabId, chatId: `tab-${sourceTabId}` };
-    sessionCtx.destinationFingerprint = sessionCtx.fingerprint || `${sessionCtx.platform || graph.destination}:${sessionCtx.chatId}`;
+  async function prepareVisualIntent(submit) {
+    if (busy) return;
+    setBusy(true);
+    setResult(null);
 
-    const isNewChat = Boolean(
-      sessionCtx.isNewChat ||
-      sessionCtx.chatId === 'new' ||
-      sessionCtx.chatId === '/' ||
-      sessionCtx.rawChatId === 'new' ||
-      sessionCtx.rawChatId === '/' ||
-      !sessionCtx.chatId ||
-      String(sessionCtx.destinationFingerprint).endsWith(':new') ||
-      String(sessionCtx.destinationFingerprint).endsWith(':/') ||
-      String(sessionCtx.destinationFingerprint).endsWith(':/app') ||
-      String(sessionCtx.destinationFingerprint).endsWith(':/new')
-    );
-    sessionCtx.isNewChat = isNewChat;
+    try {
+      const graph = buildGraph();
+      const currentSignature = JSON.stringify({
+        nodes: nodes.map(n => ({ id: n.id, type: n.type, position: n.position, data: { ...n.data, dataUrl: n.data?.dataUrl?.slice(0, 100) } })),
+        edges: edges.map(e => ({ id: e.id, source: e.source, target: e.target, data: e.data })),
+        gestureOps: gestureOperations.length,
+        plan,
+      });
 
-    if (!isNewChat && globalThis.chrome?.storage?.local) {
-      const realChatId = sessionCtx.rawChatId || sessionCtx.chatId;
-      const keys = [
-        `viscue-chat-state-${sessionCtx.destinationFingerprint}`,
-        sessionCtx.platform && realChatId ? `viscue-chat-state-${sessionCtx.platform}:${realChatId}` : null,
-      ].filter(Boolean);
-      const res = await chrome.storage.local.get(keys);
-      sessionCtx.previousState = res[`viscue-chat-state-${sessionCtx.destinationFingerprint}`] ||
-        (sessionCtx.platform && realChatId ? res[`viscue-chat-state-${sessionCtx.platform}:${realChatId}`] : null) ||
-        undefined;
-    } else {
-      sessionCtx.previousState = undefined;
-    }
-
-    onPhase?.('compiling');
-    const media = {};
-    await Promise.all((graph.items || []).map(async item => {
-      const node = nodes.find(n => n.id === item.id);
-      if (!node?.data?.dataUrl) return;
-      if (['image', 'video_frame', 'webpage'].includes(item.kind)) {
-        try {
-          media[item.id] = { kind: item.kind, dataUrl: await downscaleDataUrl(node.data.dataUrl, 768, 0.78), provenance: item.provenance || null };
-        } catch { /* ignored */ }
-      } else if (item.kind === 'video' && node.data.dataUrl.length <= 8_000_000) {
-        media[item.id] = { kind: 'video', dataUrl: node.data.dataUrl, temporalRange: item.temporalRange || null };
+      if (preparedCompilationRef.current && preparedCompilationRef.current.signature === currentSignature) {
+        setBusy(false);
+        setDialog({
+          type: 'send',
+          submit,
+          review: preparedCompilationRef.current.response,
+        });
+        return;
       }
-    }));
-    const response = await chromeMessage({ type: 'compile', payload: buildVicsucRequest(graph, media, { plan }, sessionCtx, platformCapability) });
-    if (!response?.ok) { setBusy(false); onPhase?.('error'); setResult({ error: response?.error || 'Compilation failed.' }); setCueAnimation(null); return; }
 
-    onPhase?.('attaching');
-    const attachmentById = new Map((response.attachments || []).map(item => [item.id, item]));
-    const attachments = await Promise.all(nodes.filter(node => node.type === 'asset' && node.data.dataUrl && attachmentById.has(node.id)).map(async node => ({ id: node.id, name: node.data.name, mime: node.data.mime, stateHash: attachmentById.get(node.id).stateHash, dataUrl: node.data.kind === 'image' && node.data.crop ? await renderCropDataUrl(node.data.dataUrl, node.data.crop) : node.data.dataUrl })));
-    const promptHash = response.prompt_hash || response.promptHash || response.data?.promptHash;
-    const handoff = await chromeMessage({ type: 'handoff', tabId: sourceTabId, prompt: response.final_prompt, attachments, submit, executionId: response.execution_id || response.executionId, destinationFingerprint: response.destination_fingerprint, promptHash });
-    setBusy(false);
-    if (!handoff?.ok) { onPhase?.('error'); setResult({ error: handoff?.error || 'The destination did not accept the intent.' }); setCueAnimation(null); return; }
-    const receipt = await chromeMessage({ type: 'handoff-receipt', receipt: handoff });
-    const prevAttachedCount = (sessionCtx.previousState?.sent_attachment_hashes || sessionCtx.previousState?.attachment_state_hashes || []).length;
-    let successMsg;
-    if (attachments.length) {
-      successMsg = submit
-        ? `Attached ${attachments.length} new reference${attachments.length === 1 ? '' : 's'}${prevAttachedCount ? ` (${prevAttachedCount} prior reference${prevAttachedCount === 1 ? '' : 's'} already in chat)` : ''}, inserted intent, and submitted.`
-        : `Attached ${attachments.length} new reference${attachments.length === 1 ? '' : 's'}${prevAttachedCount ? ` (${prevAttachedCount} prior reference${prevAttachedCount === 1 ? '' : 's'} already in chat)` : ''} and inserted intent.`;
-    } else if (prevAttachedCount) {
-      successMsg = submit
-        ? `Refinement sent (referencing ${prevAttachedCount} prior reference${prevAttachedCount === 1 ? '' : 's'} without duplicate uploads).`
-        : `Refinement prepared (referencing ${prevAttachedCount} prior reference${prevAttachedCount === 1 ? '' : 's'} without duplicate uploads).`;
-    } else {
-      successMsg = submit ? 'Text intent inserted and submitted.' : 'Text intent inserted for review.';
+      const sessionResponse = await chromeMessage({ type: 'active-context', tabId: sourceTabId });
+      const sessionCtx = sessionResponse?.context || { sourceTabId, chatId: `tab-${sourceTabId}` };
+      sessionCtx.destinationFingerprint = sessionCtx.fingerprint || `${sessionCtx.platform || graph.destination}:${sessionCtx.chatId}`;
+
+      const isNewChat = Boolean(
+        sessionCtx.isNewChat ||
+        sessionCtx.chatId === 'new' ||
+        sessionCtx.chatId === '/' ||
+        sessionCtx.rawChatId === 'new' ||
+        sessionCtx.rawChatId === '/' ||
+        !sessionCtx.chatId ||
+        String(sessionCtx.destinationFingerprint).endsWith(':new') ||
+        String(sessionCtx.destinationFingerprint).endsWith(':/') ||
+        String(sessionCtx.destinationFingerprint).endsWith(':/app') ||
+        String(sessionCtx.destinationFingerprint).endsWith(':/new')
+      );
+      sessionCtx.isNewChat = isNewChat;
+
+      if (!isNewChat && globalThis.chrome?.storage?.local) {
+        const realChatId = sessionCtx.rawChatId || sessionCtx.chatId;
+        const keys = [
+          `viscue-chat-state-${sessionCtx.destinationFingerprint}`,
+          sessionCtx.platform && realChatId ? `viscue-chat-state-${sessionCtx.platform}:${realChatId}` : null,
+        ].filter(Boolean);
+        const res = await chrome.storage.local.get(keys);
+        sessionCtx.previousState = res[`viscue-chat-state-${sessionCtx.destinationFingerprint}`] ||
+          (sessionCtx.platform && realChatId ? res[`viscue-chat-state-${sessionCtx.platform}:${realChatId}`] : null) ||
+          undefined;
+      } else {
+        sessionCtx.previousState = undefined;
+      }
+
+      const media = {};
+      await Promise.all((graph.items || []).map(async item => {
+        const node = nodes.find(n => n.id === item.id);
+        if (!node?.data?.dataUrl) return;
+        if (['image', 'video_frame', 'webpage'].includes(item.kind)) {
+          try {
+            media[item.id] = { kind: item.kind, dataUrl: await downscaleDataUrl(node.data.dataUrl, 768, 0.78), provenance: item.provenance || null };
+          } catch { /* ignored */ }
+        } else if (item.kind === 'video' && node.data.dataUrl.length <= 8_000_000) {
+          media[item.id] = { kind: 'video', dataUrl: node.data.dataUrl, temporalRange: item.temporalRange || null };
+        }
+      }));
+
+      const response = await chromeMessage({
+        type: 'compile',
+        payload: buildVicsucRequest(graph, media, { plan }, sessionCtx, platformCapability),
+      });
+
+      if (!response?.ok) {
+        setBusy(false);
+        setResult({ error: response?.error || 'Compilation failed.' });
+        return;
+      }
+
+      preparedCompilationRef.current = {
+        signature: currentSignature,
+        graph,
+        response,
+        sessionCtx,
+      };
+
+      setBusy(false);
+      setDialog({
+        type: 'send',
+        submit,
+        review: response,
+      });
+    } catch (err) {
+      setBusy(false);
+      setResult({ error: err.message || 'Failed to prepare visual intent.' });
     }
-    setResult({ success: receipt?.ok ? successMsg : `${successMsg} (Failed to save state cache)`, provider: response.provider });
-    onPhase?.('done');
-    if (shouldCloseWorkspace(handoff, receipt)) {
-      setTimeout(() => chromeMessage({ type: 'complete-workspace', sourceTabId }), 900);
-    } else {
-      setTimeout(() => setCueAnimation(null), 1200);
+  }
+
+  async function executeHandoff(submit) {
+    if (busy) return;
+    setBusy(true);
+    setDialog(null);
+    saveToPersistentHistory(nodes, edges);
+
+    let prepared = preparedCompilationRef.current;
+    if (!prepared) {
+      await prepareVisualIntent(submit);
+      prepared = preparedCompilationRef.current;
+      if (!prepared) {
+        setBusy(false);
+        return;
+      }
+    }
+
+    const { response, sessionCtx } = prepared;
+    setCueAnimation({ phase: 'attaching', submit });
+
+    try {
+      const attachmentById = new Map((response.attachments || []).map(item => [item.id, item]));
+      const attachments = await Promise.all(
+        nodes
+          .filter(node => node.type === 'asset' && node.data.dataUrl && attachmentById.has(node.id))
+          .map(async node => ({
+            id: node.id,
+            name: node.data.name,
+            mime: node.data.mime,
+            stateHash: attachmentById.get(node.id).stateHash,
+            dataUrl: node.data.kind === 'image' && node.data.crop ? await renderCropDataUrl(node.data.dataUrl, node.data.crop) : node.data.dataUrl,
+          }))
+      );
+      const promptHash = response.prompt_hash || response.promptHash || response.data?.promptHash;
+      const handoff = await chromeMessage({
+        type: 'handoff',
+        tabId: sourceTabId,
+        prompt: response.final_prompt,
+        attachments,
+        submit,
+        executionId: response.execution_id || response.executionId,
+        destinationFingerprint: response.destination_fingerprint,
+        promptHash,
+      });
+      setBusy(false);
+
+      if (!handoff?.ok) {
+        setCueAnimation(prev => prev ? { ...prev, phase: 'error' } : null);
+        setResult({ error: handoff?.error || 'The destination did not accept the intent.' });
+        setTimeout(() => setCueAnimation(null), 1500);
+        return;
+      }
+
+      const receipt = await chromeMessage({ type: 'handoff-receipt', receipt: handoff });
+      const prevAttachedCount = (sessionCtx.previousState?.sent_attachment_hashes || sessionCtx.previousState?.attachment_state_hashes || []).length;
+      let successMsg;
+      if (attachments.length) {
+        successMsg = submit
+          ? `Attached ${attachments.length} new reference${attachments.length === 1 ? '' : 's'}${prevAttachedCount ? ` (${prevAttachedCount} prior reference${prevAttachedCount === 1 ? '' : 's'} already in chat)` : ''}, inserted intent, and submitted.`
+          : `Attached ${attachments.length} new reference${attachments.length === 1 ? '' : 's'}${prevAttachedCount ? ` (${prevAttachedCount} prior reference${prevAttachedCount === 1 ? '' : 's'} already in chat)` : ''} and inserted intent.`;
+      } else if (prevAttachedCount) {
+        successMsg = submit
+          ? `Refinement sent (referencing ${prevAttachedCount} prior reference${prevAttachedCount === 1 ? '' : 's'} without duplicate uploads).`
+          : `Refinement prepared (referencing ${prevAttachedCount} prior reference${prevAttachedCount === 1 ? '' : 's'} without duplicate uploads).`;
+      } else {
+        successMsg = submit ? 'Text intent inserted and submitted.' : 'Text intent inserted for review.';
+      }
+      setResult({ success: receipt?.ok ? successMsg : `${successMsg} (Failed to save state cache)`, provider: response.provider });
+      setCueAnimation(prev => prev ? { ...prev, phase: 'done' } : null);
+
+      if (shouldCloseWorkspace(handoff, receipt)) {
+        setTimeout(() => chromeMessage({ type: 'complete-workspace', sourceTabId }), 900);
+      } else {
+        setTimeout(() => setCueAnimation(null), 1200);
+      }
+    } catch (err) {
+      setBusy(false);
+      setCueAnimation(null);
+      setResult({ error: err.message || 'Failed to complete handoff.' });
     }
   }
 
@@ -1635,16 +1739,25 @@ function AppCanvas() {
           />
         </div>
       )}
-      {dialog?.type === 'send' && <SendDialog graph={buildGraph()} plan={plan} referencePolicy={referencePolicy} review={dialog.review} busy={busy} submit={dialog.submit} setSubmit={submit => setDialog({ ...dialog, submit })} close={() => !busy && setDialog(null)} action={() => compileAndSend(dialog.submit)} />}
+      {dialog?.type === 'send' && (
+        <SendDialog
+          graph={buildGraph()}
+          plan={plan}
+          referencePolicy={referencePolicy}
+          review={dialog.review}
+          busy={busy}
+          submit={dialog.submit}
+          setSubmit={submit => setDialog({ ...dialog, submit })}
+          close={() => !busy && setDialog(null)}
+          action={() => executeHandoff(dialog.submit)}
+        />
+      )}
       {dialog?.type === 'host-closed' && <HostClosedDialog saveAndClose={() => { saveToPersistentHistory(nodes, edges); window.close(); }} discardAndClose={() => window.close()} />}
-      {!cueAnimation && busy && <div className="busy-chip"><SpinnerGap className="spin" size={18} /> Working…</div>}
+      {dialog?.type === 'gesture-lab' && <GestureLabDialog close={() => setDialog(null)} />}
+      {!cueAnimation && busy && <div className="busy-chip"><SpinnerGap className="spin" size={18} /> Preparing intent…</div>}
       {cueAnimation && (
         <CueProcessingLine
           phase={cueAnimation.phase}
-          onMount={() => {
-            const onPhase = (p) => setCueAnimation(prev => prev ? { ...prev, phase: p } : null);
-            setTimeout(() => compileAndSend(cueAnimation.submit, onPhase), 550);
-          }}
         />
       )}
     </main>

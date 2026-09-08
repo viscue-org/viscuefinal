@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Copilot Mock Host</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 20px; }
+    #userInput { width: 100%; min-height: 48px; border: 1px solid #ccc; padding: 8px; border-radius: 6px; box-sizing: border-box; }
+    .attachment-card { display: inline-block; padding: 4px 8px; background: #e5e7eb; border-radius: 4px; margin: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Copilot Mock Interface</h1>
+  <form id="chat-form">
+    <div id="attachments" aria-live="polite"></div>
+    <textarea id="userInput" placeholder="Ask Copilot..."></textarea>
+    <input id="file-input" type="file" multiple style="display:none">
+    <button type="button" aria-label="Submit message" disabled>Submit</button>
+  </form>
+
+  <script>
+    window.__VISCUE_EVENTS = [];
+    const promptEl = document.getElementById('userInput');
+    const fileInput = document.getElementById('file-input');
+    const sendBtn = document.querySelector('button[aria-label="Submit message"]');
+    const attachmentsContainer = document.getElementById('attachments');
+    const isRejectMode = new URLSearchParams(location.search).has('reject');
+
+    function updateSendState() {
+      const text = (promptEl.value || '').trim();
+      const hasText = Boolean(text);
+      const hasAttachments = attachmentsContainer.children.length > 0;
+      sendBtn.disabled = !(hasText || hasAttachments);
+    }
+
+    // Also poll value periodically for programmatic property setters
+    setInterval(updateSendState, 100);
+    ['input', 'change', 'keyup', 'focus', 'blur'].forEach(ev => promptEl.addEventListener(ev, () => {
+      const text = (promptEl.value || '').trim();
+      window.__VISCUE_EVENTS.push({ type: 'prompt-input', text });
+      if (isRejectMode) {
+        setTimeout(() => { promptEl.value = ''; updateSendState(); }, 40);
+      } else {
+        updateSendState();
+      }
+    }));
+
+    fileInput.addEventListener('change', () => {
+      for (const file of fileInput.files) {
+        window.__VISCUE_EVENTS.push({ type: 'file-attached', name: file.name, size: file.size });
+        const card = document.createElement('div');
+        card.className = 'attachment-card';
+        card.dataset.testid = 'attachment-preview';
+        card.textContent = file.name;
+        attachmentsContainer.appendChild(card);
+      }
+      updateSendState();
+    });
+
+    sendBtn.addEventListener('click', () => {
+      const text = (promptEl.value || '').trim();
+      window.__VISCUE_EVENTS.push({
+        type: 'submit',
+        prompt: text,
+        attachmentsCount: attachmentsContainer.children.length
+      });
+      promptEl.value = '';
+      attachmentsContainer.innerHTML = '';
+      updateSendState();
+    });
+  </script>
+</body>
+</html>
