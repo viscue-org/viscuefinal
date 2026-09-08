@@ -158,7 +158,8 @@ export async function runPipeline(request = {}, deps = {}) {
     }));
   }
 
-  const newPromptHash = hash(finalPrompt);
+  const rawIntent = JSON.stringify((graph.cues || []).map(c => [c.x, c.y, c.area, c.instruction]));
+  const newPromptHash = hash(finalPrompt + '\n' + rawIntent);
 
   return {
     ok: true,

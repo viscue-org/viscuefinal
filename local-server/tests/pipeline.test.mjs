@@ -79,7 +79,8 @@ test('prompt_hash matches sha256 of final_prompt when AI compiler returns compil
   const result = await runPipeline(requestWith(1, 'plus'), { bedrock });
   assert.equal(result.ok, true);
   assert.equal(result.final_prompt, compiledText);
-  const expectedHash = crypto.createHash('sha256').update(compiledText).digest('hex');
+  const rawIntent = JSON.stringify([[0.4, 0.5, undefined, 'Keep the red object.']]);
+  const expectedHash = crypto.createHash('sha256').update(compiledText + '\n' + rawIntent).digest('hex');
   assert.equal(result.prompt_hash, expectedHash);
 });
 

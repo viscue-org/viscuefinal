@@ -205,5 +205,6 @@ test('re-editing workspace compiles real AI prompt and does not skip or emit dum
   assert.doesNotMatch(reEditResult.final_prompt, /I updated the visual references\./);
   assert.notEqual(reEditResult.provider, 'delta-skip');
   // Hash is accurate
-  assert.equal(reEditResult.prompt_hash, hash(reEditResult.final_prompt));
+  const rawIntent = JSON.stringify([[0.5, 0.5, undefined, 'OLED pure black theme with indigo accents.']]);
+  assert.equal(reEditResult.prompt_hash, hash(reEditResult.final_prompt + '\n' + rawIntent));
 });
