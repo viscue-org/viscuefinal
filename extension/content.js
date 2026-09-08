@@ -10,8 +10,9 @@
   };
   const platform=window.__MOCK_PLATFORM__||(location.hostname.includes('gemini.google')?'Gemini':location.hostname.includes('claude.ai')?'Claude':location.hostname.includes('copilot.microsoft')?'Copilot':location.hostname.includes('perplexity')?'Perplexity':location.hostname.includes('grok.com')?'Grok':'ChatGPT');
   const adapter=adapters[platform];
-  const extensionId=globalThis.chrome?.runtime?.id||'viscue';
-  const extensionVersion=globalThis.chrome?.runtime?.getManifest?.()?.version||'0.0.0';
+  const runtime=(typeof chrome!=='undefined'&&chrome?.runtime)?chrome.runtime:(typeof globalThis!=='undefined'?globalThis.chrome?.runtime:undefined);
+  const extensionId=runtime?.id||'viscue';
+  const extensionVersion=runtime?.getManifest?.()?.version||'0.0.0';
 
   function queryFirst(selectors){for(const selector of selectors){const element=document.querySelector(selector);if(element)return element}return null}
   function compareVersions(left,right){const a=String(left||'0').split('.').map(Number),b=String(right||'0').split('.').map(Number);for(let i=0;i<Math.max(a.length,b.length);i++){const delta=(a[i]||0)-(b[i]||0);if(delta)return delta}return 0}
