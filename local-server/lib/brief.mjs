@@ -85,7 +85,7 @@ export function buildCanonicalBrief({ graph = {}, selection = {}, evidence = [],
   const selectedLogical = selected.flatMap(item => item.logicalItems?.length ? item.logicalItems.map(logical => ({ ...logical, required: item.required })) : [item]);
   const trimmedLogical = trimmed.flatMap(item => item.logicalItems?.length ? item.logicalItems : [item]);
   const selectedIds = new Set(selectedLogical.map(item => item.id));
-  const lines = ['Use the selected clean references as an explicit visual specification.'];
+  const lines = [];
   if (Array.isArray(alreadyAttached) && alreadyAttached.length > 0) {
     const priorNames = alreadyAttached.map(a => `“${a.name}”`).join(', ');
     lines.push(`(Note: ${priorNames} was already attached in prior turns of this conversation and will not be re-uploaded.)`);
@@ -104,8 +104,8 @@ export function buildCanonicalBrief({ graph = {}, selection = {}, evidence = [],
     const target = cue.isWholeAsset ? 'the whole reference' : formatPoint(cue, evidence);
     const instructionText = cue.instruction.trim();
     const punct = /[.!?:]$/.test(instructionText) ? '' : '.';
-    // Use clear imperative phrasing so AI understands the spatial target
-    lines.push(`- On "${asset.name}"${timestamp}: ${instructionText}${punct} (Target: ${target}.)`);
+    // Natural phrasing so AI models interpret the directive without bureaucratic form inflation
+    lines.push(`- On "${asset.name}"${timestamp} in ${target}: ${instructionText}${punct}`);
     protectedFacts.push({ id: `name:${asset.id}`, text: asset.name });
     if (cue.timeMs != null) protectedFacts.push({ id: `time:${cue.id}`, text: formatTime(cue.timeMs / 1000) });
   }

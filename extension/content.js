@@ -62,6 +62,62 @@
     if(message.type==='handoff'){runHandoff(message).then(sendResponse).catch(error=>sendResponse({ok:false,error:error.message}));return true}
   });
 
+  async function clearStaleComposerAttachments(composer){
+    const root = composer ? (composer.closest('form') || composer.closest('[role="presentation"]') || composer.closest('[class*="composer"]') || composer.closest('main') || composer.parentElement?.parentElement || document) : document;
+    for (let pass = 0; pass < 3; pass++) {
+      let removed = 0;
+      const imgs = root.querySelectorAll('img');
+      for (const img of imgs) {
+        if (composer && composer.contains(img)) continue;
+        const card = img.closest('div, li, [role="group"]') || img.parentElement;
+        if (!card || !root.contains(card)) continue;
+        card.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+        card.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+        const btns = card.querySelectorAll('button');
+        for (const btn of btns) {
+          try {
+            btn.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+            btn.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+            btn.click();
+            removed++;
+          } catch {}
+        }
+      }
+      const removeSelectors = [
+        'button[aria-label*="Remove" i]',
+        'button[aria-label*="Delete" i]',
+        'button[aria-label*="Dismiss" i]',
+        'button[aria-label*="Clear" i]',
+        'button[aria-label*="Close" i]',
+        'button[data-testid*="remove" i]',
+        'button[data-testid*="delete" i]',
+        'button[data-testid*="close" i]',
+        'div[class*="attachment" i] button',
+        'div[class*="file-preview" i] button',
+        'div[class*="thumbnail" i] button',
+        'li[class*="attachment" i] button',
+        '[class*="pill" i] button'
+      ];
+      for (const selector of removeSelectors) {
+        const buttons = root.querySelectorAll(selector);
+        for (const btn of buttons) {
+          if (btn.getAttribute('data-testid') === 'send-button') continue;
+          const label = (btn.getAttribute('aria-label') || '').toLowerCase();
+          if (label.includes('send') || label.includes('voice') || label.includes('attach') || label.includes('submit')) continue;
+          try {
+            btn.click();
+            removed++;
+          } catch {}
+        }
+      }
+      if (removed > 0) {
+        await delay(200);
+      } else {
+        break;
+      }
+    }
+  }
+
   async function runHandoff({prompt,attachments=[],submit=false,executionId,destinationFingerprint,promptHash,tabId}){
     const liveCtx = extractLiveChatContext();
     const actualDestination = liveCtx.destinationFingerprint;
@@ -84,6 +140,7 @@
       }
     }
     const composer=await waitFor(()=>queryFirst(adapter.composer),8000,'Destination composer was not found.');
+    await clearStaleComposerAttachments(composer);
     let attached=0;
     if(attachments.length){
       const files=await Promise.all(attachments.map(toFile));
