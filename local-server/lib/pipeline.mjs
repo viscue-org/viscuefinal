@@ -91,7 +91,7 @@ export async function runPipeline(request = {}, deps = {}) {
   let finalPrompt = compiled.text;
   let finalAttachments = canonical.attachments;
   let provider = compiled.provider || 'deterministic';
-  const newPromptHash = hash(compiled.text);
+  const newPromptHash = hash(canonical.prompt);
 
   if (request.session?.previousState) {
     const prevState = request.session.previousState;
