@@ -102,7 +102,7 @@ const createFlowEdge = (source, target, sourceHandle, targetHandle) => ({ id: cr
 function chromeMessage(message) {
   if (globalThis.chrome?.runtime?.sendMessage) return chrome.runtime.sendMessage(message);
   const headers = { 'content-type': 'application/json' };
-  const apiKey = import.meta.env.VITE_VISCUE_API_KEY || localStorage.getItem('viscue-preview-api-key') || '';
+  const apiKey = localStorage.getItem('viscue-preview-api-key') || '';
   if (apiKey) headers['authorization'] = `Bearer ${apiKey}`;
 
   if (message.type === 'health') return fetch(`${VISCUE_API_URL}/health`, { headers }).then(r => r.json()).catch(() => ({ ok: false }));
