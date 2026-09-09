@@ -167,7 +167,7 @@ export function WorkspaceCommandDock({
 }
 
 export function WorkspaceDestination({ label = 'ChatGPT' }) {
-  return h('div', { className: 'workspace-destination', 'aria-label': `Destination: ${label}` }, label);
+  return h('div', { className: 'workspace-destination', 'aria-label': `Destination: ${label}` }, `Attached Platform: ${label}`);
 }
 
 export function WorkspaceEmptyState({ onAdd = () => {} }) {

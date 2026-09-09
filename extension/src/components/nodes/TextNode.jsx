@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useRef, useContext } from 'react';
+import React, { memo, useEffect, useRef, useContext, useState, useCallback } from 'react';
 import { Handle, NodeToolbar, Position, useUpdateNodeInternals } from '@xyflow/react';
 import {
   AlignCenter,
@@ -26,6 +26,17 @@ export const TextNode = memo(function TextNode({ id, data, selected }) {
   const updateNodeInternals = useUpdateNodeInternals();
   const context = useContext(WorkspaceContext) || {};
   const { onStyleChange, onCopy, onDelete, onChange } = context;
+  
+  // Local draft for isolated text editing
+  const [draft, setDraft] = useState(data.text);
+  const draftTimer = useRef(null);
+  
+  useEffect(() => {
+    // Sync external changes if not currently editing
+    if (document.activeElement !== textareaRef.current) {
+      setDraft(data.text);
+    }
+  }, [data.text]);
   const style = {
     fontSize: data.style?.fontSize || (isSticky ? 17 : 19),
     fontWeight: data.style?.fontWeight || (isSticky ? 500 : 600),
@@ -46,7 +57,22 @@ export const TextNode = memo(function TextNode({ id, data, selected }) {
       field.scrollTop = prevScrollTop;
     }
     updateNodeInternals(id);
-  }, [data.text, id, isSticky, style.fontSize, updateNodeInternals]);
+  }, [draft, id, isSticky, style.fontSize, updateNodeInternals]);
+
+  const handleTextChange = useCallback((e) => {
+    const nextVal = e.target.value;
+    setDraft(nextVal);
+    
+    if (draftTimer.current) clearTimeout(draftTimer.current);
+    draftTimer.current = setTimeout(() => {
+      onChange(id, nextVal);
+    }, 400);
+  }, [id, onChange]);
+
+  const handleBlur = useCallback(() => {
+    if (draftTimer.current) clearTimeout(draftTimer.current);
+    onChange(id, draft);
+  }, [id, draft, onChange]);
 
   const setStyle = patch => onStyleChange(id, patch);
   const isActive = (key, value) => style[key] === value;
@@ -109,15 +135,17 @@ export const TextNode = memo(function TextNode({ id, data, selected }) {
         </div>
       </NodeToolbar>
 
-      <Handle id="top" type="target" position={Position.Top} className="text-handle" />
-      <Handle id="target" type="target" position={Position.Left} className="text-handle" />
-      <Handle id="source" type="source" position={Position.Right} className="text-handle" />
+      <Handle id="top" type="source" position={Position.Top} className="text-handle" />
+      <Handle id="left" type="source" position={Position.Left} className="text-handle" />
+      <Handle id="right" type="source" position={Position.Right} className="text-handle" />
       <Handle id="bottom" type="source" position={Position.Bottom} className="text-handle" />
 
       {selected && context.onAddConnectedText && (
         <>
-          <button className="flow-add-btn right" onClick={() => context.onAddConnectedText(id, 'source', 'right')} aria-label="Add connected note right"><Plus size={14} /></button>
-          <button className="flow-add-btn bottom" onClick={() => context.onAddConnectedText(id, 'bottom', 'bottom')} aria-label="Add connected note below"><Plus size={14} /></button>
+          <button className="flow-add-btn top" onClick={() => context.onAddConnectedText(id, 'top', 'bottom')} aria-label="Add connected note above"><Plus size={14} /></button>
+          <button className="flow-add-btn left" onClick={() => context.onAddConnectedText(id, 'left', 'right')} aria-label="Add connected note left"><Plus size={14} /></button>
+          <button className="flow-add-btn right" onClick={() => context.onAddConnectedText(id, 'right', 'left')} aria-label="Add connected note right"><Plus size={14} /></button>
+          <button className="flow-add-btn bottom" onClick={() => context.onAddConnectedText(id, 'bottom', 'top')} aria-label="Add connected note below"><Plus size={14} /></button>
         </>
       )}
 
@@ -126,8 +154,9 @@ export const TextNode = memo(function TextNode({ id, data, selected }) {
       <textarea
         ref={textareaRef}
         className="nodrag nowheel"
-        value={data.text}
-        onChange={event => onChange(id, event.target.value)}
+        value={draft}
+        onChange={handleTextChange}
+        onBlur={handleBlur}
         placeholder={isSticky ? 'Write a sticky note…' : 'Type your instruction…'}
         autoFocus={data.autoFocus}
         aria-label={isSticky ? 'Sticky note text' : 'Intent text'}

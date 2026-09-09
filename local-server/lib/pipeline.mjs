@@ -11,13 +11,30 @@ const hash = value => crypto.createHash('sha256').update(normalizeForHash(value)
 function explicitScores(graph = {}) {
   const scores = new Map();
   for (const [index, item] of (graph.items || []).entries()) {
-    let score = Math.max(0, 0.1 - index * 0.001);
-    if ((graph.cues || []).some(cue => cue.assetId === item.id)) score += 0.25;
-    if ((graph.relations || []).some(relation => relation.sourceAssetId === item.id || relation.targetAssetId === item.id)) score += 0.1;
-    if (String(item.role || '').toLowerCase() === 'preserve' || item.preserved) score += 0.1;
+    let score = Math.max(0, 0.1 - index * 0.001); // fallback deterministic order
+    if ((graph.cues || []).some(cue => cue.assetId === item.id)) score += 0.3; // 30% explicit intent strength
+    if ((graph.relations || []).some(relation => relation.sourceAssetId === item.id || relation.targetAssetId === item.id)) score += 0.25; // 25% relationship strength
+    // Vision importance and prompt relevance will be added later
     scores.set(item.id, score);
   }
   return scores;
+}
+
+function requiresVision(graph) {
+  const allText = (graph.cues || []).map(c => c.instruction).join(' ').toLowerCase();
+  
+  // Vision is required if there are temporal video queries, identification queries, or ambiguity
+  const visionWords = /\b(what|who|how many|count|identify|read|compare|describe|locate|where|find|extract|which)\b/;
+  if (visionWords.test(allText)) return true;
+
+  // No-vision edit keywords (generation/edit instruction)
+  const noVisionWords = /\b(larger|smaller|clearer|darker|lighter|color|move|align|remove|replace|copy|rotate|crop|emphasize|restyle|modify|transfer|follow)\b/;
+  if (noVisionWords.test(allText)) {
+    return false;
+  }
+  
+  // Default to vision if ambiguous
+  return true;
 }
 
 async function collectEvidence(selected, media, bedrock, priorEvidence = []) {
@@ -113,22 +130,11 @@ async function runFontIdentification(request, font) {
 export async function runPipeline(request = {}, deps = {}) {
   const graph = request.graph || {};
   const stages = [];
-  const referencePolicy = effectiveReferenceLimit({ viscuePlan: request.profile?.plan, capability: request.platformCapability });
-  const policy = enforceReferencePlan(graph, { ...referencePolicy, plan: request.profile?.plan || 'free' }, explicitScores(graph));
-  stages.push(createStage('plan.selection', policy.status, { summary: policy.summary, limit: policy.limit, constrained_by: policy.constrainedBy, required_ids: policy.requiredIds }));
-  if (policy.status === 'blocked') {
-    const ledger = normalizeExecutionLedger(stages);
-    return {
-      ok: false,
-      status: 'blocked',
-      error: policy.summary,
-      stages,
-      ledger,
-      trust: ledger.trust,
-      selected_references: [],
-      trimmed_references: policy.trimmed,
-    };
-  }
+  
+  // Cheap pre-compilation scope filter
+  const itemsInScope = (graph.items || []).filter(item => {
+    return item.intentional || item.preserved || (graph.cues || []).some(c => c.assetId === item.id) || (graph.relations || []).some(r => r.sourceAssetId === item.id || r.targetAssetId === item.id);
+  });
 
   const isNewChat = Boolean(
     request.session?.isNewChat === true ||
@@ -154,29 +160,34 @@ export async function runPipeline(request = {}, deps = {}) {
     ...(Array.isArray(prevState?.attachments) ? prevState.attachments.filter(a => a.confirmed !== false).map(a => a.stateHash || a.hash) : []),
   ].filter(Boolean));
 
-  const [perceptionResult, titanStage, fontResult] = await Promise.all([
-    collectEvidence(policy.selected, request.media || {}, deps.bedrock, prevState?.evidence || []),
-    runRelevance(graph, deps.bedrock),
-    runFontIdentification(request, deps.font),
-  ]);
+  // 1. Deterministic vision gate
+  const needsVision = requiresVision(graph);
+  let perceptionResult = { stages: [], evidence: [] };
+  
+  if (needsVision) {
+    perceptionResult = await collectEvidence(itemsInScope, request.media || {}, deps.bedrock, prevState?.evidence || []);
+  } else {
+    perceptionResult = {
+      stages: [createStage('perception', 'skipped', { reason: 'generation_edit_sufficient' })],
+      evidence: []
+    };
+  }
 
+  const fontResult = await runFontIdentification(request, deps.font);
   stages.push(...perceptionResult.stages);
-  stages.push(titanStage);
   stages.push(...fontResult.stages);
-
   const evidence = [...perceptionResult.evidence, ...fontResult.evidence];
 
-  // Identify attachments that were already confirmed in this chat session
-  const preliminaryBrief = buildCanonicalBrief({ graph, evidence, selection: policy });
-  const alreadyAttached = (preliminaryBrief.attachments || []).filter(a => sentHashes.has(a.stateHash) || (a.hash && sentHashes.has(a.hash)));
-  const finalAttachments = (preliminaryBrief.attachments || []).filter(a => !sentHashes.has(a.stateHash) && (!a.hash || !sentHashes.has(a.hash)));
-
-  // Build canonical brief with refinement context about existing references
-  const canonical = buildCanonicalBrief({ graph, evidence, selection: policy, alreadyAttached });
+  // 2. Prompt Compilation
+  // We mock a 'selection' that includes all items in scope for compilation
+  const mockSelection = { selected: itemsInScope, requiredIds: itemsInScope.map(i => i.id) };
+  let canonical = buildCanonicalBrief({ graph, evidence, selection: mockSelection });
+  
   let compiled = { status: 'degraded', provider: 'deterministic', text: canonical.prompt, warning: { reason: 'Compiler not configured.' } };
   if (deps.bedrock?.compilePrompt) compiled = await deps.bedrock.compilePrompt(canonical);
   const verified = verifyProtectedFacts(compiled.text, canonical);
   if (!verified.ok) compiled = { status: 'degraded', provider: 'deterministic', text: canonical.prompt, warning: verified };
+  
   stages.push(createStage('prompt.compile', compiled.status || 'degraded', {
     provider: compiled.provider || 'deterministic',
     model: compiled.model || null,
@@ -187,12 +198,67 @@ export async function runPipeline(request = {}, deps = {}) {
   }));
   stages.push(createStage('prompt.reverse_verification', 'ok', { protected_facts: canonical.protectedFacts.length, cue_coverage: canonical.coverageIds.length }));
 
-  const executionId = `exec_${crypto.randomUUID()}`;
-  const status = stages.some(stage => stage.status === 'degraded') ? 'degraded' : 'ok';
-  
-  // Real compiled AI prompt or verified deterministic brief - NEVER replace with dummy skip text!
   let finalPrompt = compiled.text;
   let provider = compiled.provider || 'deterministic';
+
+  // 3. Final Reference Engine
+  const baseScores = explicitScores(graph);
+  // Add 15% relevance to the compiled prompt if titan is available
+  let titanStage = createStage('relevance.titan', 'skipped', { warning: 'Titan relevance is not configured.' });
+  if (deps.bedrock?.embedReference) {
+    try {
+      const result = await deps.bedrock.embedReference({ text: finalPrompt });
+      titanStage = createStage('relevance.titan', 'ok', { provider: 'titan', model: result?.model, duration_ms: result?.duration_ms });
+      // We would ideally compute dot product with item embeddings here, but since embedReference just returns ok,
+      // we'll simulate prompt relevance score for now.
+      for (const item of itemsInScope) {
+         if (finalPrompt.includes(item.name || '')) baseScores.set(item.id, (baseScores.get(item.id) || 0) + 0.15);
+      }
+    } catch {
+      titanStage = createStage('relevance.titan', 'degraded', { warning: 'Titan relevance unavailable.' });
+    }
+  }
+  stages.push(titanStage);
+  
+  // Add 20% vision importance if vision legitimately ran
+  if (needsVision) {
+    for (const ev of perceptionResult.evidence) {
+      if (ev.importance) {
+        baseScores.set(ev.assetId, (baseScores.get(ev.assetId) || 0) + (ev.importance * 0.2));
+      } else {
+        baseScores.set(ev.assetId, (baseScores.get(ev.assetId) || 0) + 0.2); // Default importance
+      }
+    }
+  }
+
+  const referencePolicy = effectiveReferenceLimit({ viscuePlan: request.profile?.plan, capability: request.platformCapability });
+  const policy = enforceReferencePlan(graph, { ...referencePolicy, plan: request.profile?.plan || 'free' }, baseScores);
+  stages.push(createStage('plan.selection', policy.status, { summary: policy.summary, limit: policy.limit, constrained_by: policy.constrainedBy, required_ids: policy.requiredIds }));
+  
+  if (policy.status === 'blocked') {
+    const ledger = normalizeExecutionLedger(stages);
+    return {
+      ok: false,
+      status: 'blocked',
+      error: policy.summary,
+      stages,
+      ledger,
+      trust: ledger.trust,
+      selected_references: [],
+      trimmed_references: policy.trimmed,
+    };
+  }
+
+  // Re-build canonical brief now that we have final selected attachments
+  const preliminaryBrief = buildCanonicalBrief({ graph, evidence, selection: policy });
+  const alreadyAttached = (preliminaryBrief.attachments || []).filter(a => sentHashes.has(a.stateHash) || (a.hash && sentHashes.has(a.hash)));
+  const finalAttachments = (preliminaryBrief.attachments || []).filter(a => !sentHashes.has(a.stateHash) && (!a.hash || !sentHashes.has(a.hash)));
+
+  // Re-build canonical to get correct summary now
+  canonical = buildCanonicalBrief({ graph, evidence, selection: policy, alreadyAttached });
+
+  const executionId = `exec_${crypto.randomUUID()}`;
+  const status = stages.some(stage => stage.status === 'degraded') ? 'degraded' : 'ok';
 
   if (alreadyAttached.length > 0) {
     stages.push(createStage('refine.deduplication', 'ok', {

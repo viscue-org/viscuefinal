@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Background, BaseEdge, MarkerType, Position,
-  ReactFlow, ReactFlowProvider, getBezierPath, useEdgesState, useNodesState, useReactFlow, applyNodeChanges,
+  ReactFlow, ReactFlowProvider, getBezierPath, useEdgesState, useNodesState, useReactFlow, applyNodeChanges, addEdge,
 } from '@xyflow/react';
 import {
   ArrowRight, ArrowUUpLeft, ArrowUUpRight, Cursor, PencilSimple, Plus, Selection,
@@ -986,7 +986,27 @@ function AppCanvas() {
     
     setNodes(items => [...items.map(node => ({ ...node, selected: false })), createTextNode(textId, position, sourceNode.data.variant)]);
     setEdges(items => [...items, createFlowEdge(sourceId, textId, sourceHandle, targetHandle)]);
-    setMode('select');
+  }
+
+  function onConnect(params) {
+    // Reject self-connections
+    if (params.source === params.target) return;
+    
+    // Determine connection type
+    const sourceNode = nodes.find(n => n.id === params.source);
+    const targetNode = nodes.find(n => n.id === params.target);
+    if (!sourceNode || !targetNode) return;
+    
+    let type = 'flow';
+    if (sourceNode.type === 'asset' && targetNode.type === 'text') {
+      type = 'annotation';
+    } else if (sourceNode.type === 'asset' && targetNode.type === 'asset') {
+      type = 'crossAsset';
+    } else if (sourceNode.type === 'text' && targetNode.type === 'asset') {
+      type = 'flow'; // Text applies to visual
+    }
+    
+    setEdges(eds => addEdge({ ...params, type, markerEnd: defaultMarkerEnd }, eds));
   }
 
   function onAnnotLinkEnd(nodeId, point, screenPoint, screenStart) {
@@ -1488,11 +1508,12 @@ function AppCanvas() {
         edgeTypes={edgeTypes} 
         onPaneClick={onPaneClick} 
         onNodeDragStart={snapshot}
-        panOnDrag={mode === 'select'}
+        panOnDrag={[1, 2]}
         selectionOnDrag={false}
         selectionKeyCode="Shift"
         panOnScroll={true}
         zoomOnScroll={false}
+        onConnect={onConnect}
         nodeExtent={[[-Infinity, 0], [Infinity, Infinity]]}
         selectionMode="partial"
         defaultViewport={{ x: 0, y: 0, zoom: 1 }} 
