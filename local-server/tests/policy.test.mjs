@@ -14,7 +14,7 @@ function graphWithAssets(count, { required = [] } = {}) {
 }
 
 test('blocks before provider work when required physical references exceed the plan', () => {
-  const result = enforceReferencePlan(graphWithAssets(3, { required: [0, 1, 2] }), 'free');
+  const result = enforceReferencePlan(graphWithAssets(3, { required: [0, 1, 2] }), { limit: 2 });
   assert.equal(result.status, 'blocked');
   assert.deepEqual(result.selected, []);
   assert.deepEqual(result.requiredIds, ['asset_0', 'asset_1', 'asset_2']);
@@ -22,7 +22,7 @@ test('blocks before provider work when required physical references exceed the p
 
 test('reserves required references before deterministically trimming optional references', () => {
   const graph = graphWithAssets(4, { required: [2] });
-  const result = enforceReferencePlan(graph, 'free');
+  const result = enforceReferencePlan(graph, { limit: 2 });
   assert.deepEqual(result.selected.map(item => item.id), ['asset_2', 'asset_0']);
   assert.deepEqual(result.trimmed.map(item => item.id), ['asset_1', 'asset_3']);
 });

@@ -41,6 +41,32 @@ export async function POST(request: NextRequest) {
   try { payload = parseCompilePayload(JSON.parse(body)); }
   catch { return json({ ok: false, error: 'Invalid compilation payload' }, 400); }
 
+  // Ultra-fast cache hit bypassing quota check completely if canvas is entirely unchanged
+  try {
+    const crypto = await import('node:crypto');
+    const normalizeForHash = (val: string) => String(val || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+    const hash = (val: string) => crypto.createHash('sha256').update(normalizeForHash(val)).digest('hex');
+    const graphHash = hash(JSON.stringify(payload.graph || {}));
+
+    if (!payload.session?.isNewChat && payload.session?.previousState?.graph_hash === graphHash && payload.session?.previousState?.final_prompt) {
+      return json({
+        ok: true, status: 'ok', provider: 'cache', cached: true,
+        final_prompt: payload.session.previousState.final_prompt,
+        prompt_hash: payload.session.previousState.prompt_hash,
+        canonical_hash: payload.session.previousState.canonical_hash,
+        graph_hash: graphHash,
+        executionId: `cache_${crypto.randomUUID()}`, execution_id: `cache_${crypto.randomUUID()}`,
+        attachments: [], alreadyAttached: payload.session.previousState.alreadyAttached || [],
+        selected_references: payload.session.previousState.selected_references || [], trimmed_references: payload.session.previousState.trimmed_references || [],
+        stages: payload.session.previousState.stages || [], ledger: payload.session.previousState.ledger || {}, trust: payload.session.previousState.trust || {},
+        evidence: payload.session.previousState.evidence || [], summary: payload.session.previousState.summary || '',
+        destination_fingerprint: payload.session?.destinationFingerprint || '',
+        data: { version: '3.3.0', status: 'ok', compiledPrompt: payload.session.previousState.final_prompt },
+        quota: { remaining: 0, resetsAt: new Date(Date.now() + 86400000).toISOString() } // Dummy quota for cache hits
+      });
+    }
+  } catch (err) {}
+
   // Each new execution needs a server-owned reservation: a reused committed client
   // key would permit unlimited model calls against one consumed cue.
   let reservation;

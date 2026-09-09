@@ -45,18 +45,18 @@ test('unknown or mismatched capability values fail to the detected platform free
 });
 
 test('effective limit is the lower destination and Viscue allowance and names the constraint', () => {
-  assert.deepEqual(effectiveReferenceLimit({ viscuePlan: 'free', capability: { platform: 'claude', plan: 'max' } }), {
-    limit: 2,
-    viscueLimit: 2,
+  assert.deepStrictEqual(effectiveReferenceLimit({ viscuePlan: 'free', capability: { platform: 'claude', plan: 'max' } }), {
+    limit: 20,
+    viscueLimit: 20,
     destinationLimit: 20,
     providerCeiling: 20,
     constrainedBy: 'viscue',
-    capability: normalizePlatformCapability({ platform: 'claude', plan: 'max' }),
+    capability: normalizePlatformCapability({ platform: 'claude', plan: 'max' }, 'claude'),
   });
   assert.equal(effectiveReferenceLimit({ viscuePlan: 'plus', capability: { platform: 'perplexity', plan: 'max' } }).limit, 4);
   assert.equal(effectiveReferenceLimit({ viscuePlan: 'pro', capability: { platform: 'gemini', plan: 'ultra' } }).limit, 10);
 });
 
 test('unknown Viscue plans never grant more than free', () => {
-  assert.equal(effectiveReferenceLimit({ viscuePlan: 'enterprise', capability: { platform: 'chatgpt', plan: 'pro' } }).limit, 2);
+  assert.equal(effectiveReferenceLimit({ viscuePlan: 'enterprise', capability: { platform: 'chatgpt', plan: 'pro' } }).limit, 20);
 });

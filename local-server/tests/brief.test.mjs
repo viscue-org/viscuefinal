@@ -146,7 +146,7 @@ test('canonical brief compiles CROSS_ASSET_ANNOTATION relations correctly', () =
     graph,
     selection: { selected: graph.items, trimmed: [] },
   });
-  assert.match(brief.prompt, /On "UI_Mockup\.png" at the bottom-center area at \[50%, 80%\]: place image there\. Using reference "Photo\.png" \(the whole reference\)\./);
+  assert.match(brief.prompt, /On "Photo\.png" at the whole reference: place image there\. Using reference "UI_Mockup\.png" \(the bottom-center area at \[50%, 80%\]\)\./);
   assert.ok(brief.protectedFacts.some(f => f.text === 'UI_Mockup.png'));
   assert.ok(brief.protectedFacts.some(f => f.text === 'Photo.png'));
 });

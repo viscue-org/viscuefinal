@@ -265,8 +265,11 @@ export async function runPipeline(request = {}, deps = {}) {
   
   let compiled = { status: 'degraded', provider: 'deterministic', text: canonical.prompt, warning: { reason: 'Compiler not configured.' } };
   const needsCompilation = requiresCompilation(graph, evidence);
+  const canonicalHash = hash(canonical.prompt);
   
-  if (deps.bedrock?.compilePrompt && needsCompilation) {
+  if (!isNewChat && prevState?.canonical_hash === canonicalHash && prevState?.final_prompt) {
+    compiled = { status: 'ok', provider: 'cache', text: prevState.final_prompt, warning: null };
+  } else if (deps.bedrock?.compilePrompt && needsCompilation) {
     compiled = await deps.bedrock.compilePrompt(canonical);
   } else if (!needsCompilation) {
     compiled = { status: 'ok', provider: 'deterministic', text: canonical.prompt, warning: null };
@@ -358,6 +361,8 @@ export async function runPipeline(request = {}, deps = {}) {
       cached: true,
       final_prompt: finalPrompt,
       prompt_hash: newPromptHash,
+      canonical_hash: canonicalHash,
+      graph_hash: hash(JSON.stringify(graph)),
       executionId: `cache_${crypto.randomUUID()}`,
       execution_id: `cache_${crypto.randomUUID()}`,
       attachments: [],           // nothing to re-upload
@@ -391,6 +396,8 @@ export async function runPipeline(request = {}, deps = {}) {
     provider,
     final_prompt: finalPrompt,
     prompt_hash: newPromptHash,
+    canonical_hash: canonicalHash,
+    graph_hash: hash(JSON.stringify(graph)),
     executionId,
     execution_id: executionId,
     attachments: finalAttachments,

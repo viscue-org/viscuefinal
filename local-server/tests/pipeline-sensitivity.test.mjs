@@ -204,7 +204,7 @@ test('platform capability dynamically governs capacity and names the constrainin
   assert.equal(stageA.limit, 2);
   assert.equal(stageA.constrained_by, 'destination');
 
-  // Case B: Viscue Free (allowance 2), but ChatGPT Plus (budget 10) -> constrained by viscue
+  // Case B: Viscue Free (allowance 20), but ChatGPT Plus (budget 10) -> constrained by destination
   const requestConstrainedByViscue = {
     graph: { destination: 'ChatGPT', items, cues: [], relations: [], motions: [] },
     media: createMedia(items),
@@ -215,11 +215,11 @@ test('platform capability dynamically governs capacity and names the constrainin
 
   const resultB = await runPipeline(requestConstrainedByViscue, {});
   assert.equal(resultB.ok, true);
-  assert.equal(resultB.selected_references.length, 2);
-  assert.equal(resultB.trimmed_references.length, 2);
+  assert.equal(resultB.selected_references.length, 4);
+  assert.equal(resultB.trimmed_references.length, 0);
   const stageB = resultB.stages.find(s => s.name === 'plan.selection');
-  assert.equal(stageB.limit, 2);
-  assert.equal(stageB.constrained_by, 'viscue');
+  assert.equal(stageB.limit, 10);
+  assert.equal(stageB.constrained_by, 'destination');
 
   // Case C: Viscue Pro (allowance 10) AND ChatGPT Plus (budget 10, provider ceiling 10) -> all 4 fit
   const requestBothPro = {

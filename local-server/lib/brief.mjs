@@ -148,9 +148,9 @@ export function buildCanonicalBrief({ graph = {}, selection = {}, evidence = [],
             }, evidence);
         const instruction = relation.instruction?.trim() || 'Connect and apply';
         const punct = /[.!?:]$/.test(instruction) ? '' : '.';
-        lines.push(`- On "${sourceAsset.name}" at ${sourceLoc}: ${instruction}${punct} Using reference "${targetAsset.name}" (${targetLoc}).`);
-        protectedFacts.push({ id: `name:${sourceAsset.id}`, text: sourceAsset.name });
+        lines.push(`- On "${targetAsset.name}" at ${targetLoc}: ${instruction}${punct} Using reference "${sourceAsset.name}" (${sourceLoc}).`);
         protectedFacts.push({ id: `name:${targetAsset.id}`, text: targetAsset.name });
+        protectedFacts.push({ id: `name:${sourceAsset.id}`, text: sourceAsset.name });
       }
     } else if (relation.type === 'FLOWS_TO') {
       const source = byId.get(relation.sourceId);

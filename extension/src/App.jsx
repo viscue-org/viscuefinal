@@ -56,6 +56,21 @@ const initialNodes = [];
 const defaultMarkerStart = 'start-dot-marker';
 const defaultMarkerEnd = { type: MarkerType.ArrowClosed, color: '#5B7593', width: 18, height: 18 };
 
+function findFreePosition(nodes, baseX, baseY, excludeId = null) {
+  let y = baseY;
+  for (let i = 0; i < 30; i++) {
+    const collision = nodes.find(n =>
+      n.id !== excludeId &&
+      Math.abs(n.position.x - baseX) < 280 &&
+      n.position.y - 10 <= y + 80 &&
+      n.position.y + (n.measured?.height || 80) + 10 >= y
+    );
+    if (!collision) return { x: baseX, y };
+    y += (collision.measured?.height || 80) + 20;
+  }
+  return { x: baseX, y };
+}
+
 const createTextNode = (id, position, variant = 'text') => ({
   id,
   type: 'text',
@@ -553,7 +568,7 @@ function AppCanvas() {
     const anchorId = `annot-${crypto.randomUUID()}`;
     const anchor = { id: anchorId, x: 0.5, y: 0.5, isWholeAsset: true };
     const parentW = parent.measured?.width || 280;
-    const position = { x: parent.position.x + parentW + 40, y: parent.position.y };
+    const position = findFreePosition(nodes, parent.position.x + parentW + 40, parent.position.y);
     setNodes(items => [
       ...items.map(node => node.id === id ? { ...node, selected: false, data: { ...node.data, cueAnchors: [...(node.data.cueAnchors || []), anchor] } } : { ...node, selected: false }),
       { ...createTextNode(textId, position), selected: true }
@@ -571,7 +586,7 @@ function AppCanvas() {
     const parentW = parent.measured?.width || 280;
     const parentH = parent.measured?.height || 280;
     // Place text node to the right, vertically aligned with the annotation area
-    const position = { x: parent.position.x + parentW + 40, y: parent.position.y + area.y * parentH };
+    const position = findFreePosition(nodes, parent.position.x + parentW + 40, parent.position.y + area.y * parentH);
     setNodes(items => [
       ...items.map(node => node.id === id ? { ...node, selected: false, data: { ...node.data, cueAnchors: [...(node.data.cueAnchors || []), anchor] } } : { ...node, selected: false }),
       { ...createTextNode(textId, position), selected: true }
@@ -1036,10 +1051,7 @@ function AppCanvas() {
     else if (direction === 'bottom') offset.y = 220;
     else if (direction === 'top') offset.y = -220;
 
-    const position = {
-      x: sourceNode.position.x + offset.x,
-      y: sourceNode.position.y + offset.y
-    };
+    const position = findFreePosition(nodes, sourceNode.position.x + offset.x, sourceNode.position.y + offset.y);
     
     setNodes(items => [...items.map(node => ({ ...node, selected: false })), createTextNode(textId, position, sourceNode.data.variant)]);
     setEdges(items => [...items, createFlowEdge(sourceId, textId, sourceHandle, targetHandle)]);
@@ -1104,7 +1116,7 @@ function AppCanvas() {
       const parentPos = parentNode ? parentNode.position : flow.screenToFlowPosition({ x: screenPoint.x, y: screenPoint.y });
       // Y-position follows where on the image the user pointed
       const relativeY = point ? (point.y || 0) * parentH : 0;
-      const textPos = { x: parentPos.x + parentW + 40, y: parentPos.y + relativeY };
+      const textPos = findFreePosition(nodes, parentPos.x + parentW + 40, parentPos.y + relativeY);
       setNodes(items => [...items.map(node => node.id === nodeId ? { ...node, data: { ...node.data, cueAnchors: [...(node.data.cueAnchors || []), sourceAnchor] } } : node), createTextNode(textId, textPos)]);
       setEdges(items => [...items, createAnnotationEdge(nodeId, sourceAnchor.id, textId)]);
     }
@@ -1457,6 +1469,18 @@ function AppCanvas() {
       setResult({ error: response?.error || 'Compilation failed.' });
       setCueAnimation(null);
       return;
+    }
+
+    if (response.quota) {
+      if (globalThis.chrome?.storage?.local) {
+        chrome.storage.local.get('viscue-cached-summary', res => {
+          const current = res['viscue-cached-summary'] || {};
+          chrome.storage.local.set({ 'viscue-cached-summary': { ...current, remaining: response.quota.remaining, resetsAt: response.quota.resetsAt } });
+        });
+      } else {
+        const current = JSON.parse(localStorage.getItem('viscue-cached-summary') || '{}');
+        localStorage.setItem('viscue-cached-summary', JSON.stringify({ ...current, remaining: response.quota.remaining, resetsAt: response.quota.resetsAt }));
+      }
     }
 
     onPhase?.('attaching');
