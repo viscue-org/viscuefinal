@@ -5,12 +5,12 @@ export const PLAN_POLICY = Object.freeze({
 });
 
 export const MODEL_ROUTES = Object.freeze({
-  imagePrimary: 'amazon.nova-lite-v1:0',
-  imageFallback: 'amazon.nova-pro-v1:0',
-  videoPrimary: 'amazon.nova-pro-v1:0',
-  videoFallback: 'amazon.nova-lite-v1:0',
+  imagePrimary: 'us.amazon.nova-lite-v1:0',
+  imageFallback: 'us.amazon.nova-pro-v1:0',
+  videoPrimary: 'us.amazon.nova-pro-v1:0',
+  videoFallback: 'us.amazon.nova-lite-v1:0',
   relevance: 'amazon.titan-embed-image-v1',
-  compiler: 'mistral.mistral-large-3-675b-instruct',
+  compiler: 'mistral.ministral-3-8b-instruct',
 });
 
 export const STAGE_STATUS = Object.freeze(['ok', 'degraded', 'blocked', 'skipped']);
