@@ -545,7 +545,7 @@ function StandardPopup() {
             <div className="settings-plan-choice">
               <div className="settings-plan-name-group">
                 <strong>Free</strong>
-                <small>9 Cues / day</small>
+                <small>{view.plan === 'free' && view.cuesMax > 0 ? `${view.cuesLeft} / ${view.cuesMax} Cues left` : '9 Cues / day'}</small>
               </div>
               {view.plan === 'free' ? (
                 <span className="settings-plan-badge">Current</span>
@@ -564,7 +564,7 @@ function StandardPopup() {
             <div className="settings-plan-choice">
               <div className="settings-plan-name-group">
                 <strong>Plus</strong>
-                <small>28 Cues / day</small>
+                <small>{view.plan === 'plus' && view.cuesMax > 0 ? `${view.cuesLeft} / ${view.cuesMax} Cues left` : '28 Cues / day'}</small>
               </div>
               {view.plan === 'plus' ? (
                 <span className="settings-plan-badge">Current</span>
@@ -583,7 +583,7 @@ function StandardPopup() {
             <div className="settings-plan-choice">
               <div className="settings-plan-name-group">
                 <strong>Pro</strong>
-                <small>99 Cues / day</small>
+                <small>{view.plan === 'pro' && view.cuesMax > 0 ? `${view.cuesLeft} / ${view.cuesMax} Cues left` : '99 Cues / day'}</small>
               </div>
               {view.plan === 'pro' ? (
                 <span className="settings-plan-badge">Current</span>

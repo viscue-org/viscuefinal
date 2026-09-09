@@ -1,6 +1,6 @@
 export const PLAN_POLICY = Object.freeze({
-  free: Object.freeze({ physicalReferences: 2 }),
-  pro: Object.freeze({ physicalReferences: 10 }),
+  free: Object.freeze({ physicalReferences: 20 }),
+  pro: Object.freeze({ physicalReferences: 20 }),
   plus: Object.freeze({ physicalReferences: 20 }),
 });
 
