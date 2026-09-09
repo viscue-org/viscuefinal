@@ -37,6 +37,7 @@ import { buildVicsucRequest } from './utils/vicsuc';
 import { validateCueEligibility } from './utils/cueEligibility.mjs';
 import { resolveAnnotationTarget } from './utils/annotationTargets.mjs';
 import { shouldCloseWorkspace } from '../api/workspaceCompletion.mjs';
+import { VISCUE_API_URL } from '../api/config.mjs';
 import { acceptRawGesture } from '../../gesture/runtime/acceptance.mjs';
 import { resolveAnnotationCandidate } from '../../gesture/runtime/annotation-policy.mjs';
 import { attachStrokeResolution, collectStrokeOperations, createWorkspaceSnapshot, hydrateWorkspace, resetWorkspace } from '../../gesture/shared/operation-lifecycle.mjs';
@@ -83,14 +84,13 @@ const createFlowEdge = (source, target, sourceHandle, targetHandle) => ({ id: cr
 
 function chromeMessage(message) {
   if (globalThis.chrome?.runtime?.sendMessage) return chrome.runtime.sendMessage(message);
-  
   const headers = { 'content-type': 'application/json' };
-  const apiKey = import.meta.env.VITE_VISCUE_API_KEY || localStorage.getItem('viscue-api-key') || '';
+  const apiKey = import.meta.env.VITE_VISCUE_API_KEY || localStorage.getItem('viscue-preview-api-key') || '';
   if (apiKey) headers['authorization'] = `Bearer ${apiKey}`;
 
-  if (message.type === 'health') return fetch('http://127.0.0.1:8787/health', { headers }).then(r => r.json()).catch(() => ({ ok: false }));
-  if (message.type === 'compile') return fetch('http://127.0.0.1:8787/compile', { method: 'POST', headers, body: JSON.stringify(message.payload) }).then(r => r.json());
-  if (message.type === 'handoff-receipt') return fetch('http://127.0.0.1:8787/handoff-receipt', { method: 'POST', headers, body: JSON.stringify(message.receipt) }).then(r => r.json());
+  if (message.type === 'health') return fetch(`${VISCUE_API_URL}/health`, { headers }).then(r => r.json()).catch(() => ({ ok: false }));
+  if (message.type === 'compile') return fetch(`${VISCUE_API_URL}/compile`, { method: 'POST', headers, body: JSON.stringify(message.payload) }).then(r => r.json());
+  if (message.type === 'handoff-receipt') return fetch(`${VISCUE_API_URL}/handoff-receipt`, { method: 'POST', headers, body: JSON.stringify(message.receipt) }).then(r => r.json());
   return Promise.resolve({ ok: true, preview: true });
 }
 

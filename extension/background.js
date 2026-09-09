@@ -1,10 +1,10 @@
 import { signIn, signOut, getSession, getAccessToken, handleWorkspaceAccess } from './auth/session.mjs';
 import { apiFetch } from './api/client.mjs';
-import { VISCUE_WEB_URL } from './api/config.mjs';
+import { VISCUE_WEB_URL, VISCUE_API_URL } from './api/config.mjs';
 import { isWorkspaceUrl } from './api/workspaceCompletion.mjs';
 import { parsePlatformChatContext } from '../local-server/lib/platform-capabilities.mjs';
 
-const API = 'http://127.0.0.1:8787';
+const API = VISCUE_API_URL;
 const ONBOARDING_KEY = 'viscue-onboarding-complete';
 
 async function showAccountPopup() {
