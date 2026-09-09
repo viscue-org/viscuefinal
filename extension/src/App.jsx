@@ -426,18 +426,56 @@ function AppCanvas() {
   const undo = () => { const prior = history.at(-1); if (!prior) return; setFuture(x => [createWorkspaceSnapshot(nodes, edges, gestureOperations), ...x]); setHistory(x => x.slice(0, -1)); const workspace = hydrateWorkspace(prior); setNodes(workspace.nodes); setEdges(workspace.edges); setGestureOperations(workspace.gestureOperations); };
   const redo = () => { const next = future[0]; if (!next) return; setHistory(x => [...x, createWorkspaceSnapshot(nodes, edges, gestureOperations)]); setFuture(x => x.slice(1)); const workspace = hydrateWorkspace(next); setNodes(workspace.nodes); setEdges(workspace.edges); setGestureOperations(workspace.gestureOperations); };
 
+  const cleanupAnchorsForEdges = useCallback((edgesToRemove) => {
+    const anchorIdsToRemove = edgesToRemove.map(e => e.sourceHandle).filter(Boolean);
+    if (anchorIdsToRemove.length === 0) return;
+    
+    setNodes(items => items.map(node => {
+      let updatedData = { ...node.data };
+      let modified = false;
+
+      if (updatedData.cueAnchors?.some(a => anchorIdsToRemove.includes(a.id))) {
+        updatedData.cueAnchors = updatedData.cueAnchors.filter(a => !anchorIdsToRemove.includes(a.id));
+        modified = true;
+      }
+      if (updatedData.targetAnchors?.some(a => anchorIdsToRemove.includes(a.id))) {
+        updatedData.targetAnchors = updatedData.targetAnchors.filter(a => !anchorIdsToRemove.includes(a.id));
+        modified = true;
+      }
+      if (updatedData.strokes?.some(s => anchorIdsToRemove.includes(s.id))) {
+        updatedData.strokes = updatedData.strokes.filter(s => !anchorIdsToRemove.includes(s.id));
+        modified = true;
+      }
+      
+      return modified ? { ...node, data: updatedData } : node;
+    }));
+  }, [setNodes]);
+
+  const onEdgesChangeCustom = useCallback((changes) => {
+    const edgesToRemove = changes.filter(c => c.type === 'remove').map(c => edges.find(e => e.id === c.id)).filter(Boolean);
+    if (edgesToRemove.length > 0) {
+      cleanupAnchorsForEdges(edgesToRemove);
+    }
+    onEdgesChange(changes);
+  }, [edges, onEdgesChange, cleanupAnchorsForEdges]);
+
   const deleteNode = useCallback(id => {
     const nodeToDelete = nodes.find(n => n.id === id);
     if (nodeToDelete?.data.locked) return;
     
     snapshot();
+    const removedEdges = edges.filter(edge => edge.source === id || edge.target === id);
+    if (removedEdges.length > 0) {
+      cleanupAnchorsForEdges(removedEdges);
+    }
+    
     setNodes(items => items
       .filter(node => node.id !== id)
       .map(node => node.data.provenance?.parentId === id
         ? { ...node, data: { ...node.data, provenance: { ...node.data.provenance, detached: true } } }
         : node));
     setEdges(items => items.filter(edge => edge.source !== id && edge.target !== id));
-  }, [nodes, setEdges, setNodes, snapshot]);
+  }, [nodes, edges, setEdges, setNodes, snapshot, cleanupAnchorsForEdges]);
 
   const onNodesChangeWithMotion = useCallback((changes) => {
     const hasRemoves = changes.some(change => change.type === 'remove');
@@ -1512,7 +1550,7 @@ function AppCanvas() {
         nodes={nodes.map(n => ({ ...n, draggable: !n.data.locked, deletable: !n.data.locked }))} 
         edges={enrichedEdges} 
         onNodesChange={onNodesChangeWithMotion} 
-        onEdgesChange={onEdgesChange} 
+        onEdgesChange={onEdgesChangeCustom} 
         nodeTypes={nodeTypes} 
         edgeTypes={edgeTypes} 
         onPaneClick={onPaneClick} 
