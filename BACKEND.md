@@ -25,11 +25,12 @@ Every optional provider failure creates a `degraded` or `skipped` stage and leav
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | Alternative auth method | SigV4 credentials. |
 | `AWS_SESSION_TOKEN` | Optional | Temporary SigV4 session token. |
 | `AWS_REGION` | Optional | Defaults to `us-east-1`. |
-| `QWEN_MODEL_ID` | Optional override | Defaults to `qwen.qwen3-vl-235b-a22b`. |
-| `NOVA_PRO_MODEL_ID` | Optional override | Defaults to `amazon.nova-pro-v1:0`. |
-| `NOVA_LITE_MODEL_ID` | Optional override | Defaults to `amazon.nova-lite-v1:0`. |
-| `TITAN_EMBED_MODEL_ID` | Optional override | Defaults to `amazon.titan-embed-image-v1`. |
-| `BEDROCK_MODEL_ID` | Optional | Mistral compiler route; omitted means deterministic wording. |
+| `IMAGE_MODEL_ID` | Optional override | Defaults to `us.amazon.nova-lite-v1:0`. |
+| `IMAGE_FALLBACK_MODEL_ID` | Optional override | Defaults to `us.amazon.nova-pro-v1:0`. |
+| `VIDEO_MODEL_ID` | Optional override | Defaults to `us.amazon.nova-pro-v1:0`. |
+| `VIDEO_FALLBACK_MODEL_ID` | Optional override | Defaults to `us.amazon.nova-lite-v1:0`. |
+| `RELEVANCE_MODEL_ID` | Optional override | Defaults to `amazon.titan-embed-image-v1`. |
+| `PROMPT_MODEL_ID` | Optional override | Defaults to `mistral.ministral-3-8b-instruct`. |
 | `FONT_PROVIDER_URL`, `FONT_PROVIDER_API_KEY` | Optional pair | Commercially licensed font-identification service. |
 | `FONT_MATCH_THRESHOLD` | Optional | Exact font threshold, default `0.90`. |
 | `VISCUE_PORT` | Optional | Defaults to `8787`. |

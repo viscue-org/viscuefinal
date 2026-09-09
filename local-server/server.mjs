@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
-import { MODEL_ROUTES } from './lib/contracts.mjs';
+import { resolveModelRoutes } from './lib/contracts.mjs';
 import { BedrockGateway } from './lib/bedrock.mjs';
 import { FontGateway } from './lib/font-gateway.mjs';
 import { runPipeline } from './lib/pipeline.mjs';
@@ -25,15 +25,7 @@ function loadEnv(file) {
 loadEnv(path.resolve(process.cwd(), '.viscue-local.env'));
 const port = Number(process.env.VISCUE_PORT || 8787);
 const region = process.env.AWS_REGION || 'us-east-1';
-const routes = {
-  ...MODEL_ROUTES,
-  imagePrimary: process.env.QWEN_MODEL_ID || process.env.QWEN_VISION_MODEL_ID || MODEL_ROUTES.imagePrimary,
-  imageFallback: process.env.NOVA_PRO_MODEL_ID || MODEL_ROUTES.imageFallback,
-  videoPrimary: process.env.NOVA_PRO_MODEL_ID || MODEL_ROUTES.videoPrimary,
-  videoFallback: process.env.NOVA_LITE_MODEL_ID || MODEL_ROUTES.videoFallback,
-  relevance: process.env.TITAN_EMBED_MODEL_ID || MODEL_ROUTES.relevance,
-  compiler: process.env.BEDROCK_MODEL_ID || process.env.COMPILER_MODEL || MODEL_ROUTES.compiler,
-};
+const routes = resolveModelRoutes(process.env);
 const bearerToken = process.env.AWS_BEARER_TOKEN_BEDROCK || '';
 const credentials = { accessKeyId: process.env.AWS_ACCESS_KEY_ID || '', secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '', sessionToken: process.env.AWS_SESSION_TOKEN || '' };
 const bedrockConfigured = Boolean(bearerToken || (credentials.accessKeyId && credentials.secretAccessKey));

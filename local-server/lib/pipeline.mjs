@@ -7,6 +7,15 @@ import { normalizeExecutionLedger } from './execution-ledger.mjs';
 
 const normalizeForHash = value => String(value || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
 const hash = value => crypto.createHash('sha256').update(normalizeForHash(value)).digest('hex');
+const VISION_WORDS = /\b(what|who|how many|count|identify|recognize|detect|read|compare|describe|locate|where|find|extract|which|inspect|analyze)\b/;
+const EDIT_WORDS = /\b(add|apply|change|convert|copy|crop|delete|draw|emphasize|enlarge|follow|insert|keep|make|modify|move|place|preserve|put|remove|replace|resize|restyle|rotate|scale|swap|transfer|turn|use|instead|actual|larger|smaller|clearer|darker|lighter|color|align|big|small|huge|tiny|background|transparent|bold|italic|font|character|subject)\b/;
+
+const explicitVisionInstruction = value => VISION_WORDS.test(String(value || '').toLowerCase());
+const anchoredCue = cue => Boolean(cue?.assetId) && (
+  cue?.isWholeAsset === true ||
+  cue?.isWholeAsset === false ||
+  (Number.isFinite(cue?.x) && Number.isFinite(cue?.y))
+);
 
 function explicitScores(graph = {}) {
   const scores = new Map();
@@ -21,25 +30,45 @@ function explicitScores(graph = {}) {
 }
 
 function requiresVision(graph) {
-  const cueText = (graph.cues || []).map(c => c.instruction).join(' ');
+  const cues = graph.cues || [];
+  const cueText = cues.map(c => c.instruction).join(' ');
   const noteText = (graph.items || []).filter(i => i.kind === 'note').map(i => i.text).join(' ');
   const allText = `${cueText} ${noteText}`.toLowerCase();
-  
-  // Vision is required if there are temporal video queries, identification queries, or ambiguity
-  const visionWords = /\b(what|who|how many|count|identify|read|compare|describe|locate|where|find|extract|which)\b/;
-  if (visionWords.test(allText)) return true;
 
-  // No-vision edit keywords (generation/edit instruction)
-  const noVisionWords = /\b(larger|smaller|clearer|darker|lighter|color|move|align|remove|replace|copy|rotate|crop|emphasize|restyle|modify|transfer|follow|big|small|huge|tiny|scale|resize|background|transparent|bold|italic|font)\b/;
-  if (noVisionWords.test(allText)) {
-    return false;
-  }
-  
-  // If there's no text and no spatial cues, we don't need vision
-  if (!allText.trim() && (graph.cues || []).length === 0) return false;
-  
-  // Default to vision if ambiguous
+  if (explicitVisionInstruction(allText)) return true;
+  if (!allText.trim() && cues.length === 0) return false;
+
+  const anchoredGenerationEdit = cues.length > 0
+    && cues.every(anchoredCue)
+    && cues.every(cue => EDIT_WORDS.test(String(cue.instruction || '').toLowerCase()));
+  if (anchoredGenerationEdit) return false;
+
+  // Ambiguous, unanchored requests still require visual grounding.
   return true;
+}
+
+function perceptionScope(graph, selectedItems) {
+  const explicitAssetIds = new Set((graph.cues || [])
+    .filter(cue => explicitVisionInstruction(cue.instruction))
+    .map(cue => cue.assetId)
+    .filter(Boolean));
+  const noteNeedsVision = (graph.items || []).some(item => item.kind === 'note' && explicitVisionInstruction(item.text));
+  if (noteNeedsVision || explicitAssetIds.size === 0) return selectedItems;
+  return selectedItems.filter(item => explicitAssetIds.has(item.id));
+}
+
+async function mapWithConcurrency(items, limit, worker) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+  const runners = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (nextIndex < items.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      results[index] = await worker(items[index], index);
+    }
+  });
+  await Promise.all(runners);
+  return results;
 }
 
 function requiresCompilation(graph, evidence) {
@@ -65,7 +94,7 @@ async function collectEvidence(selected, media, bedrock, priorEvidence = []) {
     }
   }
 
-  const itemResults = await Promise.all(selected.map(async item => {
+  const itemResults = await mapWithConcurrency(selected, 4, async item => {
     const source = media[item.id];
     if (!source?.dataUrl) {
       return {
@@ -97,13 +126,21 @@ async function collectEvidence(selected, media, bedrock, priorEvidence = []) {
         }),
         evidence: (result.evidence || []).map(e => ({ ...e, assetId: item.id })),
       };
-    } catch {
+    } catch (error) {
       return {
-        stage: createStage(`perception.${item.id}`, 'degraded', { warning: 'Visual perception failed; user-authored intent remains authoritative.' }),
+        stage: createStage(`perception.${item.id}`, 'degraded', {
+          provider: error?.provider || null,
+          model: error?.model || null,
+          duration_ms: Number.isFinite(error?.duration_ms) ? error.duration_ms : null,
+          attempt: Number.isFinite(error?.attempt) ? error.attempt : null,
+          fallback: Boolean(error?.fallback),
+          fallback_from: error?.fallback_from || null,
+          warning: 'Visual perception failed; user-authored intent remains authoritative.',
+        }),
         evidence: [],
       };
     }
-  }));
+  });
 
   return {
     stages: itemResults.map(r => r.stage),
@@ -173,12 +210,42 @@ export async function runPipeline(request = {}, deps = {}) {
     ...(Array.isArray(prevState?.attachments) ? prevState.attachments.filter(a => a.confirmed !== false).map(a => a.stateHash || a.hash) : []),
   ].filter(Boolean));
 
+  const baseScores = explicitScores(graph);
+  const referencePolicy = effectiveReferenceLimit({ viscuePlan: request.profile?.plan, capability: request.platformCapability });
+  const preliminaryPolicy = enforceReferencePlan(graph, { ...referencePolicy, plan: request.profile?.plan || 'free' }, baseScores);
+  if (preliminaryPolicy.status === 'blocked') {
+    const blockedStages = [createStage('plan.selection', preliminaryPolicy.status, {
+      summary: preliminaryPolicy.summary,
+      limit: preliminaryPolicy.limit,
+      constrained_by: preliminaryPolicy.constrainedBy,
+      required_ids: preliminaryPolicy.requiredIds,
+    })];
+    const ledger = normalizeExecutionLedger(blockedStages);
+    return {
+      ok: false,
+      status: 'blocked',
+      error: preliminaryPolicy.summary,
+      stages: blockedStages,
+      ledger,
+      trust: ledger.trust,
+      selected_references: [],
+      trimmed_references: preliminaryPolicy.trimmed,
+    };
+  }
+
+  const selectedLogicalIds = new Set(preliminaryPolicy.selected.flatMap(item => [
+    item.id,
+    ...(item.logicalItems || []).map(logical => logical.id),
+  ]));
+  const selectedItemsInScope = itemsInScope.filter(item => selectedLogicalIds.has(item.id));
+
   // 1. Deterministic vision gate
   const needsVision = requiresVision(graph);
   let perceptionResult = { stages: [], evidence: [] };
-  
+  const relevancePromise = runRelevance(graph, deps.bedrock);
+
   if (needsVision) {
-    perceptionResult = await collectEvidence(itemsInScope, request.media || {}, deps.bedrock, prevState?.evidence || []);
+    perceptionResult = await collectEvidence(perceptionScope(graph, selectedItemsInScope), request.media || {}, deps.bedrock, prevState?.evidence || []);
   } else {
     perceptionResult = {
       stages: [createStage('perception', 'skipped', { reason: 'generation_edit_sufficient' })],
@@ -220,24 +287,15 @@ export async function runPipeline(request = {}, deps = {}) {
   let finalPrompt = compiled.text;
   let provider = compiled.provider || 'deterministic';
 
-  // 3. Final Reference Engine
-  const baseScores = explicitScores(graph);
-  // Add 15% relevance to the compiled prompt if titan is available
-  let titanStage = createStage('relevance.titan', 'skipped', { warning: 'Titan relevance is not configured.' });
-  if (deps.bedrock?.embedReference) {
-    try {
-      const result = await deps.bedrock.embedReference({ text: finalPrompt });
-      titanStage = createStage('relevance.titan', 'ok', { provider: 'titan', model: result?.model, duration_ms: result?.duration_ms });
-      // We would ideally compute dot product with item embeddings here, but since embedReference just returns ok,
-      // we'll simulate prompt relevance score for now.
-      for (const item of itemsInScope) {
-         if (finalPrompt.includes(item.name || '')) baseScores.set(item.id, (baseScores.get(item.id) || 0) + 0.15);
-      }
-    } catch {
-      titanStage = createStage('relevance.titan', 'degraded', { warning: 'Titan relevance unavailable.' });
+  // 3. Final Reference Engine. Relevance starts before perception/compilation,
+  // then joins here so it does not add another sequential network wait.
+  const titanStage = await relevancePromise;
+  stages.push(titanStage);
+  if (titanStage.status === 'ok') {
+    for (const item of itemsInScope) {
+      if (finalPrompt.includes(item.name || '')) baseScores.set(item.id, (baseScores.get(item.id) || 0) + 0.15);
     }
   }
-  stages.push(titanStage);
   
   // Add 20% vision importance if vision legitimately ran
   if (needsVision) {
@@ -250,7 +308,6 @@ export async function runPipeline(request = {}, deps = {}) {
     }
   }
 
-  const referencePolicy = effectiveReferenceLimit({ viscuePlan: request.profile?.plan, capability: request.platformCapability });
   const policy = enforceReferencePlan(graph, { ...referencePolicy, plan: request.profile?.plan || 'free' }, baseScores);
   stages.push(createStage('plan.selection', policy.status, { summary: policy.summary, limit: policy.limit, constrained_by: policy.constrainedBy, required_ids: policy.requiredIds }));
   

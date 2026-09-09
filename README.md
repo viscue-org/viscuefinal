@@ -75,11 +75,12 @@ The companion service supports `AWS_BEARER_TOKEN_BEDROCK` or SigV4 with `AWS_ACC
 
 | Variable | Purpose |
 | --- | --- |
-| `QWEN_MODEL_ID` | Qwen3-VL still-image, region, object, OCR, and layout evidence (`qwen.qwen3-vl-235b-a22b`). |
-| `NOVA_PRO_MODEL_ID` | Primary video understanding and still-image fallback (`amazon.nova-pro-v1:0`). |
-| `NOVA_LITE_MODEL_ID` | Video fallback (`amazon.nova-lite-v1:0`). |
-| `TITAN_EMBED_MODEL_ID` | Image/text relevance. |
-| `BEDROCK_MODEL_ID` | Mistral Large 3 wording compiler (`mistral.mistral-large-3-675b-instruct`); deterministic canonical wording remains the fallback. |
+| `IMAGE_MODEL_ID` | Still-image and annotated-region perception (`us.amazon.nova-lite-v1:0`). |
+| `IMAGE_FALLBACK_MODEL_ID` | Still-image fallback (`us.amazon.nova-pro-v1:0`). |
+| `VIDEO_MODEL_ID` | Primary video understanding (`us.amazon.nova-pro-v1:0`). |
+| `VIDEO_FALLBACK_MODEL_ID` | Video fallback (`us.amazon.nova-lite-v1:0`). |
+| `RELEVANCE_MODEL_ID` | Image/text relevance (`amazon.titan-embed-image-v1`). |
+| `PROMPT_MODEL_ID` | Ministral 8B wording compiler (`mistral.ministral-3-8b-instruct`); deterministic canonical wording remains the fallback. |
 | `FONT_PROVIDER_URL` / `FONT_PROVIDER_API_KEY` | Optional commercially licensed font API. |
 | `FONT_MATCH_THRESHOLD` | Exact-match threshold, default `0.90`. |
 

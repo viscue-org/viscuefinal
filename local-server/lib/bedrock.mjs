@@ -39,19 +39,31 @@ function providerName(modelId) {
 }
 
 export class BedrockGateway {
-  constructor({ region = 'us-east-1', credentials = {}, bearerToken, routes = MODEL_ROUTES, request = signedJsonRequest } = {}) {
+  constructor({
+    region = 'us-east-1',
+    credentials = {},
+    bearerToken,
+    routes = MODEL_ROUTES,
+    request = signedJsonRequest,
+    visualTimeoutMs = 2200,
+    compilerTimeoutMs = 1600,
+    relevanceTimeoutMs = 1200,
+  } = {}) {
     this.region = region;
     this.credentials = credentials;
     this.bearerToken = bearerToken;
     this.routes = { ...MODEL_ROUTES, ...routes };
     this.request = request;
+    this.visualTimeoutMs = visualTimeoutMs;
+    this.compilerTimeoutMs = compilerTimeoutMs;
+    this.relevanceTimeoutMs = relevanceTimeoutMs;
   }
 
-  async #call(modelId, body, api = 'converse') {
-    return this.request({ region: this.region, credentials: this.credentials, bearerToken: this.bearerToken, modelId, api, body });
+  async #call(modelId, body, api = 'converse', timeoutMs) {
+    return this.request({ region: this.region, credentials: this.credentials, bearerToken: this.bearerToken, modelId, api, body, timeoutMs });
   }
 
-  async #visual(modelId, input, kind) {
+  async #visual(modelId, input, kind, timeoutMs) {
     const media = dataPart(input.dataUrl);
     const mediaContent = kind === 'video'
       ? { video: { format: media.format, source: { bytes: media.bytes } } }
@@ -60,20 +72,26 @@ export class BedrockGateway {
       messages: [{ role: 'user', content: [mediaContent, { text: `${input.prompt || 'Return only visible facts.'}\nReturn strict JSON only, with no markdown. Choose exactly one type for each claim from: object, layout, ocr, relation. Use specific observed values, never schema alternatives or placeholders. Example shape: {"claims":[{"type":"object","value":"specific visible fact","bbox":[0.0,0.0,1.0,1.0],"confidence":0.9}]}. Use null when no bounding box applies. Semantic relations are hypotheses, not facts.` }] }],
       inferenceConfig: { maxTokens: 700, temperature: 0 },
     };
-    const response = await this.#call(modelId, body);
+    const response = await this.#call(modelId, body, 'converse', timeoutMs);
     return parseEvidence(response, { provider: providerName(modelId), model: modelId, assetId: input.assetId });
   }
 
-  async analyzeImage(input) {
+  async #analyzeVisual(input, kind, configuredModels) {
     const startTime = performance.now();
-    const attempts = [this.routes.imagePrimary, this.routes.imagePrimary, this.routes.imageFallback];
+    const attempts = [...new Set(configuredModels.filter(Boolean))];
     let lastError;
+    let lastModel = null;
+    let attempted = 0;
     for (const [index, modelId] of attempts.entries()) {
+      const remainingMs = Math.floor(this.visualTimeoutMs - (performance.now() - startTime));
+      if (remainingMs <= 0) break;
+      attempted += 1;
+      lastModel = modelId;
       try {
-        const evidence = await this.#visual(modelId, input, 'image');
+        const evidence = await this.#visual(modelId, input, kind, remainingMs);
         const duration_ms = Math.round(performance.now() - startTime);
-        const fallback = index === 2;
-        const fallback_from = fallback ? this.routes.imagePrimary : null;
+        const fallback = index > 0;
+        const fallback_from = fallback ? attempts[0] : null;
         return {
           status: index === 0 ? 'ok' : 'degraded',
           provider: providerName(modelId),
@@ -86,32 +104,25 @@ export class BedrockGateway {
         };
       } catch (error) { lastError = error; }
     }
-    throw new Error(`Image perception unavailable: ${lastError?.message || 'unknown failure'}`);
+    const label = kind === 'video' ? 'Video' : 'Image';
+    const failure = new Error(`${label} perception unavailable: ${lastError?.message || 'provider deadline exceeded'}`);
+    Object.assign(failure, {
+      duration_ms: Math.round(performance.now() - startTime),
+      provider: lastModel ? providerName(lastModel) : null,
+      model: lastModel,
+      attempt: attempted,
+      fallback: attempted > 1,
+      fallback_from: attempted > 1 ? attempts[0] : null,
+    });
+    throw failure;
+  }
+
+  async analyzeImage(input) {
+    return this.#analyzeVisual(input, 'image', [this.routes.imagePrimary, this.routes.imageFallback]);
   }
 
   async analyzeVideo(input) {
-    const startTime = performance.now();
-    let lastError;
-    const attempts = [this.routes.videoPrimary, this.routes.videoFallback];
-    for (const [index, modelId] of attempts.entries()) {
-      try {
-        const evidence = await this.#visual(modelId, input, 'video');
-        const duration_ms = Math.round(performance.now() - startTime);
-        const fallback = index === 1;
-        const fallback_from = fallback ? this.routes.videoPrimary : null;
-        return {
-          status: index === 0 ? 'ok' : 'degraded',
-          provider: providerName(modelId),
-          model: modelId,
-          duration_ms,
-          evidence,
-          fallback,
-          fallback_from,
-          attempt: index + 1,
-        };
-      } catch (error) { lastError = error; }
-    }
-    throw new Error(`Video perception unavailable: ${lastError?.message || 'unknown failure'}`);
+    return this.#analyzeVisual(input, 'video', [this.routes.videoPrimary, this.routes.videoFallback]);
   }
 
   async embedReference({ text, dataUrl } = {}) {
@@ -119,7 +130,7 @@ export class BedrockGateway {
     try {
       const body = { inputText: String(text || '').slice(0, 2048) };
       if (dataUrl) body.inputImage = dataPart(dataUrl).bytes;
-      const response = await this.#call(this.routes.relevance, body, 'invoke');
+      const response = await this.#call(this.routes.relevance, body, 'invoke', this.relevanceTimeoutMs);
       const parsed = typeof response.body === 'string' ? JSON.parse(response.body) : response.body;
       const embedding = parsed.embedding || parsed.embeddings?.[0]?.embedding;
       if (!Array.isArray(embedding)) throw new TypeError('Missing embedding.');
@@ -149,7 +160,7 @@ export class BedrockGateway {
         messages: [{ role: 'user', content: [{ text: canonical.prompt }] }],
         inferenceConfig: { maxTokens: 1400, temperature: 0 },
       };
-      const candidate = responseText(await this.#call(this.routes.compiler, body));
+      const candidate = responseText(await this.#call(this.routes.compiler, body, 'converse', this.compilerTimeoutMs));
       const duration_ms = Math.round(performance.now() - startTime);
       const verification = verifyProtectedFacts(candidate, canonical);
       if (!candidate || !verification.ok) {

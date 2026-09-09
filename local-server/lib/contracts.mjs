@@ -13,6 +13,18 @@ export const MODEL_ROUTES = Object.freeze({
   compiler: 'mistral.ministral-3-8b-instruct',
 });
 
+export function resolveModelRoutes(env = {}) {
+  return Object.freeze({
+    ...MODEL_ROUTES,
+    imagePrimary: env.IMAGE_MODEL_ID || env.VISION_MODEL_ID || MODEL_ROUTES.imagePrimary,
+    imageFallback: env.IMAGE_FALLBACK_MODEL_ID || MODEL_ROUTES.imageFallback,
+    videoPrimary: env.VIDEO_MODEL_ID || MODEL_ROUTES.videoPrimary,
+    videoFallback: env.VIDEO_FALLBACK_MODEL_ID || MODEL_ROUTES.videoFallback,
+    relevance: env.RELEVANCE_MODEL_ID || MODEL_ROUTES.relevance,
+    compiler: env.PROMPT_MODEL_ID || env.COMPILER_MODEL || MODEL_ROUTES.compiler,
+  });
+}
+
 export const STAGE_STATUS = Object.freeze(['ok', 'degraded', 'blocked', 'skipped']);
 
 export function createStage(name, status, details = {}) {
