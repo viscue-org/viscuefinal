@@ -5,7 +5,7 @@ export const PLAN_POLICY = Object.freeze({
 });
 
 export const MODEL_ROUTES = Object.freeze({
-  imagePrimary: 'qwen.qwen3-vl-235b-a22b',
+  imagePrimary: 'amazon.nova-lite-v1:0',
   imageFallback: 'amazon.nova-pro-v1:0',
   videoPrimary: 'amazon.nova-pro-v1:0',
   videoFallback: 'amazon.nova-lite-v1:0',
