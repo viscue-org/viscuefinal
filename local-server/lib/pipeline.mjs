@@ -21,20 +21,33 @@ function explicitScores(graph = {}) {
 }
 
 function requiresVision(graph) {
-  const allText = (graph.cues || []).map(c => c.instruction).join(' ').toLowerCase();
+  const cueText = (graph.cues || []).map(c => c.instruction).join(' ');
+  const noteText = (graph.items || []).filter(i => i.kind === 'note').map(i => i.text).join(' ');
+  const allText = `${cueText} ${noteText}`.toLowerCase();
   
   // Vision is required if there are temporal video queries, identification queries, or ambiguity
   const visionWords = /\b(what|who|how many|count|identify|read|compare|describe|locate|where|find|extract|which)\b/;
   if (visionWords.test(allText)) return true;
 
   // No-vision edit keywords (generation/edit instruction)
-  const noVisionWords = /\b(larger|smaller|clearer|darker|lighter|color|move|align|remove|replace|copy|rotate|crop|emphasize|restyle|modify|transfer|follow)\b/;
+  const noVisionWords = /\b(larger|smaller|clearer|darker|lighter|color|move|align|remove|replace|copy|rotate|crop|emphasize|restyle|modify|transfer|follow|big|small|huge|tiny|scale|resize|background|transparent|bold|italic|font)\b/;
   if (noVisionWords.test(allText)) {
     return false;
   }
   
+  // If there's no text and no spatial cues, we don't need vision
+  if (!allText.trim() && (graph.cues || []).length === 0) return false;
+  
   // Default to vision if ambiguous
   return true;
+}
+
+function requiresCompilation(graph, evidence) {
+  if ((evidence || []).length > 0) return true;
+  if ((graph.relations || []).length > 0) return true;
+  if ((graph.operations || []).length > 0) return true;
+  if ((graph.cues || []).some(c => c.isWholeAsset === false)) return true;
+  return false;
 }
 
 async function collectEvidence(selected, media, bedrock, priorEvidence = []) {
@@ -184,7 +197,13 @@ export async function runPipeline(request = {}, deps = {}) {
   let canonical = buildCanonicalBrief({ graph, evidence, selection: mockSelection });
   
   let compiled = { status: 'degraded', provider: 'deterministic', text: canonical.prompt, warning: { reason: 'Compiler not configured.' } };
-  if (deps.bedrock?.compilePrompt) compiled = await deps.bedrock.compilePrompt(canonical);
+  const needsCompilation = requiresCompilation(graph, evidence);
+  
+  if (deps.bedrock?.compilePrompt && needsCompilation) {
+    compiled = await deps.bedrock.compilePrompt(canonical);
+  } else if (!needsCompilation) {
+    compiled = { status: 'ok', provider: 'deterministic', text: canonical.prompt, warning: null };
+  }
   const verified = verifyProtectedFacts(compiled.text, canonical);
   if (!verified.ok) compiled = { status: 'degraded', provider: 'deterministic', text: canonical.prompt, warning: verified };
   
