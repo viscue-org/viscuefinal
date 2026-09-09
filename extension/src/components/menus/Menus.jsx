@@ -34,7 +34,7 @@ export function AssetMenu({ pickFile, capturePage, addWebpage, close }) {
 export function AnnotMenu({ value, onChange }) {
   return (
     <div className="annot-menu">
-      <button className={value === 'annotate' ? 'active' : ''} onClick={() => onChange('annotate')}><Selection size={18} /> Annotate</button>
+      <button className={value === 'annotate' ? 'active' : ''} onClick={() => onChange('annotate')}><Selection size={18} /> Point</button>
       <button className={value === 'area' ? 'active' : ''} onClick={() => onChange('area')}><BoundingBox size={18} /> Area</button>
       <button className={value === 'pen' ? 'active' : ''} onClick={() => onChange('pen')}><PencilSimple size={18} /> Pen</button>
       <button className={value === 'highlighter' ? 'active' : ''} onClick={() => onChange('highlighter')}><Highlighter size={18} /> Highlighter</button>

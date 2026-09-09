@@ -200,10 +200,10 @@ export const AssetNode = memo(function AssetNode({ id, data, selected }) {
           {visibleStrokes.map(stroke => <path key={stroke.id} d={strokePath(stroke.points)} className={stroke.tool} />)}
           {draft.length > 1 && annotationTool === 'area' && (
             <rect 
-              x={Math.min(draft[0][0], draft[1][0]) * 1000} 
-              y={Math.min(draft[0][1], draft[1][1]) * 640} 
-              width={Math.abs(draft[1][0] - draft[0][0]) * 1000} 
-              height={Math.abs(draft[1][1] - draft[0][1]) * 640} 
+              x={Math.min(draft[0][0], draft[draft.length - 1][0]) * 1000} 
+              y={Math.min(draft[0][1], draft[draft.length - 1][1]) * 640} 
+              width={Math.abs(draft[draft.length - 1][0] - draft[0][0]) * 1000} 
+              height={Math.abs(draft[draft.length - 1][1] - draft[0][1]) * 640} 
               className="area-draft" 
             />
           )}
