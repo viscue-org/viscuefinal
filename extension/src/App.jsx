@@ -316,17 +316,21 @@ function AppCanvas() {
       refreshPlatformPlan(platformName);
       
       const log = result['viscue-history-log'] || [];
-      const cutoff = Date.now() - (config.autoDeleteHours * 60 * 60 * 1000);
-      const filtered = log.filter(item => {
-        const t = typeof item.timestamp === 'number' ? item.timestamp : Date.parse(item.timestamp) || 0;
-        return t > cutoff;
-      });
-      
-      setPersistentHistory(filtered);
-      
-      if (filtered.length !== log.length) {
-        if (globalThis.chrome?.storage?.local) chrome.storage.local.set({ 'viscue-history-log': filtered });
-        else localStorage.setItem('viscue-history-log', JSON.stringify(filtered));
+      if (config.autoDeleteHours > 0) {
+        const cutoff = Date.now() - (config.autoDeleteHours * 60 * 60 * 1000);
+        const filtered = log.filter(item => {
+          const t = typeof item.timestamp === 'number' ? item.timestamp : Date.parse(item.timestamp) || 0;
+          return t > cutoff;
+        });
+        
+        setPersistentHistory(filtered);
+        
+        if (filtered.length !== log.length) {
+          if (globalThis.chrome?.storage?.local) chrome.storage.local.set({ 'viscue-history-log': filtered });
+          else localStorage.setItem('viscue-history-log', JSON.stringify(filtered));
+        }
+      } else {
+        setPersistentHistory(log);
       }
     });
   }, []);
@@ -382,21 +386,23 @@ function AppCanvas() {
     if (globalThis.chrome?.storage?.local) chrome.storage.local.set({ 'viscue-history-config': config });
     else localStorage.setItem('viscue-history-config', JSON.stringify(config));
     
-    const cutoff = Date.now() - (numHours * 60 * 60 * 1000);
-    setPersistentHistory(prev => {
-      const filtered = prev.filter(item => {
-        const t = typeof item.timestamp === 'number' ? item.timestamp : Date.parse(item.timestamp) || 0;
-        return t > cutoff;
+    if (numHours > 0) {
+      const cutoff = Date.now() - (numHours * 60 * 60 * 1000);
+      setPersistentHistory(prev => {
+        const filtered = prev.filter(item => {
+          const t = typeof item.timestamp === 'number' ? item.timestamp : Date.parse(item.timestamp) || 0;
+          return t > cutoff;
+        });
+        if (globalThis.chrome?.storage?.local) chrome.storage.local.set({ 'viscue-history-log': filtered });
+        else localStorage.setItem('viscue-history-log', JSON.stringify(filtered));
+        return filtered;
       });
-      if (globalThis.chrome?.storage?.local) chrome.storage.local.set({ 'viscue-history-log': filtered });
-      else localStorage.setItem('viscue-history-log', JSON.stringify(filtered));
-      return filtered;
-    });
+    }
   };
 
   useEffect(() => {
-    if (dialog?.type === 'history' && historyConfig?.autoDeleteHours) {
-      const numHours = Number(historyConfig.autoDeleteHours) || 24;
+    if (dialog?.type === 'history' && historyConfig?.autoDeleteHours && historyConfig.autoDeleteHours > 0) {
+      const numHours = Number(historyConfig.autoDeleteHours);
       const cutoff = Date.now() - (numHours * 60 * 60 * 1000);
       setPersistentHistory(prev => {
         const filtered = prev.filter(item => {
