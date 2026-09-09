@@ -276,6 +276,46 @@ export async function runPipeline(request = {}, deps = {}) {
   // Re-build canonical to get correct summary now
   canonical = buildCanonicalBrief({ graph, evidence, selection: policy, alreadyAttached });
 
+  // ── UNCHANGED-CANVAS FAST PATH ─────────────────────────────────────────────
+  // If everything that would be sent is already in the prior state AND the
+  // compiled prompt text is identical, there is nothing new to do.  Return an
+  // instant cache-hit so the extension can skip compilation and re-attachment.
+  const newPromptHash = hash(finalPrompt);
+  const prevPromptHash = prevState?.prompt_hash;
+  const noNewAttachments = finalAttachments.length === 0;
+  const promptUnchanged = Boolean(prevPromptHash && prevPromptHash === newPromptHash);
+
+  if (!isNewChat && noNewAttachments && promptUnchanged) {
+    const ledger = normalizeExecutionLedger([
+      ...stages,
+      createStage('cache.hit', 'ok', {
+        reason: 'canvas_unchanged',
+        reused_attachments: alreadyAttached.length,
+        new_attachments: 0,
+      }),
+    ]);
+    return {
+      ok: true,
+      status: 'ok',
+      provider: 'cache',
+      cached: true,
+      final_prompt: finalPrompt,
+      prompt_hash: newPromptHash,
+      executionId: `cache_${crypto.randomUUID()}`,
+      execution_id: `cache_${crypto.randomUUID()}`,
+      attachments: [],           // nothing to re-upload
+      alreadyAttached,           // for display / reference
+      selected_references: policy.selected,
+      trimmed_references: policy.trimmed,
+      stages: ledger.stages,
+      ledger,
+      trust: ledger.trust,
+      evidence,
+      summary: canonical.summary,
+    };
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   const executionId = `exec_${crypto.randomUUID()}`;
   const status = stages.some(stage => stage.status === 'degraded') ? 'degraded' : 'ok';
 
@@ -286,7 +326,6 @@ export async function runPipeline(request = {}, deps = {}) {
     }));
   }
 
-  const newPromptHash = hash(finalPrompt);
   const ledger = normalizeExecutionLedger(stages);
 
   return {

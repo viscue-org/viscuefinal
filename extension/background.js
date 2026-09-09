@@ -211,6 +211,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           'viscue-state-cache': enrichedReceipt,
           'viscue-last-receipt': enrichedReceipt,
           [`viscue-receipt-${receipt.execution_id || receipt.executionId || Date.now()}`]: enrichedReceipt,
+          // Always write tab-scoped state so that if the platform redirects
+          // from a "new" URL (e.g. /app, /new) to an assigned chat ID, we
+          // can still bridge the prior upload state from the same tab.
+          [`viscue-tab-state-${tabId}`]: enrichedReceipt,
         };
         if (realChatKey) {
           updates[realChatKey] = enrichedReceipt;

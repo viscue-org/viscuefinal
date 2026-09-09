@@ -1420,6 +1420,10 @@ function AppCanvas() {
           undefined;
       } else {
       sessionCtx.previousState = undefined;
+      // Clear any stale tab bridge state so this genuinely-new chat starts clean
+      if (globalThis.chrome?.storage?.local) {
+        chrome.storage.local.remove([`viscue-tab-state-${sourceTabId}`]).catch(() => {});
+      }
     }
 
     onPhase?.('compiling');
