@@ -136,9 +136,13 @@ export const TextNode = memo(function TextNode({ id, data, selected }) {
       </NodeToolbar>
 
       <Handle id="top" type="source" position={Position.Top} className="text-handle" />
+      <Handle id="top" type="target" position={Position.Top} className="text-handle target-handle" style={{ opacity: 0 }} />
       <Handle id="left" type="source" position={Position.Left} className="text-handle" />
+      <Handle id="left" type="target" position={Position.Left} className="text-handle target-handle" style={{ opacity: 0 }} />
       <Handle id="right" type="source" position={Position.Right} className="text-handle" />
+      <Handle id="right" type="target" position={Position.Right} className="text-handle target-handle" style={{ opacity: 0 }} />
       <Handle id="bottom" type="source" position={Position.Bottom} className="text-handle" />
+      <Handle id="bottom" type="target" position={Position.Bottom} className="text-handle target-handle" style={{ opacity: 0 }} />
 
       {selected && context.onAddConnectedText && (
         <>

@@ -77,7 +77,7 @@ const createTextNode = (id, position, variant = 'text') => ({
     },
   },
 });
-const createAnnotationEdge = (source, sourceHandle, target) => ({ id: crypto.randomUUID(), source, sourceHandle, target, targetHandle: 'target', type: 'annotation', markerStart: defaultMarkerStart, markerEnd: defaultMarkerEnd });
+const createAnnotationEdge = (source, sourceHandle, target) => ({ id: crypto.randomUUID(), source, sourceHandle, target, targetHandle: 'left', type: 'annotation', markerStart: defaultMarkerStart, markerEnd: defaultMarkerEnd });
 const createCrossAssetEdge = (source, sourceHandle, target, targetHandle) => ({ id: crypto.randomUUID(), source, sourceHandle, target, targetHandle, type: 'crossAsset', markerStart: defaultMarkerStart, markerEnd: defaultMarkerEnd, data: { instructionOpen: false, instruction: '' } });
 const createFlowEdge = (source, target, sourceHandle, targetHandle) => ({ id: crypto.randomUUID(), source, target, sourceHandle, targetHandle, type: 'flow', markerEnd: defaultMarkerEnd });
 
