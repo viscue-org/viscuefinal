@@ -552,13 +552,15 @@ function AppCanvas() {
     const textId = crypto.randomUUID();
     const anchorId = `annot-${crypto.randomUUID()}`;
     const anchor = { id: anchorId, x: 0.5, y: 0.5, isWholeAsset: true };
-    const position = { x: parent.position.x + 380, y: parent.position.y };
+    // Stack below existing annotation text nodes for this parent
+    const existingAnnotCount = edges.filter(e => e.source === id && e.type === 'annotation').length;
+    const position = { x: parent.position.x + 400, y: parent.position.y + existingAnnotCount * 280 };
     setNodes(items => [
       ...items.map(node => node.id === id ? { ...node, selected: false, data: { ...node.data, cueAnchors: [...(node.data.cueAnchors || []), anchor] } } : { ...node, selected: false }),
       { ...createTextNode(textId, position), selected: true }
     ]);
     setEdges(items => [...items, createAnnotationEdge(id, anchorId, textId)]);
-  }, [nodes, setNodes, snapshot]);
+  }, [nodes, edges, setNodes, setEdges, snapshot]);
 
   const onAreaAnnotate = useCallback((id, area, timeMs) => {
     snapshot();
@@ -567,13 +569,15 @@ function AppCanvas() {
     const textId = crypto.randomUUID();
     const anchorId = `annot-${crypto.randomUUID()}`;
     const anchor = { id: anchorId, x: area.x + area.width / 2, y: area.y + area.height / 2, isArea: true, area, timeMs };
-    const position = { x: parent.position.x + 380, y: parent.position.y + area.y * (parent.measured?.height || 280) };
+    // Stack below existing annotation text nodes for this parent
+    const existingAnnotCount = edges.filter(e => e.source === id && e.type === 'annotation').length;
+    const position = { x: parent.position.x + 400, y: parent.position.y + existingAnnotCount * 280 };
     setNodes(items => [
       ...items.map(node => node.id === id ? { ...node, selected: false, data: { ...node.data, cueAnchors: [...(node.data.cueAnchors || []), anchor] } } : { ...node, selected: false }),
       { ...createTextNode(textId, position), selected: true }
     ]);
     setEdges(items => [...items, createAnnotationEdge(id, anchorId, textId)]);
-  }, [nodes, setNodes, snapshot]);
+  }, [nodes, edges, setNodes, setEdges, snapshot]);
 
   const onToggleLock = useCallback(id => {
     snapshot();
@@ -1093,9 +1097,13 @@ function AppCanvas() {
       
       setEdges(items => [...items, createCrossAssetEdge(nodeId, sourceAnchor.id, targetNode.id, targetAnchor.id)]);
     } else {
-      // Standard Drop to Text Note
-      const position = flow.screenToFlowPosition({ x: screenPoint.x + 12, y: screenPoint.y - 34 });
-      setNodes(items => [...items.map(node => node.id === nodeId ? { ...node, data: { ...node.data, cueAnchors: [...(node.data.cueAnchors || []), sourceAnchor] } } : node), createTextNode(textId, position)]);
+      // Standard Drop to Text Note — place cleanly to the right, stacking by count
+      const existingAnnotCount = edges.filter(e => e.source === nodeId && e.type === 'annotation').length;
+      const parentNode = nodes.find(n => n.id === nodeId);
+      const parentPos = parentNode ? parentNode.position : flow.screenToFlowPosition({ x: screenPoint.x, y: screenPoint.y });
+      const parentW = parentNode?.measured?.width || 280;
+      const textPos = { x: parentPos.x + parentW + 40, y: parentPos.y + existingAnnotCount * 280 };
+      setNodes(items => [...items.map(node => node.id === nodeId ? { ...node, data: { ...node.data, cueAnchors: [...(node.data.cueAnchors || []), sourceAnchor] } } : node), createTextNode(textId, textPos)]);
       setEdges(items => [...items, createAnnotationEdge(nodeId, sourceAnchor.id, textId)]);
     }
     setMode('select');

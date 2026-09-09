@@ -39,8 +39,8 @@ const MENU_OPTIONS = Object.freeze({
   ],
   annotate: [
     ['annotate', 'Point', Cursor],
-    ['whole', 'Whole image', BoundingBox],
     ['area', 'Area', Selection],
+    ['whole', 'Whole image', BoundingBox],
     ['draw', 'Draw', PencilSimple],
     ['erase', 'Erase', Eraser],
   ],
