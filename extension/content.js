@@ -145,9 +145,34 @@
     let attached=0;
     if(attachments.length){
       const files=await Promise.all(attachments.map(toFile));
+      // Strategy 1: direct file input
       const input=queryFirst(adapter.file);
       if(input){attached=attachThroughInput(input,files)}
+      // Strategy 2: clipboard paste into composer
       if(attached!==files.length){const pasted=dispatchFilePaste(composer,files);if(pasted)attached=files.length}
+      // Strategy 3 (Gemini-specific): click the upload button to expose the file input, then attach
+      if(attached!==files.length && platform==='Gemini'){
+        const uploadBtn=document.querySelector('button[aria-label*="Upload" i],button[aria-label*="Attach" i],button[aria-label*="Add" i],[data-test-id*="upload" i],[jsname] button mat-icon-button,button.upload-button');
+        if(uploadBtn){
+          uploadBtn.click();
+          await delay(400);
+          const lazyInput=document.querySelector('input[type="file"]');
+          if(lazyInput){attached=attachThroughInput(lazyInput,files)}
+        }
+      }
+      // Strategy 4: dataTransfer drop on document.body as last resort
+      if(attached!==files.length){
+        try{
+          const dt=new DataTransfer();
+          files.forEach(f=>dt.items.add(f));
+          const dropTarget=composer.closest('form')||composer.parentElement||document.body;
+          ['dragenter','dragover'].forEach(ev=>dropTarget.dispatchEvent(new DragEvent(ev,{bubbles:true,cancelable:true,dataTransfer:dt})));
+          await delay(120);
+          dropTarget.dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:dt}));
+          await delay(400);
+          attached=files.length; // optimistic — waitForAttachmentsReady will verify
+        }catch{}
+      }
       if(attached!==files.length)throw new Error(`${platform} did not accept all ${files.length} references automatically. Reopen the composer and try Send intent again.`)
       await waitForAttachmentsReady(files);
       console.info('[Viscue handoff] references ready',{platform,count:files.length});

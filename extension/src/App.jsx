@@ -1139,7 +1139,7 @@ function AppCanvas() {
       const dataUrl = await fileToDataUrl(file);
       const { id, kind } = additionsMeta[index];
       return {
-        id, type: 'asset', position: { x: center.x - 180 + index * 36, y: center.y - 130 + index * 36 },
+        id, type: 'asset', position: { x: center.x - 180 + (index % 3) * 400, y: center.y - 130 + Math.floor(index / 3) * 280 },
         data: { kind, name: file.name, mime: file.type, dataUrl, hash: await digest(dataUrl), role: 'Reference', strokes: [], cueAnchors: [], targetAnchors: [] },
       };
     }));
@@ -1197,7 +1197,7 @@ function AppCanvas() {
       
       return {
         id, type: 'asset', 
-        position: { x: position.x - 180 + index * 36, y: position.y - 130 + index * 36 },
+        position: { x: position.x - 180 + (index % 3) * 400, y: position.y - 130 + Math.floor(index / 3) * 280 },
         data: { kind, name: file.name, mime: file.type, dataUrl, hash: await digest(dataUrl), role: 'Reference', strokes: [], cueAnchors: [], targetAnchors: [] },
       };
     }));
