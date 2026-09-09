@@ -1556,7 +1556,7 @@ function AppCanvas() {
         onPaneClick={onPaneClick} 
         onNodeDragStart={snapshot}
         panOnDrag={[1, 2]}
-        selectionOnDrag={false}
+        selectionOnDrag={true}
         selectionKeyCode="Shift"
         panOnScroll={true}
         zoomOnScroll={false}

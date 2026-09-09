@@ -154,8 +154,8 @@ export const AssetNode = memo(function AssetNode({ id, data, selected }) {
           {data.kind === 'image' && <button aria-label="Crop" onClick={() => onCrop(id)}><Crop size={20} /></button>}
           {data.kind === 'video' && <button aria-label="Extract Frame" onClick={() => onExtractFrame(id, videoRef.current)}><Film size={20} /></button>}
           {data.kind === 'video' && <button aria-label="Edit Video" onClick={() => onEditVideo(id)}><Scissors size={20} /></button>}
-          {data.url && <button aria-label="Extract Selection" onClick={() => onExtractSelection(id, data.url)}><Route size={20} /></button>}
-          {data.kind === 'document_page' && <button aria-label="View Document" onClick={() => onViewDocument(id)}><FileText size={20} /></button>}
+          {data.url && data.kind !== 'video' && data.kind !== 'document' && <button aria-label="Extract Selection" onClick={() => onExtractSelection(id, data.url)}><Route size={20} /></button>}
+          {(data.kind === 'document' || data.kind === 'document_page') && <button aria-label="Preview Document" onClick={() => onViewDocument(id)}><FileText size={20} /></button>}
           {data.url && <a href={data.url} target="_blank" rel="noreferrer" aria-label="Open Source"><ExternalLink size={20} /></a>}
           {canRecordMotion && !isAnnotating && (
             <AssetMotionControls
