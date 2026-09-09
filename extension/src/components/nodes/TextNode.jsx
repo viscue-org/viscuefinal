@@ -74,6 +74,21 @@ export const TextNode = memo(function TextNode({ id, data, selected }) {
     onChange(id, draft);
   }, [id, draft, onChange]);
 
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === 'Escape') {
+      textareaRef.current?.blur();
+      return;
+    }
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      context.onAddConnectedText?.(id, 'right', 'left');
+    }
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      context.onAddConnectedText?.(id, 'bottom', 'top');
+    }
+  }, [id, context]);
+
   const setStyle = patch => onStyleChange(id, patch);
   const isActive = (key, value) => style[key] === value;
 
@@ -160,12 +175,20 @@ export const TextNode = memo(function TextNode({ id, data, selected }) {
         className="nodrag nowheel"
         value={draft}
         onChange={handleTextChange}
+        onKeyDown={handleKeyDown}
         onBlur={handleBlur}
         placeholder={isSticky ? 'Write a sticky note…' : 'Type your instruction…'}
         autoFocus={data.autoFocus}
         aria-label={isSticky ? 'Sticky note text' : 'Intent text'}
         style={style}
       />
+
+      {selected && context.onAddConnectedText && (
+        <div className="text-node-actions" style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginTop: '12px' }}>
+          <button type="button" onClick={() => context.onAddConnectedText?.(id, 'right', 'left')} className="text-node-action-btn">+ Next</button>
+          <button type="button" onClick={() => context.onAddConnectedText?.(id, 'bottom', 'top')} className="text-node-action-btn">+ Branch</button>
+        </div>
+      )}
     </div>
   );
 });

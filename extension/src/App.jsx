@@ -440,6 +440,15 @@ function AppCanvas() {
   }, [nodes, setEdges, setNodes, snapshot]);
 
   const onNodesChangeWithMotion = useCallback((changes) => {
+    const hasRemoves = changes.some(change => change.type === 'remove');
+    if (hasRemoves) {
+      snapshot();
+      const lockedSelected = nodes.filter(n => n.selected && n.data.locked).length;
+      if (lockedSelected > 0) {
+        setResult({ error: `Skipped ${lockedSelected} locked node${lockedSelected !== 1 ? 's' : ''}` });
+      }
+    }
+
     const positionChanges = new Map(
       changes
         .filter(change => change.type === 'position' && change.position)
@@ -470,7 +479,7 @@ function AppCanvas() {
         return n;
       });
     });
-  }, [setNodes]);
+  }, [nodes, setNodes, snapshot]);
 
   const startMotion = useCallback(id => {
     snapshot();
