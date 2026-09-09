@@ -3,6 +3,7 @@ import { apiFetch } from './api/client.mjs';
 import { VISCUE_WEB_URL, VISCUE_API_URL } from './api/config.mjs';
 import { isWorkspaceUrl } from './api/workspaceCompletion.mjs';
 import { parsePlatformChatContext } from '../local-server/lib/platform-capabilities.mjs';
+import { compileLocal } from './compiler.mjs';
 
 const API = VISCUE_API_URL;
 const ONBOARDING_KEY = 'viscue-onboarding-complete';
@@ -125,10 +126,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
     if (message.type === 'compile') {
       try {
-        const result = await apiFetch('/compile/vicsuc', {
-          method: 'POST',
-          body: JSON.stringify(message.payload),
-        });
+        const result = await compileLocal(message.payload);
         sendResponse(result);
       } catch (err) {
         sendResponse({ ok: false, error: err.message, code: err.code });

@@ -196,6 +196,19 @@ export function WorkspaceUtilities({
   const dark = theme === 'dark';
   return h('div', { className: 'workspace-utilities' },
     h('div', { className: 'workspace-utilities__rail' },
+      h('input', { 
+        type: 'number', 
+        placeholder: '0', 
+        'aria-label': 'Value',
+        title: 'Value',
+        style: { width: '40px', height: '22px', background: 'transparent', border: '1px solid var(--border-default)', borderRadius: '4px', color: 'var(--text-muted)', fontSize: '11px', padding: '0 4px', textAlign: 'center', outline: 'none' } 
+      }),
+      h('input', { 
+        type: 'checkbox', 
+        'aria-label': 'Toggle setting',
+        title: 'Toggle setting',
+        style: { margin: '0 4px', cursor: 'pointer', accentColor: 'var(--brand)', width: '14px', height: '14px' } 
+      }),
       h('button', {
         type: 'button',
         'aria-label': dark ? 'Switch to light mode' : 'Switch to dark mode',

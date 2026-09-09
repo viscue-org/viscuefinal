@@ -552,9 +552,8 @@ function AppCanvas() {
     const textId = crypto.randomUUID();
     const anchorId = `annot-${crypto.randomUUID()}`;
     const anchor = { id: anchorId, x: 0.5, y: 0.5, isWholeAsset: true };
-    // Stack below existing annotation text nodes for this parent
-    const existingAnnotCount = edges.filter(e => e.source === id && e.type === 'annotation').length;
-    const position = { x: parent.position.x + 400, y: parent.position.y + existingAnnotCount * 280 };
+    const parentW = parent.measured?.width || 280;
+    const position = { x: parent.position.x + parentW + 40, y: parent.position.y };
     setNodes(items => [
       ...items.map(node => node.id === id ? { ...node, selected: false, data: { ...node.data, cueAnchors: [...(node.data.cueAnchors || []), anchor] } } : { ...node, selected: false }),
       { ...createTextNode(textId, position), selected: true }
@@ -569,9 +568,10 @@ function AppCanvas() {
     const textId = crypto.randomUUID();
     const anchorId = `annot-${crypto.randomUUID()}`;
     const anchor = { id: anchorId, x: area.x + area.width / 2, y: area.y + area.height / 2, isArea: true, area, timeMs };
-    // Stack below existing annotation text nodes for this parent
-    const existingAnnotCount = edges.filter(e => e.source === id && e.type === 'annotation').length;
-    const position = { x: parent.position.x + 400, y: parent.position.y + existingAnnotCount * 280 };
+    const parentW = parent.measured?.width || 280;
+    const parentH = parent.measured?.height || 280;
+    // Place text node to the right, vertically aligned with the annotation area
+    const position = { x: parent.position.x + parentW + 40, y: parent.position.y + area.y * parentH };
     setNodes(items => [
       ...items.map(node => node.id === id ? { ...node, selected: false, data: { ...node.data, cueAnchors: [...(node.data.cueAnchors || []), anchor] } } : { ...node, selected: false }),
       { ...createTextNode(textId, position), selected: true }
@@ -1031,10 +1031,10 @@ function AppCanvas() {
     const targetHandle = direction === 'right' ? 'left' : direction === 'left' ? 'right' : direction === 'bottom' ? 'top' : 'bottom';
     
     const offset = { x: 0, y: 0 };
-    if (direction === 'right') offset.x = 280;
-    else if (direction === 'left') offset.x = -280;
-    else if (direction === 'bottom') offset.y = 120;
-    else if (direction === 'top') offset.y = -120;
+    if (direction === 'right') offset.x = 340;
+    else if (direction === 'left') offset.x = -340;
+    else if (direction === 'bottom') offset.y = 220;
+    else if (direction === 'top') offset.y = -220;
 
     const position = {
       x: sourceNode.position.x + offset.x,
@@ -1097,12 +1097,14 @@ function AppCanvas() {
       
       setEdges(items => [...items, createCrossAssetEdge(nodeId, sourceAnchor.id, targetNode.id, targetAnchor.id)]);
     } else {
-      // Standard Drop to Text Note — place cleanly to the right, stacking by count
-      const existingAnnotCount = edges.filter(e => e.source === nodeId && e.type === 'annotation').length;
+      // Standard Drop to Text Note — place to the right aligned with the annotation point
       const parentNode = nodes.find(n => n.id === nodeId);
-      const parentPos = parentNode ? parentNode.position : flow.screenToFlowPosition({ x: screenPoint.x, y: screenPoint.y });
       const parentW = parentNode?.measured?.width || 280;
-      const textPos = { x: parentPos.x + parentW + 40, y: parentPos.y + existingAnnotCount * 280 };
+      const parentH = parentNode?.measured?.height || 280;
+      const parentPos = parentNode ? parentNode.position : flow.screenToFlowPosition({ x: screenPoint.x, y: screenPoint.y });
+      // Y-position follows where on the image the user pointed
+      const relativeY = point ? (point.y || 0) * parentH : 0;
+      const textPos = { x: parentPos.x + parentW + 40, y: parentPos.y + relativeY };
       setNodes(items => [...items.map(node => node.id === nodeId ? { ...node, data: { ...node.data, cueAnchors: [...(node.data.cueAnchors || []), sourceAnchor] } } : node), createTextNode(textId, textPos)]);
       setEdges(items => [...items, createAnnotationEdge(nodeId, sourceAnchor.id, textId)]);
     }

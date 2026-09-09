@@ -2,7 +2,7 @@
 * { -ms-overflow-style: none !important; scrollbar-width: none !important; }
 
 :root {
-  /* ── VisCue Design System v1.0 Typography ── */
+  /* â”€â”€ VisCue Design System v1.0 Typography â”€â”€ */
   --font-sans: "Instrument Sans", "Inter", "Noto Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-display: var(--font-sans);
   --font-heading: var(--font-sans);
@@ -13,7 +13,7 @@
   font-family: var(--font-body);
   font-synthesis: none;
 
-  /* ── Viscue Steel Blue Scale ── */
+  /* â”€â”€ Viscue Steel Blue Scale â”€â”€ */
   --steel-50: #F3F6FA;
   --steel-100: #E6EDF4;
   --steel-200: #CFDAE6;
@@ -26,13 +26,13 @@
   --steel-900: #1B2C3E;
   --steel-950: #111D29;
 
-  /* Supporting note color — intentionally non-brand */
+  /* Supporting note color â€” intentionally non-brand */
   --note-50: #FFF8E6;
   --note-200: #F1DCA3;
   --note-300: #D9B968;
   --note-700: #7A5B16;
 
-  /* ── Primitive Neutral Palette ── */
+  /* â”€â”€ Primitive Neutral Palette â”€â”€ */
   --neutral-0: #FFFFFF;
   --neutral-25: #FBFCFD;
   --neutral-50: #F6F8FA;
@@ -47,34 +47,34 @@
   --neutral-900: #17222D;
   --neutral-950: #0D151E;
 
-  /* ── Semantic Status Colors ── */
+  /* â”€â”€ Semantic Status Colors â”€â”€ */
   --color-success: #2D9B78;
   --color-error: #DF5360;
   --color-warning: #D99533;
   --color-info: #5B7593;
 
-  /* ── Brand Tokens ── */
+  /* â”€â”€ Brand Tokens â”€â”€ */
   --brand: var(--steel-500);
   --brand-pressed: var(--steel-600);
   --brand-subtle: rgba(91, 117, 147, 0.12);
   --brand-accessible-text: #FFFFFF;
   --brand-gradient: linear-gradient(135deg, #7891AB, #5B7593, #455E79);
 
-  /* ── Semantic Background & Surface Tokens ── */
+  /* â”€â”€ Semantic Background & Surface Tokens â”€â”€ */
   --bg-canvas: #F4F7FA;
   --bg-surface: #FFFFFF;
   --bg-subtle: #E9EFF5;
   --bg-color: #F4F7FA;
   --surface: #FFFFFF;
 
-  /* ── Semantic Text Tokens ── */
+  /* â”€â”€ Semantic Text Tokens â”€â”€ */
   --text-primary: #17222D;
   --text-secondary: #526375;
   --text-muted: #788797;
   --text-disabled: #AAB5C0;
   --text: #17222D;
 
-  /* ── Semantic Border Tokens ── */
+  /* â”€â”€ Semantic Border Tokens â”€â”€ */
   --border-default: #D8E1E9;
   --border-strong: #BCC9D5;
   --border-hover: #92A4B6;
@@ -82,14 +82,14 @@
   --node-border: #D8E1E9;
   --node-bg: #FFFFFF;
 
-  /* ── Semantic Action & Selection Tokens ── */
+  /* â”€â”€ Semantic Action & Selection Tokens â”€â”€ */
   --color-action-primary-bg: #5B7593;
   --color-action-primary-fg: #FFFFFF;
   --color-selection: #5B7593;
   --color-focus: #5B7593;
   --color-connection-active: #5B7593;
 
-  /* 💠 Radius System (Squircle / Logo-inspired) 💠 */
+  /* ðŸ’  Radius System (Squircle / Logo-inspired) ðŸ’  */
   --radius-xs: 12px;
   --radius-sm: 16px;
   --radius-md: 22px;
@@ -97,16 +97,16 @@
   --radius-xl: 36px;
   --radius-full: 999px;
 
-  /* 💠 Logo-Inspired Standard Corner Radius System 💠 */
+  /* ðŸ’  Logo-Inspired Standard Corner Radius System ðŸ’  */
   --radius-container: var(--radius-xl); /* 36px: Pop-ups, outer dialogs, modals */
   --radius-card: var(--radius-lg);      /* 28px: Cards, panels, surfaces */
   --radius-action: var(--radius-md);    /* 22px: Buttons, actions, interactive pills */
   --radius-control: var(--radius-sm);   /* 16px: Inputs, selects, chips, badges */
 
-  /* ── Viscue Signature Eye-Blink & Brand Animation System ── */
+  /* â”€â”€ Viscue Signature Eye-Blink & Brand Animation System â”€â”€ */
   --blink-duration: 4.2s;
 
-  /* ── Spacing System ── */
+  /* â”€â”€ Spacing System â”€â”€ */
   --space-025: 2px;
   --space-050: 4px;
   --space-100: 8px;
@@ -117,7 +117,7 @@
   --space-600: 48px;
   --space-800: 64px;
 
-  /* ── Elevation System ── */
+  /* â”€â”€ Elevation System â”€â”€ */
   --elevation-0: none;
   --elevation-1: 0 2px 8px rgba(17, 35, 52, 0.06), 0 1px 2px rgba(17, 35, 52, 0.04);
   --elevation-2: 0 8px 24px rgba(17, 35, 52, 0.10), 0 2px 6px rgba(17, 35, 52, 0.06);
@@ -129,7 +129,7 @@
   --shadow-xl: var(--elevation-3);
   --shadow-subtle: rgba(255, 255, 255, 0.1) 0px 0px 0px 1px inset;
 
-  /* ── Motion & Animation ── */
+  /* â”€â”€ Motion & Animation â”€â”€ */
   --ease-quiet: cubic-bezier(.2, .7, .2, 1);
   --ease-ambient: cubic-bezier(.2, .7, .2, 1);
   --duration-fast: 100ms;
@@ -360,8 +360,13 @@ button:disabled {
   background-color: transparent !important;
 }
 
+.react-flow__edge-path {
+  stroke-width: 2.5;
+  stroke: var(--brand, #5B7593);
+}
+
 .react-flow__edge.selected .react-flow__edge-path { 
-  stroke-width: 3; 
+  stroke-width: 4; 
   filter: none;
 }
 
@@ -422,7 +427,7 @@ textarea:focus-visible {
 
 
 
-/* Empty workspace — visible only in Select mode before any canvas content exists. */
+/* Empty workspace â€” visible only in Select mode before any canvas content exists. */
 .canvas-empty-state {
   position: absolute;
   inset: 0;
@@ -790,25 +795,22 @@ textarea:focus-visible {
 .text-node { 
   min-width: 200px; 
   min-height: 64px; 
-  border-radius: var(--radius-lg); 
-  padding: 16px 20px; 
+  border-radius: 8px; 
+  padding: 14px 18px; 
   background: var(--bg-surface); 
-  opacity: 0.95; 
-  border: 1px solid var(--border-default); 
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-  transition: border-color var(--duration-normal) var(--ease-ambient), box-shadow var(--duration-normal) var(--ease-ambient);
+  opacity: 1; 
+  border: 1.5px solid var(--border-default); 
+  box-shadow: none;
+  transition: border-color var(--duration-normal) var(--ease-ambient);
 }
 
 .text-node:hover {
   border-color: var(--border-hover);
-  opacity: 1;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.08);
 }
 
 .text-node.selected { 
   border-color: var(--color-selection); 
-  opacity: 1; 
-  box-shadow: 0 0 0 2px rgba(91, 117, 147, 0.16), 0 8px 24px rgba(0,0,0,0.1);
+  box-shadow: 0 0 0 2px rgba(91, 117, 147, 0.18);
 }
 
 .text-node textarea { 
@@ -919,7 +921,7 @@ textarea:focus-visible {
   opacity: 1;
 }
 
-/* Canvas inventory — the bottom-left contents button opens this live summary. */
+/* Canvas inventory â€” the bottom-left contents button opens this live summary. */
 .canvas-inventory {
   position: fixed;
   z-index: 30;
@@ -1164,7 +1166,7 @@ textarea:focus-visible {
   gap: 5px;
 }
 
-/* ── 3-Section Bottom Bar ── */
+/* â”€â”€ 3-Section Bottom Bar â”€â”€ */
 .bottom-bar-layout {
   position: fixed;
   bottom: 0;
@@ -1175,7 +1177,7 @@ textarea:focus-visible {
   z-index: 20;
 }
 
-/* Left section: ViewSwitcher — absolutely anchored to bottom-left */
+/* Left section: ViewSwitcher â€” absolutely anchored to bottom-left */
 .bottom-bar-left {
   position: absolute;
   left: 24px;
@@ -1192,7 +1194,7 @@ textarea:focus-visible {
   opacity: 1;
 }
 
-/* Center section: CenterFloatingBar — absolutely centered horizontally */
+/* Center section: CenterFloatingBar â€” absolutely centered horizontally */
 .bottom-bar-center {
   position: absolute;
   left: 50%;
@@ -1204,7 +1206,7 @@ textarea:focus-visible {
   justify-content: center;
 }
 
-/* Right section: UtilityMenu + CloseButton — absolutely anchored to bottom-right */
+/* Right section: UtilityMenu + CloseButton â€” absolutely anchored to bottom-right */
 .bottom-bar-right {
   position: absolute;
   right: 24px;
@@ -2349,3 +2351,6 @@ textarea:focus-visible {
 .flow-add-btn.bottom { bottom: -28px; }
 .text-node-action-btn { background: transparent; color: var(--text-muted); border: 1px solid var(--border-default); border-radius: 12px; padding: 4px 10px; font-size: 11px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
 .text-node-action-btn:hover { background: var(--bg-subtle); color: var(--text-primary); }
+
+.react-flow__edges { z-index: 9999 !important; }
+
