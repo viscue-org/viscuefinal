@@ -335,6 +335,7 @@ export async function runPipeline(request = {}, deps = {}) {
 
   // Re-build canonical to get correct summary now
   canonical = buildCanonicalBrief({ graph, evidence, selection: policy, alreadyAttached });
+  if (provider === 'deterministic') finalPrompt = canonical.prompt;
 
   // ── UNCHANGED-CANVAS FAST PATH ─────────────────────────────────────────────
   // If everything that would be sent is already in the prior state AND the
