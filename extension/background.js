@@ -226,8 +226,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           'viscue-chat-state-Claude:/new',
           'viscue-chat-state-Gemini:/app',
           'viscue-chat-state-Perplexity:/',
-          'viscue-chat-state-Grok:/',
-          `viscue-tab-state-${tabId}`
+          'viscue-chat-state-Grok:/'
         ]).catch(() => {});
         const devSettings = await chrome.storage.local.get('viscue-dev-server').catch(() => ({}));
         if (devSettings?.['viscue-dev-server']) {

@@ -1407,16 +1407,18 @@ function AppCanvas() {
     sessionCtx.isNewChat = isNewChat;
 
     if (!isNewChat && globalThis.chrome?.storage?.local) {
-      const realChatId = sessionCtx.rawChatId || sessionCtx.chatId;
-      const keys = [
-        `viscue-chat-state-${sessionCtx.destinationFingerprint}`,
-        sessionCtx.platform && realChatId ? `viscue-chat-state-${sessionCtx.platform}:${realChatId}` : null,
-      ].filter(Boolean);
-      const res = await chrome.storage.local.get(keys);
-      sessionCtx.previousState = res[`viscue-chat-state-${sessionCtx.destinationFingerprint}`] ||
-        (sessionCtx.platform && realChatId ? res[`viscue-chat-state-${sessionCtx.platform}:${realChatId}`] : null) ||
-        undefined;
-    } else {
+        const realChatId = sessionCtx.rawChatId || sessionCtx.chatId;
+        const keys = [
+          `viscue-chat-state-${sessionCtx.destinationFingerprint}`,
+          sessionCtx.platform && realChatId ? `viscue-chat-state-${sessionCtx.platform}:${realChatId}` : null,
+          `viscue-tab-state-${sourceTabId}`
+        ].filter(Boolean);
+        const res = await chrome.storage.local.get(keys);
+        sessionCtx.previousState = res[`viscue-chat-state-${sessionCtx.destinationFingerprint}`] ||
+          (sessionCtx.platform && realChatId ? res[`viscue-chat-state-${sessionCtx.platform}:${realChatId}`] : null) ||
+          res[`viscue-tab-state-${sourceTabId}`] ||
+          undefined;
+      } else {
       sessionCtx.previousState = undefined;
     }
 
