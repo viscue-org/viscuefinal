@@ -33,9 +33,9 @@ export async function initOnnxSession({ modelPath = null } = {}) {
         }
       }
 
-      // Configure WASM paths if running in browser
+      // Configure WASM paths and uncap concurrency/memory for maximum inference speed
       if (typeof window !== 'undefined' && ort.env?.wasm) {
-        ort.env.wasm.numThreads = 1;
+        ort.env.wasm.numThreads = Math.max(1, navigator.hardwareConcurrency || 4);
         ort.env.wasm.simd = true;
         const runtimeGetUrl = typeof chrome !== 'undefined' && chrome.runtime?.getURL
           ? chrome.runtime.getURL.bind(chrome.runtime)
