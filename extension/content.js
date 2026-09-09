@@ -143,48 +143,77 @@
     const composer=await waitFor(()=>queryFirst(adapter.composer),8000,'Destination composer was not found.');
     await clearStaleComposerAttachments(composer);
     let attached=0;
+    let attachWarning=null;
     if(attachments.length){
       const files=await Promise.all(attachments.map(toFile));
-      // Strategy 1: direct file input
-      const input=queryFirst(adapter.file);
-      if(input){attached=attachThroughInput(input,files)}
-      // Strategy 2: clipboard paste into composer
-      if(attached!==files.length){const pasted=dispatchFilePaste(composer,files);if(pasted)attached=files.length}
-      // Strategy 3 (Gemini-specific): click the upload button to expose the file input, then attach
-      if(attached!==files.length && platform==='Gemini'){
-        const uploadBtn=document.querySelector('button[aria-label*="Upload" i],button[aria-label*="Attach" i],button[aria-label*="Add" i],[data-test-id*="upload" i],[jsname] button mat-icon-button,button.upload-button');
-        if(uploadBtn){
-          uploadBtn.click();
-          await delay(400);
+      // Guard: ensure the composer belongs to a real platform form, not a probe/external element
+      const composerRoot=composer.closest('form,main,[role="main"],[role="dialog"],body');
+      const isValidComposerCtx=composerRoot&&(composerRoot!==document.body||platform!=='ChatGPT');
+      if(!isValidComposerCtx){
+        console.warn('[Viscue handoff] composer context guard: skipping attachment — composer appears outside platform form');
+        attachWarning='Attachment skipped: composer was outside the expected platform context.';
+      } else {
+        // Strategy 1: direct file input (any visible or hidden)
+        const allFileInputs=[...document.querySelectorAll('input[type="file"]')];
+        const input=allFileInputs.find(el=>!el.disabled)&&allFileInputs.find(el=>!el.disabled)||queryFirst(adapter.file);
+        if(input){attached=attachThroughInput(input,files)}
+        // Strategy 2: clipboard paste into composer
+        if(attached!==files.length){const pasted=dispatchFilePaste(composer,files);if(pasted)attached=files.length}
+        // Strategy 3 (Gemini-specific): click the file-upload trigger button to expose lazy input
+        if(attached!==files.length&&platform==='Gemini'){
+          const geminiUploadBtnSelectors=[
+            'button[aria-label*="Add image" i]',
+            'button[aria-label*="Upload" i]',
+            'button[aria-label*="Attach" i]',
+            'button[jsaction*="file" i]',
+            'button[data-test-id*="upload" i]',
+            'mat-icon-button[aria-label*="image" i]',
+            '[aria-label*="Add image" i]',
+          ];
+          for(const sel of geminiUploadBtnSelectors){
+            const btn=document.querySelector(sel);
+            if(btn){btn.click();await delay(500);break}
+          }
           const lazyInput=document.querySelector('input[type="file"]');
-          if(lazyInput){attached=attachThroughInput(lazyInput,files)}
+          if(lazyInput&&!lazyInput.disabled){attached=attachThroughInput(lazyInput,files)}
+        }
+        // Strategy 4: dataTransfer DragEvent on the composer form
+        if(attached!==files.length){
+          try{
+            const dt=new DataTransfer();
+            files.forEach(f=>dt.items.add(f));
+            const dropTarget=composer.closest('form')||composer.parentElement||composer;
+            ['dragenter','dragover'].forEach(ev=>dropTarget.dispatchEvent(new DragEvent(ev,{bubbles:true,cancelable:true,dataTransfer:dt})));
+            await delay(150);
+            dropTarget.dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:dt}));
+            await delay(500);
+          }catch{}
+          // Re-check DOM for any attachment previews that appeared
+          const previewCheck=document.querySelectorAll('[data-testid*="attachment" i],[class*="attachment" i],[aria-label*="Remove file" i],[aria-label*="Remove attachment" i]');
+          if(previewCheck.length>=files.length)attached=files.length;
+        }
+        // Degrade gracefully: if still not attached, warn but do NOT throw — still send the prompt
+        if(attached!==files.length){
+          attachWarning=`${platform} could not auto-attach ${files.length} reference(s). The prompt was still sent — please manually attach your images if needed.`;
+          console.warn('[Viscue handoff] attachment degraded',{platform,wanted:files.length,attached,warning:attachWarning});
+        } else {
+          try{await waitForAttachmentsReady(files)}catch(e){
+            attachWarning=`References may still be uploading: ${e.message}`;
+            console.warn('[Viscue handoff] attachments may not be fully ready',attachWarning);
+          }
+          console.info('[Viscue handoff] references ready',{platform,count:files.length});
         }
       }
-      // Strategy 4: dataTransfer drop on document.body as last resort
-      if(attached!==files.length){
-        try{
-          const dt=new DataTransfer();
-          files.forEach(f=>dt.items.add(f));
-          const dropTarget=composer.closest('form')||composer.parentElement||document.body;
-          ['dragenter','dragover'].forEach(ev=>dropTarget.dispatchEvent(new DragEvent(ev,{bubbles:true,cancelable:true,dataTransfer:dt})));
-          await delay(120);
-          dropTarget.dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:dt}));
-          await delay(400);
-          attached=files.length; // optimistic — waitForAttachmentsReady will verify
-        }catch{}
-      }
-      if(attached!==files.length)throw new Error(`${platform} did not accept all ${files.length} references automatically. Reopen the composer and try Send intent again.`)
-      await waitForAttachmentsReady(files);
-      console.info('[Viscue handoff] references ready',{platform,count:files.length});
     }
     await insertAndVerifyPrompt(composer,prompt);
     console.info('[Viscue handoff] prompt verified',{platform,characters:prompt.length});
-    const confirmedAttachments=attachments.map(item=>({...item,confirmed:true}));
+    const confirmedAttachments=attachments.map(item=>({...item,confirmed:attached>=attachments.length}));
     const finalReceipt = {
       ...globalThis.ViscueHandoff.buildReceipt({executionId,destinationFingerprint:liveCtx.destinationFingerprint,promptHash,attachments:confirmedAttachments,promptVerified:true,submitted:Boolean(submit)}),
       tabId,
       chatId: liveCtx.chatId,
       platform,
+      ...(attachWarning?{attachWarning,ok:true}:{}),
     };
     if(!submit)return{ok:true,attached,...finalReceipt};
     const sendButton=await waitFor(()=>{const button=queryFirst(adapter.send);return button&&!button.disabled?button:null},15000,'The destination Send button did not become ready.');

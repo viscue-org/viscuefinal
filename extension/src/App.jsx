@@ -1494,6 +1494,9 @@ function AppCanvas() {
     } else {
       successMsg = submit ? 'Text intent inserted and submitted.' : 'Text intent inserted for review.';
     }
+    if (handoff?.attachWarning) {
+      successMsg = `${successMsg} ⚠️ ${handoff.attachWarning}`;
+    }
     setResult({ success: receipt?.ok ? successMsg : `${successMsg} (Failed to save state cache)`, provider: response.provider });
     onPhase?.('done');
     if (shouldCloseWorkspace(handoff, receipt)) {
