@@ -180,7 +180,10 @@ export const AssetNode = memo(function AssetNode({ id, data, selected }) {
       </NodeToolbar>
       <div className="asset-frame">
         {data.kind === 'image' && <img src={data.dataUrl} alt={data.name} draggable="false" />}
-        {data.kind === 'video' && <video ref={videoRef} src={data.dataUrl} controls onLoadedMetadata={event => onVideoMetadata(id, event.currentTarget)} onTimeUpdate={event => setVideoTimeMs(Math.round(event.currentTarget.currentTime * 1000))} />}
+        {data.kind === 'video' && <video ref={videoRef} src={data.dataUrl} controls onLoadedMetadata={event => onVideoMetadata(id, event.currentTarget)} onTimeUpdate={event => {
+          const currentTimeMs = Math.round(event.currentTarget.currentTime * 1000);
+          if (Math.abs(currentTimeMs - videoTimeMs) > 250) setVideoTimeMs(currentTimeMs);
+        }} />}
         {data.kind === 'webpage' && (
           data.dataUrl ? (
             <div className="webpage-preview-wrapper">

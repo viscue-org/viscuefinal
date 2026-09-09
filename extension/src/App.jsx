@@ -56,6 +56,8 @@ const initialNodes = [];
 const defaultMarkerStart = 'start-dot-marker';
 const defaultMarkerEnd = { type: MarkerType.ArrowClosed, color: '#5B7593', width: 18, height: 18 };
 
+export const assetMediaCache = new Map();
+
 function findFreePosition(nodes, baseX, baseY, excludeId = null) {
   let y = baseY;
   for (let i = 0; i < 30; i++) {
@@ -1160,9 +1162,10 @@ function AppCanvas() {
     const additions = await Promise.all(files.map(async (file, index) => {
       const dataUrl = await fileToDataUrl(file);
       const { id, kind } = additionsMeta[index];
+      assetMediaCache.set(id, dataUrl);
       return {
         id, type: 'asset', position: { x: center.x - 180 + (index % 3) * 400, y: center.y - 130 + Math.floor(index / 3) * 280 },
-        data: { kind, name: file.name, mime: file.type, dataUrl, hash: await digest(dataUrl), role: 'Reference', strokes: [], cueAnchors: [], targetAnchors: [] },
+        data: { kind, name: file.name, mime: file.type, dataUrl: URL.createObjectURL(file), hash: await digest(dataUrl), role: 'Reference', strokes: [], cueAnchors: [], targetAnchors: [] },
       };
     }));
     setNodes(items => [...items, ...additions]); event.target.value = ''; setMode('select');
@@ -1216,11 +1219,12 @@ function AppCanvas() {
     const additions = await Promise.all(files.map(async (file, index) => {
       const dataUrl = await fileToDataUrl(file);
       const { id, kind } = additionsMeta[index];
+      assetMediaCache.set(id, dataUrl);
       
       return {
         id, type: 'asset', 
         position: { x: position.x - 180 + (index % 3) * 400, y: position.y - 130 + Math.floor(index / 3) * 280 },
-        data: { kind, name: file.name, mime: file.type, dataUrl, hash: await digest(dataUrl), role: 'Reference', strokes: [], cueAnchors: [], targetAnchors: [] },
+        data: { kind, name: file.name, mime: file.type, dataUrl: URL.createObjectURL(file), hash: await digest(dataUrl), role: 'Reference', strokes: [], cueAnchors: [], targetAnchors: [] },
       };
     }));
     setNodes(items => [...items, ...additions]);
@@ -1453,12 +1457,13 @@ function AppCanvas() {
     await Promise.all((graph.items || []).map(async item => {
       const node = nodes.find(n => n.id === item.id);
       if (!node?.data?.dataUrl) return;
+      const actualDataUrl = assetMediaCache.get(node.id) || node.data.dataUrl;
       if (['image', 'video_frame', 'webpage'].includes(item.kind)) {
         try {
-          media[item.id] = { kind: item.kind, dataUrl: await downscaleDataUrl(node.data.dataUrl, 768, 0.78), provenance: item.provenance || null };
+          media[item.id] = { kind: item.kind, dataUrl: await downscaleDataUrl(actualDataUrl, 768, 0.78), provenance: item.provenance || null };
         } catch { /* ignored */ }
-      } else if (item.kind === 'video' && node.data.dataUrl.length <= 8_000_000) {
-        media[item.id] = { kind: 'video', dataUrl: node.data.dataUrl, temporalRange: item.temporalRange || null };
+      } else if (item.kind === 'video' && actualDataUrl.length <= 8_000_000) {
+        media[item.id] = { kind: 'video', dataUrl: actualDataUrl, temporalRange: item.temporalRange || null };
       }
     }));
 
@@ -1493,7 +1498,7 @@ function AppCanvas() {
           name: node.data.name,
           mime: node.data.mime,
           stateHash: attachmentById.get(node.id).stateHash,
-          dataUrl: node.data.kind === 'image' && node.data.crop ? await renderCropDataUrl(node.data.dataUrl, node.data.crop) : node.data.dataUrl,
+          dataUrl: node.data.kind === 'image' && node.data.crop ? await renderCropDataUrl(assetMediaCache.get(node.id) || node.data.dataUrl, node.data.crop) : (assetMediaCache.get(node.id) || node.data.dataUrl),
         }))
     );
     const promptHash = response.prompt_hash || response.promptHash || response.data?.promptHash;
@@ -1766,7 +1771,11 @@ function AppCanvas() {
             onExport={async (snapshot) => {
               setBusy(true);
               try {
-                const payload = await createHistoryExport(snapshot);
+                const exportSnapshot = {
+                  ...snapshot,
+                  nodes: snapshot.nodes.map(n => n.type === 'asset' ? { ...n, data: { ...n.data, dataUrl: assetMediaCache.get(n.id) || n.data.dataUrl } } : n)
+                };
+                const payload = await createHistoryExport(exportSnapshot);
                 const url = URL.createObjectURL(new Blob([payload.contents], { type: payload.mimeType }));
                 const anchor = document.createElement('a');
                 anchor.href = url;
