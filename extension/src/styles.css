@@ -349,8 +349,14 @@ button:disabled {
   will-change: transform;
 }
 
-.react-flow__node.dragging,
-.react-flow__node.dragging * { transition: none !important; }
+.react-flow__node.dragging {
+  opacity: 0.9;
+  z-index: 1000 !important;
+}
+.react-flow__node.dragging * { 
+  transition: none !important; 
+  pointer-events: none !important; 
+}
 
 .react-flow__node:active { 
   cursor: grabbing; 
