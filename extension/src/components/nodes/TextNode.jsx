@@ -99,32 +99,32 @@ export const TextNode = memo(function TextNode({ id, data, selected }) {
       style={{ backgroundColor: surface }}
     >
       <NodeToolbar className="node-toolbar text-format-toolbar" isVisible={selected} position={Position.Top} align="center" offset={8}>
-        <div className="format-group" role="group" aria-label="Text emphasis">
-          <button type="button" onClick={() => setStyle({ fontWeight: style.fontWeight >= 700 ? (isSticky ? 500 : 600) : 700 })} aria-label="Bold" title="Bold" aria-pressed={style.fontWeight >= 700}><Bold size={16} /></button>
-          <button type="button" onClick={() => setStyle({ fontStyle: style.fontStyle === 'italic' ? 'normal' : 'italic' })} aria-label="Italic" title="Italic" aria-pressed={isActive('fontStyle', 'italic')}><Italic size={16} /></button>
-          <button type="button" onClick={() => setStyle({ textDecoration: style.textDecoration === 'underline' ? 'none' : 'underline' })} aria-label="Underline" title="Underline" aria-pressed={isActive('textDecoration', 'underline')}><Underline size={16} /></button>
-        </div>
-
-        <span className="format-divider" aria-hidden="true" />
-
-        <div className="format-group" role="group" aria-label="Text size">
-          <button type="button" onClick={() => setStyle({ fontSize: Math.max(14, style.fontSize - 2) })} aria-label="Decrease text size" title="Decrease text size"><Minus size={16} /></button>
-          <output className="font-size-output" aria-label={`Text size ${style.fontSize} pixels`}>{style.fontSize}</output>
-          <button type="button" onClick={() => setStyle({ fontSize: Math.min(32, style.fontSize + 2) })} aria-label="Increase text size" title="Increase text size"><Plus size={16} /></button>
-        </div>
-
-        <span className="format-divider" aria-hidden="true" />
-
-        <div className="format-group" role="group" aria-label="Text alignment">
-          <button type="button" onClick={() => setStyle({ textAlign: 'left' })} aria-label="Align left" title="Align left" aria-pressed={isActive('textAlign', 'left')}><AlignLeft size={16} /></button>
-          <button type="button" onClick={() => setStyle({ textAlign: 'center' })} aria-label="Align center" title="Align center" aria-pressed={isActive('textAlign', 'center')}><AlignCenter size={16} /></button>
-          <button type="button" onClick={() => setStyle({ textAlign: 'right' })} aria-label="Align right" title="Align right" aria-pressed={isActive('textAlign', 'right')}><AlignRight size={16} /></button>
-        </div>
-
-        <span className="format-divider" aria-hidden="true" />
-
         {isSticky && (
           <>
+            <div className="format-group" role="group" aria-label="Text emphasis">
+              <button type="button" onClick={() => setStyle({ fontWeight: style.fontWeight >= 700 ? 500 : 700 })} aria-label="Bold" title="Bold" aria-pressed={style.fontWeight >= 700}><Bold size={16} /></button>
+              <button type="button" onClick={() => setStyle({ fontStyle: style.fontStyle === 'italic' ? 'normal' : 'italic' })} aria-label="Italic" title="Italic" aria-pressed={isActive('fontStyle', 'italic')}><Italic size={16} /></button>
+              <button type="button" onClick={() => setStyle({ textDecoration: style.textDecoration === 'underline' ? 'none' : 'underline' })} aria-label="Underline" title="Underline" aria-pressed={isActive('textDecoration', 'underline')}><Underline size={16} /></button>
+            </div>
+
+            <span className="format-divider" aria-hidden="true" />
+
+            <div className="format-group" role="group" aria-label="Text size">
+              <button type="button" onClick={() => setStyle({ fontSize: Math.max(14, style.fontSize - 2) })} aria-label="Decrease text size" title="Decrease text size"><Minus size={16} /></button>
+              <output className="font-size-output" aria-label={`Text size ${style.fontSize} pixels`}>{style.fontSize}</output>
+              <button type="button" onClick={() => setStyle({ fontSize: Math.min(32, style.fontSize + 2) })} aria-label="Increase text size" title="Increase text size"><Plus size={16} /></button>
+            </div>
+
+            <span className="format-divider" aria-hidden="true" />
+
+            <div className="format-group" role="group" aria-label="Text alignment">
+              <button type="button" onClick={() => setStyle({ textAlign: 'left' })} aria-label="Align left" title="Align left" aria-pressed={isActive('textAlign', 'left')}><AlignLeft size={16} /></button>
+              <button type="button" onClick={() => setStyle({ textAlign: 'center' })} aria-label="Align center" title="Align center" aria-pressed={isActive('textAlign', 'center')}><AlignCenter size={16} /></button>
+              <button type="button" onClick={() => setStyle({ textAlign: 'right' })} aria-label="Align right" title="Align right" aria-pressed={isActive('textAlign', 'right')}><AlignRight size={16} /></button>
+            </div>
+
+            <span className="format-divider" aria-hidden="true" />
+
             <div className="format-swatches surface-swatches" role="group" aria-label="Sticky note color">
               {SURFACE_COLORS.map(color => (
                 <button
