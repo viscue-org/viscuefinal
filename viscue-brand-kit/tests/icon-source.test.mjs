@@ -97,3 +97,59 @@ test('every workspace action complies with category, keyword, and shape-safety c
   }
 });
 
+const productNames = [
+  'brand-mark', 'cue', 'vision', 'vision-region', 'vision-bypass', 'prompt', 'prompt-synthesis',
+  'semantic-graph', 'importance', 'gesture', 'reference-engine', 'execute', 'relation',
+  'one-to-many', 'many-to-one', 'branch', 'merge', 'flow', 'decision', 'group', 'ungroup',
+  'crop', 'frame', 'hand-pan', 'camera', 'duplicate', 'unlock', 'eye'
+];
+
+test('all 28 brand-specific product icons exist and match expected list', async () => {
+  const { ICON_DEFINITIONS } = await import('../icons/source/icon-definitions.js');
+  const brandNames = ICON_DEFINITIONS
+    .filter(icon => icon.brandSpecific)
+    .map(icon => icon.name)
+    .sort();
+  assert.deepEqual(brandNames, [...productNames].sort());
+  assert.equal(ICON_DEFINITIONS.length, 72);
+});
+
+test('exactly 72 unique names and brandSpecific is set only on the 28 product icons', async () => {
+  const { ICON_DEFINITIONS } = await import('../icons/source/icon-definitions.js');
+  const names = ICON_DEFINITIONS.map(i => i.name);
+  assert.equal(new Set(names).size, 72, 'Icon names must be unique');
+
+  const expectedBrandSet = new Set(productNames);
+  for (const icon of ICON_DEFINITIONS) {
+    if (icon.brandSpecific) {
+      assert.ok(expectedBrandSet.has(icon.name), `${icon.name} should not be brandSpecific`);
+    } else {
+      assert.ok(!expectedBrandSet.has(icon.name), `${icon.name} should be brandSpecific`);
+    }
+  }
+});
+
+test('all 72 icons pass schema validation and shape safety checks', async () => {
+  const { ICON_DEFINITIONS } = await import('../icons/source/icon-definitions.js');
+  const allCategories = new Set(['brand', 'system', 'canvas', 'format', 'media', 'action']);
+
+  for (const icon of ICON_DEFINITIONS) {
+    validateDefinition(icon);
+    assert.ok(allCategories.has(icon.category), `Icon ${icon.name} has invalid category: ${icon.category}`);
+    assert.ok(Array.isArray(icon.keywords) && icon.keywords.length >= 2 && icon.keywords.length <= 5,
+      `Icon ${icon.name} must have 2-5 keywords, found ${icon.keywords?.length}`);
+    assert.ok(icon.elements.length <= 12, `Icon ${icon.name} has too many elements: ${icon.elements.length}`);
+
+    for (const el of icon.elements) {
+      if (el.d !== undefined) {
+        assert.ok(typeof el.d === 'string' && el.d.trim().length > 0, `Icon ${icon.name} has empty path d`);
+      }
+      if (el.points !== undefined) {
+        assert.ok(typeof el.points === 'string' && el.points.trim().length > 0, `Icon ${icon.name} has empty points`);
+      }
+    }
+  }
+});
+
+
+

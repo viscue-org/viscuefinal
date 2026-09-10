@@ -4,16 +4,326 @@
  */
 
 export const ICON_DEFINITIONS = [
-  // --- Brand Mark & Concepts ---
+  // ==========================================
+  // --- Viscue-Specific Product Icons (28) ---
+  // ==========================================
+  {
+    name: 'brand-mark',
+    category: 'brand',
+    keywords: ['brand-mark', 'logo', 'viscue', 'identity', 'tile'],
+    brandSpecific: true,
+    elements: [
+      { type: 'rect', x: 2.5, y: 2.5, width: 19, height: 19, rx: 5 },
+      { type: 'path', d: 'M15 8.5a5 5 0 1 0 0 7' },
+      { type: 'line', x1: 12, y1: 12, x2: 17.5, y2: 12 }
+    ]
+  },
   {
     name: 'cue',
-    category: 'action',
+    category: 'brand',
     keywords: ['cue', 'dash', 'action', 'focus', 'brand'],
     brandSpecific: true,
     elements: [
       { type: 'line', x1: 5, y1: 12, x2: 19, y2: 12 }
     ]
   },
+  {
+    name: 'vision',
+    category: 'brand',
+    keywords: ['vision', 'eye', 'perception', 'sight', 'model'],
+    brandSpecific: true,
+    elements: [
+      { type: 'path', d: 'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z' },
+      { type: 'circle', cx: 12, cy: 12, r: 3.2 }
+    ]
+  },
+  {
+    name: 'vision-region',
+    category: 'brand',
+    keywords: ['vision-region', 'region', 'roi', 'focus', 'crop'],
+    brandSpecific: true,
+    elements: [
+      { type: 'path', d: 'M5 8V5h3' },
+      { type: 'path', d: 'M16 5h3v3' },
+      { type: 'path', d: 'M19 16v3h-3' },
+      { type: 'path', d: 'M8 19H5v-3' },
+      { type: 'path', d: 'M7 12s2-3.5 5-3.5 5 3.5 5 3.5-2 3.5-5 3.5-5-3.5-5-3.5Z' },
+      { type: 'circle', cx: 12, cy: 12, r: 1.6 }
+    ]
+  },
+  {
+    name: 'vision-bypass',
+    category: 'brand',
+    keywords: ['vision-bypass', 'bypass', 'skip', 'passthrough', 'route'],
+    brandSpecific: true,
+    elements: [
+      { type: 'line', x1: 3, y1: 12, x2: 8, y2: 12 },
+      { type: 'path', d: 'M8 12a4 4 0 0 1 8 0' },
+      { type: 'line', x1: 16, y1: 12, x2: 21, y2: 12 }
+    ]
+  },
+  {
+    name: 'prompt',
+    category: 'brand',
+    keywords: ['prompt', 'command', 'terminal', 'input', 'query'],
+    brandSpecific: true,
+    elements: [
+      { type: 'polyline', points: '5 7 10 12 5 17' },
+      { type: 'line', x1: 12, y1: 17, x2: 19, y2: 17 }
+    ]
+  },
+  {
+    name: 'prompt-synthesis',
+    category: 'brand',
+    keywords: ['prompt-synthesis', 'synthesis', 'merge', 'ai', 'generate'],
+    brandSpecific: true,
+    elements: [
+      { type: 'path', d: 'M3 6h5c3 0 5 4 7 6' },
+      { type: 'line', x1: 3, y1: 12, x2: 15, y2: 12 },
+      { type: 'path', d: 'M3 18h5c3 0 5-4 7-6' },
+      { type: 'line', x1: 15, y1: 12, x2: 21, y2: 12 }
+    ]
+  },
+  {
+    name: 'semantic-graph',
+    category: 'brand',
+    keywords: ['semantic-graph', 'graph', 'nodes', 'network', 'connect'],
+    brandSpecific: true,
+    elements: [
+      { type: 'circle', cx: 6, cy: 17, r: 3 },
+      { type: 'circle', cx: 18, cy: 17, r: 3 },
+      { type: 'circle', cx: 12, cy: 6, r: 3 },
+      { type: 'line', x1: 8.5, y1: 15, x2: 15.5, y2: 15 },
+      { type: 'line', x1: 7.5, y1: 14.5, x2: 10.5, y2: 8.5 },
+      { type: 'line', x1: 16.5, y1: 14.5, x2: 13.5, y2: 8.5 }
+    ]
+  },
+  {
+    name: 'importance',
+    category: 'brand',
+    keywords: ['importance', 'weight', 'priority', 'focal', 'significance'],
+    brandSpecific: true,
+    elements: [
+      { type: 'circle', cx: 12, cy: 12, r: 4 },
+      { type: 'line', x1: 12, y1: 3, x2: 12, y2: 5.5 },
+      { type: 'line', x1: 12, y1: 18.5, x2: 12, y2: 21 },
+      { type: 'line', x1: 3, y1: 12, x2: 5.5, y2: 12 },
+      { type: 'line', x1: 18.5, y1: 12, x2: 21, y2: 12 }
+    ]
+  },
+  {
+    name: 'gesture',
+    category: 'brand',
+    keywords: ['gesture', 'motion', 'touch', 'canvas', 'path'],
+    brandSpecific: true,
+    elements: [
+      { type: 'path', d: 'M4 18c4-1 6-7 9-7s4 4 7 2' },
+      { type: 'circle', cx: 20, cy: 13, r: 1.5 }
+    ]
+  },
+  {
+    name: 'reference-engine',
+    category: 'brand',
+    keywords: ['reference-engine', 'reference', 'stack', 'engine', 'source'],
+    brandSpecific: true,
+    elements: [
+      { type: 'rect', x: 7, y: 7, width: 13, height: 13, rx: 2.5 },
+      { type: 'path', d: 'M4 17V5a2 2 0 0 1 2-2h12' },
+      { type: 'circle', cx: 13.5, cy: 13.5, r: 2 }
+    ]
+  },
+  {
+    name: 'execute',
+    category: 'brand',
+    keywords: ['execute', 'run', 'play', 'trigger', 'start'],
+    brandSpecific: true,
+    elements: [
+      { type: 'line', x1: 3, y1: 12, x2: 7, y2: 12 },
+      { type: 'path', d: 'M8 6.5l11 5.5-11 5.5V6.5Z' }
+    ]
+  },
+  {
+    name: 'relation',
+    category: 'brand',
+    keywords: ['relation', 'link', 'connection', 'edge', 'bridge'],
+    brandSpecific: true,
+    elements: [
+      { type: 'circle', cx: 5, cy: 12, r: 2.5 },
+      { type: 'circle', cx: 19, cy: 12, r: 2.5 },
+      { type: 'path', d: 'M7.5 12h9' }
+    ]
+  },
+  {
+    name: 'one-to-many',
+    category: 'brand',
+    keywords: ['one-to-many', 'branch', 'distribute', 'split', 'expand'],
+    brandSpecific: true,
+    elements: [
+      { type: 'circle', cx: 4, cy: 12, r: 2 },
+      { type: 'path', d: 'M6 12h4c2 0 3-4 5-6h4' },
+      { type: 'path', d: 'M10 12h9' },
+      { type: 'path', d: 'M10 12c2 0 3 4 5 6h4' }
+    ]
+  },
+  {
+    name: 'many-to-one',
+    category: 'brand',
+    keywords: ['many-to-one', 'converge', 'unify', 'aggregate', 'merge'],
+    brandSpecific: true,
+    elements: [
+      { type: 'path', d: 'M5 6h4c2 0 3 4 5 6h4' },
+      { type: 'path', d: 'M5 12h9' },
+      { type: 'path', d: 'M5 18h4c2 0 3-4 5-6' },
+      { type: 'circle', cx: 20, cy: 12, r: 2 }
+    ]
+  },
+  {
+    name: 'branch',
+    category: 'brand',
+    keywords: ['branch', 'fork', 'git', 'split', 'route'],
+    brandSpecific: true,
+    elements: [
+      { type: 'circle', cx: 6, cy: 18, r: 2.5 },
+      { type: 'circle', cx: 6, cy: 6, r: 2.5 },
+      { type: 'circle', cx: 18, cy: 6, r: 2.5 },
+      { type: 'line', x1: 6, y1: 8.5, x2: 6, y2: 15.5 },
+      { type: 'path', d: 'M6 15c0-4.5 4-7.5 9.5-7.5' }
+    ]
+  },
+  {
+    name: 'merge',
+    category: 'brand',
+    keywords: ['merge', 'combine', 'unite', 'join', 'git'],
+    brandSpecific: true,
+    elements: [
+      { type: 'circle', cx: 6, cy: 6, r: 2.5 },
+      { type: 'circle', cx: 18, cy: 18, r: 2.5 },
+      { type: 'circle', cx: 18, cy: 6, r: 2.5 },
+      { type: 'line', x1: 18, y1: 8.5, x2: 18, y2: 15.5 },
+      { type: 'path', d: 'M6 6c5.5 0 9.5 3 9.5 7.5' }
+    ]
+  },
+  {
+    name: 'flow',
+    category: 'brand',
+    keywords: ['flow', 'stream', 'process', 'pipeline', 'continuity'],
+    brandSpecific: true,
+    elements: [
+      { type: 'path', d: 'M4 17c5 0 5-10 11-10h4' },
+      { type: 'polyline', points: '16 4 19 7 16 10' }
+    ]
+  },
+  {
+    name: 'decision',
+    category: 'brand',
+    keywords: ['decision', 'condition', 'branch', 'logic', 'choice'],
+    brandSpecific: true,
+    elements: [
+      { type: 'path', d: 'M12 3.5 19.5 12 12 20.5 4.5 12Z' },
+      { type: 'path', d: 'M19.5 12h3' },
+      { type: 'path', d: 'M12 20.5v3' }
+    ]
+  },
+  {
+    name: 'group',
+    category: 'brand',
+    keywords: ['group', 'combine', 'cluster', 'organize', 'selection'],
+    brandSpecific: true,
+    elements: [
+      { type: 'rect', x: 3, y: 3, width: 12, height: 12, rx: 2.5 },
+      { type: 'rect', x: 9, y: 9, width: 12, height: 12, rx: 2.5 }
+    ]
+  },
+  {
+    name: 'ungroup',
+    category: 'brand',
+    keywords: ['ungroup', 'separate', 'explode', 'detach', 'split'],
+    brandSpecific: true,
+    elements: [
+      { type: 'rect', x: 3, y: 3, width: 8, height: 8, rx: 2 },
+      { type: 'rect', x: 13, y: 13, width: 8, height: 8, rx: 2 },
+      { type: 'path', d: 'm14 10-4 4' }
+    ]
+  },
+  {
+    name: 'crop',
+    category: 'brand',
+    keywords: ['crop', 'trim', 'cut', 'frame', 'canvas'],
+    brandSpecific: true,
+    elements: [
+      { type: 'path', d: 'M6 2v14a2 2 0 0 0 2 2h14' },
+      { type: 'path', d: 'M18 22V8a2 2 0 0 0-2-2H2' }
+    ]
+  },
+  {
+    name: 'frame',
+    category: 'brand',
+    keywords: ['frame', 'artboard', 'viewport', 'screen', 'bounds'],
+    brandSpecific: true,
+    elements: [
+      { type: 'line', x1: 2, y1: 6, x2: 22, y2: 6 },
+      { type: 'line', x1: 2, y1: 18, x2: 22, y2: 18 },
+      { type: 'line', x1: 6, y1: 2, x2: 6, y2: 22 },
+      { type: 'line', x1: 18, y1: 2, x2: 18, y2: 22 }
+    ]
+  },
+  {
+    name: 'hand-pan',
+    category: 'brand',
+    keywords: ['hand-pan', 'pan', 'drag', 'canvas', 'navigate'],
+    brandSpecific: true,
+    elements: [
+      { type: 'path', d: 'M18 11V6a2 2 0 0 0-4 0v4' },
+      { type: 'path', d: 'M14 10V4a2 2 0 0 0-4 0v7' },
+      { type: 'path', d: 'M10 10.5V6a2 2 0 0 0-4 0v8a5 5 0 0 0 5 5h3a5 5 0 0 0 5-5v-3a2 2 0 0 0-4 0' }
+    ]
+  },
+  {
+    name: 'camera',
+    category: 'brand',
+    keywords: ['camera', 'capture', 'snapshot', 'lens', 'photo'],
+    brandSpecific: true,
+    elements: [
+      { type: 'path', d: 'M14.5 4h-5L7.5 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3.5L14.5 4z' },
+      { type: 'circle', cx: 12, cy: 14, r: 4 }
+    ]
+  },
+  {
+    name: 'duplicate',
+    category: 'brand',
+    keywords: ['duplicate', 'copy', 'clone', 'repeat', 'double'],
+    brandSpecific: true,
+    elements: [
+      { type: 'rect', x: 7, y: 7, width: 13, height: 13, rx: 2.5 },
+      { type: 'path', d: 'M4 17V5a2 2 0 0 1 2-2h12' },
+      { type: 'line', x1: 13.5, y1: 10.5, x2: 13.5, y2: 16.5 },
+      { type: 'line', x1: 10.5, y1: 13.5, x2: 16.5, y2: 13.5 }
+    ]
+  },
+  {
+    name: 'unlock',
+    category: 'brand',
+    keywords: ['unlock', 'open', 'access', 'security', 'permission'],
+    brandSpecific: true,
+    elements: [
+      { type: 'rect', x: 3, y: 11, width: 18, height: 11, rx: 2.5 },
+      { type: 'path', d: 'M7 11V7a5 5 0 0 1 9.9-1' }
+    ]
+  },
+  {
+    name: 'eye',
+    category: 'brand',
+    keywords: ['eye', 'view', 'visible', 'inspect', 'vision'],
+    brandSpecific: true,
+    elements: [
+      { type: 'path', d: 'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z' },
+      { type: 'circle', cx: 12, cy: 12, r: 3 }
+    ]
+  },
+
+  // ==========================================
+  // --- Workspace Actions (44) ---
+  // ==========================================
 
   // --- System ---
   {
