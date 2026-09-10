@@ -1,0 +1,934 @@
+[
+  {
+    "name": "align-center",
+    "category": "format",
+    "keywords": [
+      "align-center",
+      "align",
+      "text",
+      "center",
+      "layout"
+    ],
+    "brandSpecific": false,
+    "elementCount": 3
+  },
+  {
+    "name": "align-left",
+    "category": "format",
+    "keywords": [
+      "align-left",
+      "align",
+      "text",
+      "paragraph",
+      "layout"
+    ],
+    "brandSpecific": false,
+    "elementCount": 3
+  },
+  {
+    "name": "annotate",
+    "category": "canvas",
+    "keywords": [
+      "annotate",
+      "comment",
+      "markup",
+      "canvas",
+      "cue"
+    ],
+    "brandSpecific": false,
+    "elementCount": 2
+  },
+  {
+    "name": "annotation-tool",
+    "category": "canvas",
+    "keywords": [
+      "annotation-tool",
+      "pen",
+      "draw",
+      "tool",
+      "cue"
+    ],
+    "brandSpecific": false,
+    "elementCount": 3
+  },
+  {
+    "name": "area",
+    "category": "canvas",
+    "keywords": [
+      "area",
+      "select",
+      "region",
+      "bounds",
+      "box"
+    ],
+    "brandSpecific": false,
+    "elementCount": 5
+  },
+  {
+    "name": "bold",
+    "category": "format",
+    "keywords": [
+      "bold",
+      "text",
+      "font",
+      "weight",
+      "strong"
+    ],
+    "brandSpecific": false,
+    "elementCount": 2
+  },
+  {
+    "name": "branch",
+    "category": "brand",
+    "keywords": [
+      "branch",
+      "fork",
+      "git",
+      "split",
+      "route"
+    ],
+    "brandSpecific": true,
+    "elementCount": 5
+  },
+  {
+    "name": "brand-mark",
+    "category": "brand",
+    "keywords": [
+      "brand-mark",
+      "logo",
+      "viscue",
+      "identity",
+      "tile"
+    ],
+    "brandSpecific": true,
+    "elementCount": 3
+  },
+  {
+    "name": "camera",
+    "category": "brand",
+    "keywords": [
+      "camera",
+      "capture",
+      "snapshot",
+      "lens",
+      "photo"
+    ],
+    "brandSpecific": true,
+    "elementCount": 2
+  },
+  {
+    "name": "check",
+    "category": "action",
+    "keywords": [
+      "check",
+      "done",
+      "confirm",
+      "success",
+      "select"
+    ],
+    "brandSpecific": false,
+    "elementCount": 1
+  },
+  {
+    "name": "chevron-down",
+    "category": "system",
+    "keywords": [
+      "chevron",
+      "down",
+      "arrow",
+      "dropdown",
+      "expand"
+    ],
+    "brandSpecific": false,
+    "elementCount": 1
+  },
+  {
+    "name": "close",
+    "category": "system",
+    "keywords": [
+      "close",
+      "dismiss",
+      "cancel",
+      "exit",
+      "remove"
+    ],
+    "brandSpecific": false,
+    "elementCount": 2
+  },
+  {
+    "name": "collapse",
+    "category": "canvas",
+    "keywords": [
+      "collapse",
+      "minimize",
+      "shrink",
+      "dock",
+      "fold"
+    ],
+    "brandSpecific": false,
+    "elementCount": 4
+  },
+  {
+    "name": "copy",
+    "category": "action",
+    "keywords": [
+      "copy",
+      "duplicate",
+      "clone",
+      "clipboard"
+    ],
+    "brandSpecific": false,
+    "elementCount": 2
+  },
+  {
+    "name": "crop",
+    "category": "brand",
+    "keywords": [
+      "crop",
+      "trim",
+      "cut",
+      "frame",
+      "canvas"
+    ],
+    "brandSpecific": true,
+    "elementCount": 2
+  },
+  {
+    "name": "cue",
+    "category": "brand",
+    "keywords": [
+      "cue",
+      "dash",
+      "action",
+      "focus",
+      "brand"
+    ],
+    "brandSpecific": true,
+    "elementCount": 1
+  },
+  {
+    "name": "cursor",
+    "category": "canvas",
+    "keywords": [
+      "cursor",
+      "pointer",
+      "select",
+      "mouse",
+      "arrow"
+    ],
+    "brandSpecific": false,
+    "elementCount": 2
+  },
+  {
+    "name": "database",
+    "category": "system",
+    "keywords": [
+      "database",
+      "storage",
+      "data",
+      "server",
+      "archive"
+    ],
+    "brandSpecific": false,
+    "elementCount": 3
+  },
+  {
+    "name": "decision",
+    "category": "brand",
+    "keywords": [
+      "decision",
+      "condition",
+      "branch",
+      "logic",
+      "choice"
+    ],
+    "brandSpecific": true,
+    "elementCount": 3
+  },
+  {
+    "name": "download",
+    "category": "action",
+    "keywords": [
+      "download",
+      "export",
+      "save",
+      "retrieve"
+    ],
+    "brandSpecific": false,
+    "elementCount": 3
+  },
+  {
+    "name": "duplicate",
+    "category": "brand",
+    "keywords": [
+      "duplicate",
+      "copy",
+      "clone",
+      "repeat",
+      "double"
+    ],
+    "brandSpecific": true,
+    "elementCount": 4
+  },
+  {
+    "name": "eraser",
+    "category": "canvas",
+    "keywords": [
+      "eraser",
+      "clear",
+      "delete",
+      "wipe",
+      "canvas"
+    ],
+    "brandSpecific": false,
+    "elementCount": 2
+  },
+  {
+    "name": "execute",
+    "category": "brand",
+    "keywords": [
+      "execute",
+      "run",
+      "play",
+      "trigger",
+      "start"
+    ],
+    "brandSpecific": true,
+    "elementCount": 2
+  },
+  {
+    "name": "eye",
+    "category": "brand",
+    "keywords": [
+      "eye",
+      "view",
+      "visible",
+      "inspect",
+      "vision"
+    ],
+    "brandSpecific": true,
+    "elementCount": 2
+  },
+  {
+    "name": "eye-off",
+    "category": "system",
+    "keywords": [
+      "eye-off",
+      "hide",
+      "invisible",
+      "conceal",
+      "private"
+    ],
+    "brandSpecific": false,
+    "elementCount": 4
+  },
+  {
+    "name": "file-text",
+    "category": "media",
+    "keywords": [
+      "file-text",
+      "document",
+      "page",
+      "note",
+      "article"
+    ],
+    "brandSpecific": false,
+    "elementCount": 4
+  },
+  {
+    "name": "flow",
+    "category": "brand",
+    "keywords": [
+      "flow",
+      "stream",
+      "process",
+      "pipeline",
+      "continuity"
+    ],
+    "brandSpecific": true,
+    "elementCount": 2
+  },
+  {
+    "name": "frame",
+    "category": "brand",
+    "keywords": [
+      "frame",
+      "artboard",
+      "viewport",
+      "screen",
+      "bounds"
+    ],
+    "brandSpecific": true,
+    "elementCount": 4
+  },
+  {
+    "name": "gesture",
+    "category": "brand",
+    "keywords": [
+      "gesture",
+      "motion",
+      "touch",
+      "canvas",
+      "path"
+    ],
+    "brandSpecific": true,
+    "elementCount": 2
+  },
+  {
+    "name": "globe",
+    "category": "system",
+    "keywords": [
+      "globe",
+      "world",
+      "internet",
+      "network",
+      "web"
+    ],
+    "brandSpecific": false,
+    "elementCount": 3
+  },
+  {
+    "name": "grid",
+    "category": "canvas",
+    "keywords": [
+      "grid",
+      "layout",
+      "canvas",
+      "guides",
+      "view"
+    ],
+    "brandSpecific": false,
+    "elementCount": 4
+  },
+  {
+    "name": "group",
+    "category": "brand",
+    "keywords": [
+      "group",
+      "combine",
+      "cluster",
+      "organize",
+      "selection"
+    ],
+    "brandSpecific": true,
+    "elementCount": 2
+  },
+  {
+    "name": "hand-pan",
+    "category": "brand",
+    "keywords": [
+      "hand-pan",
+      "pan",
+      "drag",
+      "canvas",
+      "navigate"
+    ],
+    "brandSpecific": true,
+    "elementCount": 3
+  },
+  {
+    "name": "history",
+    "category": "action",
+    "keywords": [
+      "history",
+      "timeline",
+      "recent",
+      "clock",
+      "time"
+    ],
+    "brandSpecific": false,
+    "elementCount": 3
+  },
+  {
+    "name": "image",
+    "category": "media",
+    "keywords": [
+      "image",
+      "picture",
+      "photo",
+      "graphic",
+      "media"
+    ],
+    "brandSpecific": false,
+    "elementCount": 3
+  },
+  {
+    "name": "importance",
+    "category": "brand",
+    "keywords": [
+      "importance",
+      "weight",
+      "priority",
+      "focal",
+      "significance"
+    ],
+    "brandSpecific": true,
+    "elementCount": 5
+  },
+  {
+    "name": "italic",
+    "category": "format",
+    "keywords": [
+      "italic",
+      "text",
+      "oblique",
+      "slant",
+      "style"
+    ],
+    "brandSpecific": false,
+    "elementCount": 3
+  },
+  {
+    "name": "link",
+    "category": "action",
+    "keywords": [
+      "link",
+      "hyperlink",
+      "connect",
+      "url",
+      "chain"
+    ],
+    "brandSpecific": false,
+    "elementCount": 3
+  },
+  {
+    "name": "lock",
+    "category": "system",
+    "keywords": [
+      "lock",
+      "security",
+      "protect",
+      "private",
+      "secure"
+    ],
+    "brandSpecific": false,
+    "elementCount": 2
+  },
+  {
+    "name": "many-to-one",
+    "category": "brand",
+    "keywords": [
+      "many-to-one",
+      "converge",
+      "unify",
+      "aggregate",
+      "merge"
+    ],
+    "brandSpecific": true,
+    "elementCount": 4
+  },
+  {
+    "name": "merge",
+    "category": "brand",
+    "keywords": [
+      "merge",
+      "combine",
+      "unite",
+      "join",
+      "git"
+    ],
+    "brandSpecific": true,
+    "elementCount": 5
+  },
+  {
+    "name": "moon",
+    "category": "system",
+    "keywords": [
+      "moon",
+      "dark",
+      "night",
+      "theme",
+      "mode"
+    ],
+    "brandSpecific": false,
+    "elementCount": 1
+  },
+  {
+    "name": "more-stack",
+    "category": "action",
+    "keywords": [
+      "more",
+      "stack",
+      "layers",
+      "menu",
+      "overflow"
+    ],
+    "brandSpecific": false,
+    "elementCount": 3
+  },
+  {
+    "name": "one-to-many",
+    "category": "brand",
+    "keywords": [
+      "one-to-many",
+      "branch",
+      "distribute",
+      "split",
+      "expand"
+    ],
+    "brandSpecific": true,
+    "elementCount": 4
+  },
+  {
+    "name": "pencil",
+    "category": "canvas",
+    "keywords": [
+      "pencil",
+      "draw",
+      "edit",
+      "sketch",
+      "write"
+    ],
+    "brandSpecific": false,
+    "elementCount": 2
+  },
+  {
+    "name": "plus",
+    "category": "action",
+    "keywords": [
+      "plus",
+      "add",
+      "create",
+      "new",
+      "insert"
+    ],
+    "brandSpecific": false,
+    "elementCount": 2
+  },
+  {
+    "name": "prompt",
+    "category": "brand",
+    "keywords": [
+      "prompt",
+      "command",
+      "terminal",
+      "input",
+      "query"
+    ],
+    "brandSpecific": true,
+    "elementCount": 2
+  },
+  {
+    "name": "prompt-synthesis",
+    "category": "brand",
+    "keywords": [
+      "prompt-synthesis",
+      "synthesis",
+      "merge",
+      "ai",
+      "generate"
+    ],
+    "brandSpecific": true,
+    "elementCount": 4
+  },
+  {
+    "name": "redo",
+    "category": "action",
+    "keywords": [
+      "redo",
+      "forward",
+      "again",
+      "history",
+      "arrow"
+    ],
+    "brandSpecific": false,
+    "elementCount": 2
+  },
+  {
+    "name": "reference-engine",
+    "category": "brand",
+    "keywords": [
+      "reference-engine",
+      "reference",
+      "stack",
+      "engine",
+      "source"
+    ],
+    "brandSpecific": true,
+    "elementCount": 3
+  },
+  {
+    "name": "relation",
+    "category": "brand",
+    "keywords": [
+      "relation",
+      "link",
+      "connection",
+      "edge",
+      "bridge"
+    ],
+    "brandSpecific": true,
+    "elementCount": 3
+  },
+  {
+    "name": "reset",
+    "category": "action",
+    "keywords": [
+      "reset",
+      "reload",
+      "refresh",
+      "revert",
+      "restart"
+    ],
+    "brandSpecific": false,
+    "elementCount": 2
+  },
+  {
+    "name": "save",
+    "category": "action",
+    "keywords": [
+      "save",
+      "disk",
+      "store",
+      "commit",
+      "keep"
+    ],
+    "brandSpecific": false,
+    "elementCount": 3
+  },
+  {
+    "name": "search",
+    "category": "system",
+    "keywords": [
+      "search",
+      "find",
+      "lookup",
+      "query",
+      "explore"
+    ],
+    "brandSpecific": false,
+    "elementCount": 2
+  },
+  {
+    "name": "semantic-graph",
+    "category": "brand",
+    "keywords": [
+      "semantic-graph",
+      "graph",
+      "nodes",
+      "network",
+      "connect"
+    ],
+    "brandSpecific": true,
+    "elementCount": 6
+  },
+  {
+    "name": "settings",
+    "category": "system",
+    "keywords": [
+      "settings",
+      "gear",
+      "preferences",
+      "configure",
+      "options"
+    ],
+    "brandSpecific": false,
+    "elementCount": 4
+  },
+  {
+    "name": "share",
+    "category": "action",
+    "keywords": [
+      "share",
+      "send",
+      "link",
+      "social",
+      "export"
+    ],
+    "brandSpecific": false,
+    "elementCount": 5
+  },
+  {
+    "name": "sliders",
+    "category": "system",
+    "keywords": [
+      "sliders",
+      "controls",
+      "adjust",
+      "filters",
+      "settings"
+    ],
+    "brandSpecific": false,
+    "elementCount": 6
+  },
+  {
+    "name": "sticky-note",
+    "category": "canvas",
+    "keywords": [
+      "sticky-note",
+      "note",
+      "memo",
+      "canvas",
+      "card"
+    ],
+    "brandSpecific": false,
+    "elementCount": 2
+  },
+  {
+    "name": "text",
+    "category": "format",
+    "keywords": [
+      "text",
+      "type",
+      "typography",
+      "font",
+      "label"
+    ],
+    "brandSpecific": false,
+    "elementCount": 2
+  },
+  {
+    "name": "text-tool",
+    "category": "canvas",
+    "keywords": [
+      "text-tool",
+      "text",
+      "type",
+      "insert",
+      "tool"
+    ],
+    "brandSpecific": false,
+    "elementCount": 3
+  },
+  {
+    "name": "trash",
+    "category": "action",
+    "keywords": [
+      "trash",
+      "delete",
+      "remove",
+      "bin",
+      "discard"
+    ],
+    "brandSpecific": false,
+    "elementCount": 5
+  },
+  {
+    "name": "underline",
+    "category": "format",
+    "keywords": [
+      "underline",
+      "text",
+      "format",
+      "style"
+    ],
+    "brandSpecific": false,
+    "elementCount": 2
+  },
+  {
+    "name": "undo",
+    "category": "action",
+    "keywords": [
+      "undo",
+      "revert",
+      "back",
+      "history",
+      "arrow"
+    ],
+    "brandSpecific": false,
+    "elementCount": 2
+  },
+  {
+    "name": "ungroup",
+    "category": "brand",
+    "keywords": [
+      "ungroup",
+      "separate",
+      "explode",
+      "detach",
+      "split"
+    ],
+    "brandSpecific": true,
+    "elementCount": 3
+  },
+  {
+    "name": "unlock",
+    "category": "brand",
+    "keywords": [
+      "unlock",
+      "open",
+      "access",
+      "security",
+      "permission"
+    ],
+    "brandSpecific": true,
+    "elementCount": 2
+  },
+  {
+    "name": "upload",
+    "category": "action",
+    "keywords": [
+      "upload",
+      "import",
+      "publish",
+      "send"
+    ],
+    "brandSpecific": false,
+    "elementCount": 3
+  },
+  {
+    "name": "video",
+    "category": "media",
+    "keywords": [
+      "video",
+      "camera",
+      "recording",
+      "movie",
+      "stream"
+    ],
+    "brandSpecific": false,
+    "elementCount": 2
+  },
+  {
+    "name": "vision",
+    "category": "brand",
+    "keywords": [
+      "vision",
+      "eye",
+      "perception",
+      "sight",
+      "model"
+    ],
+    "brandSpecific": true,
+    "elementCount": 2
+  },
+  {
+    "name": "vision-bypass",
+    "category": "brand",
+    "keywords": [
+      "vision-bypass",
+      "bypass",
+      "skip",
+      "passthrough",
+      "route"
+    ],
+    "brandSpecific": true,
+    "elementCount": 3
+  },
+  {
+    "name": "vision-region",
+    "category": "brand",
+    "keywords": [
+      "vision-region",
+      "region",
+      "roi",
+      "focus",
+      "crop"
+    ],
+    "brandSpecific": true,
+    "elementCount": 6
+  },
+  {
+    "name": "wand",
+    "category": "action",
+    "keywords": [
+      "wand",
+      "magic",
+      "ai",
+      "generate",
+      "sparkle"
+    ],
+    "brandSpecific": false,
+    "elementCount": 3
+  }
+]
