@@ -12,7 +12,7 @@
   --workspace-radius-compact: 10px;
   --workspace-radius-control: 14px;
   --workspace-radius-card: 18px;
-  --workspace-radius-container: 24px;
+  --workspace-radius-container: 20.5px;
   --workspace-shadow: 0 12px 32px rgba(35, 54, 72, 0.12);
 }
 
@@ -76,6 +76,21 @@
   background: transparent;
   transition: background 160ms ease, color 160ms ease, transform 160ms ease;
 }
+
+.workspace-dock__button svg,
+.workspace-dock__option svg,
+.workspace-utilities__rail button svg,
+.workspace-history button svg {
+  display: block;
+  flex-shrink: 0;
+  shape-rendering: geometricPrecision;
+  transition: transform 160ms ease;
+}
+
+.workspace-dock__button:hover:not(:disabled) svg {
+  transform: scale(1.06);
+}
+
 
 .workspace-dock__button::after {
   content: attr(aria-label);

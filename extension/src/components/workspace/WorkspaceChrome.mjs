@@ -1,54 +1,54 @@
 import React from 'react';
 import {
-  ArrowUUpLeft,
-  ArrowUUpRight,
-  ArrowsClockwise,
-  BoundingBox,
-  Cursor,
-  ClockCounterClockwise,
-  Eraser,
-  FileText,
-  Globe,
-  Image,
-  Hand,
-  CaretDown,
-  ChatCircle,
-  Moon,
-  Note,
-  PencilSimple,
-  Plus,
-  Selection,
-  Sun,
-  TextT,
-  VideoCamera,
-  X,
-  Export,
-  Trash,
-  DownloadSimple
-} from '@phosphor-icons/react';
+  HandPanIcon,
+  PlusIcon,
+  AnnotateIcon,
+  TextIcon,
+  ResetIcon,
+  UndoIcon,
+  RedoIcon,
+  ChevronDownIcon,
+  ImageIcon,
+  VideoIcon,
+  FileTextIcon,
+  GlobeIcon,
+  CursorIcon,
+  AreaIcon,
+  FrameIcon,
+  PencilIcon,
+  EraserIcon,
+  StickyNoteIcon,
+  MoonIcon,
+  HistoryIcon,
+  CloseIcon,
+  ShareIcon,
+  TrashIcon,
+  UploadIcon,
+} from '../../../../viscue-brand-kit/icons/react/index.js';
 import { getSelectedTool } from './workspaceChromeModel.mjs';
 
 const h = React.createElement;
 
 const MENU_OPTIONS = Object.freeze({
   assets: [
-    ['image', 'Image', Image],
-    ['video', 'Video', VideoCamera],
-    ['document', 'Document', FileText],
-    ['web', 'Web page', Globe],
+    ['image', 'Image', ImageIcon],
+    ['video', 'Video', VideoIcon],
+    ['document', 'Document', FileTextIcon],
+    ['web', 'Web page', GlobeIcon],
   ],
   annotate: [
-    ['annotate', 'Point', Cursor],
-    ['area', 'Area', Selection],
-    ['whole', 'Whole image', BoundingBox],
-    ['draw', 'Draw', PencilSimple],
-    ['erase', 'Erase', Eraser],
+    ['annotate', 'Point', CursorIcon],
+    ['area', 'Area', AreaIcon],
+    ['whole', 'Whole image', FrameIcon],
+    ['draw', 'Draw', PencilIcon],
+    ['erase', 'Erase', EraserIcon],
   ],
   text: [
-    ['text', 'Text', TextT],
-    ['s-note', 'Sticky note', Note],
+    ['text', 'Text', TextIcon],
+    ['s-note', 'Sticky note', StickyNoteIcon],
   ],
 });
+
 
 function icon(Icon, size = 18, name) {
   return h(Icon, { size, weight: 'regular', 'aria-hidden': true, 'data-icon': name });
@@ -107,12 +107,12 @@ export function WorkspaceCommandDock({
         'aria-label': 'Minimize menu',
         title: 'Minimize menu',
         onClick: () => onMenuChange(null),
-      }, icon(CaretDown, 20)),
+      }, icon(ChevronDownIcon, 20)),
       h('div', { className: 'workspace-dock__rail' },
         openMenu ? h(React.Fragment, null,
           openMenu === 'history' ? h(React.Fragment, null,
-            h(DockButton, { label: 'Undo', disabled: !canUndo, onClick: () => onCommand('undo') }, icon(ArrowUUpLeft, 26, 'undo')),
-            h(DockButton, { label: 'Redo', disabled: !canRedo, onClick: () => onCommand('redo') }, icon(ArrowUUpRight, 26, 'redo'))
+            h(DockButton, { label: 'Undo', disabled: !canUndo, onClick: () => onCommand('undo') }, icon(UndoIcon, 26, 'undo')),
+            h(DockButton, { label: 'Redo', disabled: !canRedo, onClick: () => onCommand('redo') }, icon(RedoIcon, 26, 'redo'))
           ) : (MENU_OPTIONS[openMenu] || []).map(([value, label, Icon]) => h(DockButton, {
             key: value,
             label,
@@ -131,19 +131,19 @@ export function WorkspaceCommandDock({
             label: 'Select',
             pressed: selected === 'select',
             onClick: () => onCommand('select'),
-          }, icon(Hand, 26, 'hand')),
+          }, icon(HandPanIcon, 26, 'hand')),
           h(DockButton, {
             key: 'assets', label: 'Add assets', pressed: mode === 'assets', expanded: openMenu === 'assets', controls: 'workspace-assets-menu',
             onClick: () => onMenuChange(openMenu === 'assets' ? null : 'assets'),
-          }, icon(Plus, 26, 'plus')),
+          }, icon(PlusIcon, 26, 'plus')),
           h(DockButton, {
             key: 'annotate', label: 'Annotate', pressed: mode === 'annotate', expanded: openMenu === 'annotate', controls: 'workspace-annotate-menu',
             onClick: () => onMenuChange(openMenu === 'annotate' ? null : 'annotate'),
-          }, icon(ChatCircle, 26, 'annotation')),
+          }, icon(AnnotateIcon, 26, 'annotation')),
           h(DockButton, {
             key: 'text', label: 'Add text', pressed: mode === 'text', expanded: openMenu === 'text', controls: 'workspace-text-menu',
             onClick: () => onMenuChange(openMenu === 'text' ? null : 'text'),
-          }, icon(TextT, 26, 'text')),
+          }, icon(TextIcon, 26, 'text')),
           h('span', { className: 'workspace-dock__divider', 'aria-hidden': true }),
           h(DockButton, {
             label: 'Undo and redo',
@@ -151,7 +151,7 @@ export function WorkspaceCommandDock({
             expanded: openMenu === 'history',
             controls: 'workspace-history-menu',
             onClick: () => onMenuChange(openMenu === 'history' ? null : 'history'),
-          }, icon(ArrowsClockwise, 26, 'undo')),
+          }, icon(ResetIcon, 26, 'undo')),
         )
       ),
       !openMenu && h('button', {
@@ -201,19 +201,19 @@ export function WorkspaceUtilities({
         'aria-label': dark ? 'Switch to light mode' : 'Switch to dark mode',
         title: dark ? 'Light mode' : 'Dark mode',
         onClick: onThemeToggle,
-      }, icon(dark ? Sun : Moon, 19, 'theme')),
+      }, icon(MoonIcon, 19, 'theme')),
       h('button', {
         type: 'button',
         'aria-label': 'Open history',
         title: 'History',
         onClick: onHistoryOpen,
-      }, icon(ClockCounterClockwise, 19, 'history')),
+      }, icon(HistoryIcon, 19, 'history')),
       h('button', {
         type: 'button',
         'aria-label': 'Clear workspace',
         title: 'Clear workspace',
         onClick: onClose,
-      }, icon(X, 19, 'close')),
+      }, icon(CloseIcon, 19, 'close')),
     ),
   );
 }
@@ -240,7 +240,7 @@ export function WorkspaceHistory({ items = [], historyConfig = { autoDeleteHours
   return h('section', { className: 'workspace-history', role: 'dialog', 'aria-modal': true, 'aria-label': 'History' },
     items.length === 0
       ? h('div', { className: 'workspace-history__empty' },
-          icon(ClockCounterClockwise, 28),
+          icon(HistoryIcon, 28),
           h('p', null, 'Your saved workspace states will appear here.'),
         )
       : h('div', { className: 'workspace-history__list' }, items.map((item, index) => {
@@ -252,8 +252,8 @@ export function WorkspaceHistory({ items = [], historyConfig = { autoDeleteHours
           ),
           h('div', { className: 'workspace-history__actions' },
             h('button', { type: 'button', className: 'workspace-history__restore', onClick: () => onRestore(item) }, 'Restore'),
-            h('button', { type: 'button', 'aria-label': `Export ${title}`, title: 'Export workspace', onClick: () => onExport(item) }, icon(Export, 20)),
-            h('button', { type: 'button', 'aria-label': `Delete ${title}`, title: 'Delete workspace', onClick: () => onDelete(item.id) }, icon(Trash, 20)),
+            h('button', { type: 'button', 'aria-label': `Export ${title}`, title: 'Export workspace', onClick: () => onExport(item) }, icon(ShareIcon, 20)),
+            h('button', { type: 'button', 'aria-label': `Delete ${title}`, title: 'Delete workspace', onClick: () => onDelete(item.id) }, icon(TrashIcon, 20)),
           ),
         );
       })),
@@ -270,11 +270,12 @@ export function WorkspaceHistory({ items = [], historyConfig = { autoDeleteHours
     h('div', { className: 'workspace-history__bottom-bar' },
       h('h2', { id: 'workspace-history-title' }, 'History'),
       h('div', { className: 'workspace-history__bottom-actions' },
-        h('button', { type: 'button', className: 'workspace-history__action-btn', 'aria-label': 'Import workspace', title: 'Import', onClick: onImport }, icon(DownloadSimple, 32)),
+        h('button', { type: 'button', className: 'workspace-history__action-btn', 'aria-label': 'Import workspace', title: 'Import', onClick: onImport }, icon(UploadIcon, 32)),
       ),
       h('div', { className: 'workspace-history__close-cutout' },
-        h('button', { type: 'button', className: 'workspace-history__close-btn', 'aria-label': 'Close history', title: 'Close history', onClick: onClose }, icon(X, 32))
+        h('button', { type: 'button', className: 'workspace-history__close-btn', 'aria-label': 'Close history', title: 'Close history', onClick: onClose }, icon(CloseIcon, 32))
       )
     )
   );
 }
+
