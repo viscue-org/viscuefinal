@@ -1,0 +1,15 @@
+{
+  "name": "viscue-brand-kit",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:icons": "node scripts/build-icons.mjs",
+    "validate:icons": "node scripts/validate-icons.mjs",
+    "test": "node --test tests/icon-source.test.mjs tests/icon-output.test.mjs"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
+  }
+}
