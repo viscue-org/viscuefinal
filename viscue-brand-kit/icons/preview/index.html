@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Viscue Icon Library - Humanist Flow System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-canvas: #0D1117;
+      --bg-surface: #161B22;
+      --bg-subtle: #21262D;
+      --border-subtle: rgba(240, 246, 252, 0.1);
+      --border-active: #5B7593;
+      --text-main: #F0F6FC;
+      --text-muted: #8B949E;
+      --brand-primary: #5B7593;
+      --brand-accent: #7D97B5;
+      --brand-glow: rgba(91, 117, 147, 0.25);
+      --surface-light: #F8FAFC;
+      --surface-dark: #0D1117;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    [data-theme="light"] {
+      --bg-canvas: #F8FAFC;
+      --bg-surface: #FFFFFF;
+      --bg-subtle: #F1F5F9;
+      --border-subtle: rgba(15, 23, 42, 0.1);
+      --border-active: #5B7593;
+      --text-main: #0F172A;
+      --text-muted: #64748B;
+      --brand-primary: #4A6380;
+      --brand-accent: #334A64;
+      --brand-glow: rgba(74, 99, 128, 0.15);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-canvas);
+      color: var(--text-main);
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 24px 32px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(12px);
+    }
+
+    .header-content {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .brand-title {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-tile {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, #5B7593, #435B74);
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      box-shadow: 0 4px 14px var(--brand-glow);
+      color: #FFFFFF;
+    }
+
+    .brand-text h1 {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-text p {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .theme-toggle, .btn {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .theme-toggle:hover, .btn:hover {
+      border-color: var(--border-active);
+      background: var(--bg-surface);
+    }
+
+    .btn-primary {
+      background: var(--brand-primary);
+      color: #FFFFFF;
+      border-color: var(--brand-primary);
+    }
+    .btn-primary:hover {
+      background: var(--brand-accent);
+    }
+
+    main {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 32px;
+      width: 100%;
+      flex: 1;
+    }
+
+    .controls-panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      margin-bottom: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .search-row {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .search-input-wrap {
+      flex: 1;
+      min-width: 280px;
+      position: relative;
+    }
+
+    .search-input {
+      width: 100%;
+      background: var(--bg-canvas);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      padding: 10px 16px 10px 42px;
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-input:focus {
+      border-color: var(--border-active);
+      box-shadow: 0 0 0 3px var(--brand-glow);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .slider-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .slider-group input[type="range"] {
+      accent-color: var(--brand-primary);
+    }
+
+    .category-pills {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      background: var(--bg-canvas);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .pill:hover {
+      color: var(--text-main);
+      border-color: var(--border-active);
+    }
+
+    .pill.active {
+      background: var(--brand-primary);
+      color: #FFFFFF;
+      border-color: var(--brand-primary);
+    }
+
+    .stats-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .icon-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .icon-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: all 0.2s ease;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .icon-card:hover {
+      border-color: var(--border-active);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .badge {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: var(--bg-subtle);
+      color: var(--text-muted);
+    }
+
+    .badge-brand {
+      background: rgba(91, 117, 147, 0.2);
+      color: #8CAECF;
+      border: 1px solid rgba(91, 117, 147, 0.4);
+    }
+
+    .sizes-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 18px;
+      padding: 12px;
+      background: var(--bg-canvas);
+      border-radius: var(--radius-sm);
+      justify-content: center;
+    }
+
+    .size-sample {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .size-sample span {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+    }
+
+    .icon-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .icon-name {
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--text-main);
+    }
+
+    .icon-export {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .icon-keywords {
+      font-size: 11px;
+      color: var(--text-muted);
+      opacity: 0.8;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Modal Drawer */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal-content {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      width: 100%;
+      max-width: 580px;
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      position: relative;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .modal-title h2 {
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .close-modal-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 20px;
+      padding: 4px;
+    }
+    .close-modal-btn:hover { color: var(--text-main); }
+
+    .modal-surfaces {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .surface-tile {
+      padding: 24px;
+      border-radius: var(--radius-md);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .surface-tile.dark {
+      background: #0D1117;
+      color: #F0F6FC;
+    }
+
+    .surface-tile.light {
+      background: #FFFFFF;
+      color: #0F172A;
+    }
+
+    .code-snippet {
+      background: var(--bg-canvas);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-main);
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--brand-primary);
+      color: #FFFFFF;
+      padding: 10px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+      z-index: 200;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body data-theme="dark">
+  <header>
+    <div class="header-content">
+      <div class="brand-title">
+        <div class="brand-tile">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2.5" y="2.5" width="19" height="19" rx="5" />
+            <path d="M15 8.5a5 5 0 1 0 0 7" />
+            <line x1="12" y1="12" x2="17.5" y2="12" />
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>Viscue Icon Library</h1>
+          <p>Humanist Flow System • 72 Production Icons</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="themeToggle" class="theme-toggle" type="button" aria-label="Toggle light/dark theme">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/></svg>
+          Theme
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="controls-panel">
+      <div class="search-row">
+        <div class="search-input-wrap">
+          <span class="search-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7.5"/><path d="m16.5 16.5 4.5 4.5"/></svg>
+          </span>
+          <input type="text" id="searchInput" class="search-input" placeholder="Search 72 icons by name, keyword, or action..." autocomplete="off">
+        </div>
+        <div class="slider-group">
+          <label for="strokeSlider">Stroke:</label>
+          <input type="range" id="strokeSlider" min="1.0" max="3.0" step="0.2" value="1.8">
+          <span id="strokeValue">1.8px</span>
+        </div>
+      </div>
+
+      <div class="category-pills" id="categoryPills">
+        <button class="pill active" data-cat="all">All (72)</button>
+        <button class="pill" data-cat="brand">Brand (28)</button>
+        <button class="pill" data-cat="action">Action (15)</button>
+        <button class="pill" data-cat="canvas">Canvas (10)</button>
+        <button class="pill" data-cat="system">System (10)</button>
+        <button class="pill" data-cat="format">Format (6)</button>
+        <button class="pill" data-cat="media">Media (3)</button>
+      </div>
+    </div>
+
+    <div class="stats-bar">
+      <span id="matchStats">Showing 72 of 72 icons</span>
+      <span>Click any icon for multi-theme inspection &amp; code</span>
+    </div>
+
+    <div class="icon-grid" id="iconGrid"></div>
+  </main>
+
+  <!-- Modal for inspecting icon -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">
+          <h2 id="modalIconName">Vision</h2>
+          <p id="modalIconExport" class="icon-export">VisionIcon</p>
+        </div>
+        <button class="close-modal-btn" id="closeModalBtn">&times;</button>
+      </div>
+
+      <div class="modal-surfaces">
+        <div class="surface-tile dark">
+          <div id="modalDarkPreview"></div>
+          <span style="font-size: 11px; opacity: 0.7;">Dark Surface</span>
+        </div>
+        <div class="surface-tile light">
+          <div id="modalLightPreview"></div>
+          <span style="font-size: 11px; opacity: 0.7;">Light Surface</span>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 8px;">
+        <button class="btn btn-primary" id="copySvgBtn" style="flex: 1;">Copy SVG</button>
+        <button class="btn" id="copyReactBtn" style="flex: 1;">Copy React Import</button>
+      </div>
+
+      <div class="code-snippet" id="modalCodeSnippet"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">Copied to clipboard!</div>
+
+  <script type="module">
+    import { ICON_DEFINITIONS } from '../source/icon-definitions.js';
+    import { renderSvg, toPascalCase } from '../source/render-icon.js';
+
+    let currentCategory = 'all';
+    let searchQuery = '';
+    let currentStroke = 1.8;
+    let selectedIcon = null;
+
+    const grid = document.getElementById('iconGrid');
+    const searchInput = document.getElementById('searchInput');
+    const categoryPills = document.getElementById('categoryPills');
+    const strokeSlider = document.getElementById('strokeSlider');
+    const strokeValue = document.getElementById('strokeValue');
+    const matchStats = document.getElementById('matchStats');
+    const themeToggle = document.getElementById('themeToggle');
+    const toast = document.getElementById('toast');
+
+    // Modal elements
+    const modalOverlay = document.getElementById('modalOverlay');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const modalIconName = document.getElementById('modalIconName');
+    const modalIconExport = document.getElementById('modalIconExport');
+    const modalDarkPreview = document.getElementById('modalDarkPreview');
+    const modalLightPreview = document.getElementById('modalLightPreview');
+    const modalCodeSnippet = document.getElementById('modalCodeSnippet');
+    const copySvgBtn = document.getElementById('copySvgBtn');
+    const copyReactBtn = document.getElementById('copyReactBtn');
+
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2000);
+    }
+
+    function renderIcons() {
+      const filtered = ICON_DEFINITIONS.filter(def => {
+        const matchesCat = currentCategory === 'all' || def.category === currentCategory;
+        const q = searchQuery.toLowerCase().trim();
+        const matchesSearch = !q ||
+          def.name.toLowerCase().includes(q) ||
+          (def.keywords && def.keywords.some(k => k.toLowerCase().includes(q))) ||
+          def.category.toLowerCase().includes(q);
+        return matchesCat && matchesSearch;
+      });
+
+      matchStats.textContent = `Showing ${filtered.length} of ${ICON_DEFINITIONS.length} icons`;
+      grid.innerHTML = '';
+
+      for (const def of filtered) {
+        const card = document.createElement('div');
+        card.className = 'icon-card';
+        card.setAttribute('data-name', def.name);
+
+        const pascalName = `${toPascalCase(def.name)}Icon`;
+        const badgeClass = def.brandSpecific ? 'badge badge-brand' : 'badge';
+
+        const svg16 = renderSvg(def, { size: 16, strokeWidth: currentStroke });
+        const svg20 = renderSvg(def, { size: 20, strokeWidth: currentStroke });
+        const svg24 = renderSvg(def, { size: 24, strokeWidth: currentStroke });
+        const svg32 = renderSvg(def, { size: 32, strokeWidth: currentStroke });
+
+        card.innerHTML = `
+          <div class="card-top">
+            <span class="${badgeClass}">${def.category}</span>
+            ${def.brandSpecific ? '<span style="font-size: 10px; color: #8CAECF;">Brand</span>' : ''}
+          </div>
+          <div class="sizes-row">
+            <div class="size-sample"><div style="width:16px;height:16px;">${svg16}</div><span>16</span></div>
+            <div class="size-sample"><div style="width:20px;height:20px;">${svg20}</div><span>20</span></div>
+            <div class="size-sample"><div style="width:24px;height:24px;">${svg24}</div><span>24</span></div>
+            <div class="size-sample"><div style="width:32px;height:32px;">${svg32}</div><span>32</span></div>
+          </div>
+          <div class="icon-info">
+            <span class="icon-name">${def.name}</span>
+            <span class="icon-export">${pascalName}</span>
+            <span class="icon-keywords">${def.keywords.join(', ')}</span>
+          </div>
+        `;
+
+        card.addEventListener('click', () => openModal(def));
+        grid.appendChild(card);
+      }
+    }
+
+    function openModal(def) {
+      selectedIcon = def;
+      const pascalName = `${toPascalCase(def.name)}Icon`;
+      modalIconName.textContent = def.name;
+      modalIconExport.textContent = `<${pascalName} size={24} strokeWidth={${currentStroke}} />`;
+
+      const previewSvg = renderSvg(def, { size: 48, strokeWidth: currentStroke });
+      modalDarkPreview.innerHTML = previewSvg;
+      modalLightPreview.innerHTML = previewSvg;
+
+      modalCodeSnippet.textContent = renderSvg(def, { strokeWidth: currentStroke });
+      modalOverlay.classList.add('open');
+    }
+
+    closeModalBtn.addEventListener('click', () => modalOverlay.classList.remove('open'));
+    modalOverlay.addEventListener('click', (e) => {
+      if (e.target === modalOverlay) modalOverlay.classList.remove('open');
+    });
+
+    copySvgBtn.addEventListener('click', () => {
+      if (!selectedIcon) return;
+      navigator.clipboard.writeText(renderSvg(selectedIcon, { strokeWidth: currentStroke }))
+        .then(() => showToast(`Copied <${selectedIcon.name}> SVG!`));
+    });
+
+    copyReactBtn.addEventListener('click', () => {
+      if (!selectedIcon) return;
+      const pascalName = `${toPascalCase(selectedIcon.name)}Icon`;
+      const code = `import { ${pascalName} } from 'viscue-brand-kit/icons/react';\n\n<${pascalName} size={24} />`;
+      navigator.clipboard.writeText(code)
+        .then(() => showToast(`Copied React import for ${pascalName}!`));
+    });
+
+    // Theme toggle
+    themeToggle.addEventListener('click', () => {
+      const isDark = document.body.getAttribute('data-theme') === 'dark';
+      document.body.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    });
+
+    // Category pills
+    categoryPills.addEventListener('click', (e) => {
+      const target = e.target.closest('.pill');
+      if (!target) return;
+      categoryPills.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+      target.classList.add('active');
+      currentCategory = target.getAttribute('data-cat');
+      renderIcons();
+    });
+
+    // Search filter
+    searchInput.addEventListener('input', (e) => {
+      searchQuery = e.target.value;
+      renderIcons();
+    });
+
+    // Stroke slider
+    strokeSlider.addEventListener('input', (e) => {
+      currentStroke = parseFloat(e.target.value);
+      strokeValue.textContent = `${currentStroke.toFixed(1)}px`;
+      renderIcons();
+      if (selectedIcon && modalOverlay.classList.contains('open')) {
+        openModal(selectedIcon);
+      }
+    });
+
+    // Initial render
+    renderIcons();
+  </script>
+</body>
+</html>

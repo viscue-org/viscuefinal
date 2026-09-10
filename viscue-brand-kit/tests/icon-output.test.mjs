@@ -57,3 +57,75 @@ test('accepts custom size and strokeWidth', async () => {
   assert.match(html, /height="32"/);
   assert.match(html, /stroke-width="2\.5"/);
 });
+
+test('validator catches malformed XML', async () => {
+  const { validateSvgString } = await import('../scripts/validate-icons.mjs');
+  assert.throws(
+    () => validateSvgString('<svg viewBox="0 0 24 24"><path d="M0 0"</svg>', 'bad-xml.svg'),
+    /bad-xml\.svg/
+  );
+});
+
+test('validator catches non-24 viewBox', async () => {
+  const { validateSvgString } = await import('../scripts/validate-icons.mjs');
+  assert.throws(
+    () => validateSvgString('<svg viewBox="0 0 32 32"><path d="M0 0" /></svg>', 'bad-viewbox.svg'),
+    /bad-viewbox\.svg/
+  );
+});
+
+test('validator catches embedded text', async () => {
+  const { validateSvgString } = await import('../scripts/validate-icons.mjs');
+  assert.throws(
+    () => validateSvgString('<svg viewBox="0 0 24 24"><text>A</text></svg>', 'embedded-text.svg'),
+    /embedded-text\.svg/
+  );
+});
+
+test('validator catches embedded image', async () => {
+  const { validateSvgString } = await import('../scripts/validate-icons.mjs');
+  assert.throws(
+    () => validateSvgString('<svg viewBox="0 0 24 24"><image href="foo.png" /></svg>', 'embedded-image.svg'),
+    /embedded-image\.svg/
+  );
+});
+
+test('validator catches script tags', async () => {
+  const { validateSvgString } = await import('../scripts/validate-icons.mjs');
+  assert.throws(
+    () => validateSvgString('<svg viewBox="0 0 24 24"><script>alert(1)</script></svg>', 'has-script.svg'),
+    /has-script\.svg/
+  );
+});
+
+test('validator catches external URLs', async () => {
+  const { validateSvgString } = await import('../scripts/validate-icons.mjs');
+  assert.throws(
+    () => validateSvgString('<svg viewBox="0 0 24 24"><path d="M0 0" href="https://example.com" /></svg>', 'external-url.svg'),
+    /external-url\.svg/
+  );
+});
+
+test('validator catches hardcoded #000 in utility icons', async () => {
+  const { validateSvgString } = await import('../scripts/validate-icons.mjs');
+  assert.throws(
+    () => validateSvgString('<svg viewBox="0 0 24 24"><path d="M0 0" stroke="#000" /></svg>', 'hardcoded-black.svg'),
+    /hardcoded-black\.svg/
+  );
+});
+
+test('validator catches out-of-bound coordinates', async () => {
+  const { validateSvgString } = await import('../scripts/validate-icons.mjs');
+  assert.throws(
+    () => validateSvgString('<svg viewBox="0 0 24 24"><circle cx="28" cy="12" r="3" /></svg>', 'out-of-bounds.svg'),
+    /out-of-bounds\.svg/
+  );
+});
+
+test('validator passes on all generated icons in package', async () => {
+  const { validateIconPackage } = await import('../scripts/validate-icons.mjs');
+  const result = validateIconPackage({ rootDir: brandKitDir });
+  assert.equal(result.count, 72);
+  assert.equal(result.errors.length, 0);
+});
+
