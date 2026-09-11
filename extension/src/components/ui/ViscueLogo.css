@@ -1,0 +1,114 @@
+/* Viscue Official Logo & Signature Animation System */
+
+.viscue-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.viscue-logo svg {
+  display: block;
+  overflow: visible;
+}
+
+.viscue-logo--tile {
+  border-radius: 20.5%;
+}
+
+.viscue-logo--tile .viscue-logo__tile-bg {
+  fill: var(--viscue-brand, #5B7593);
+}
+
+.viscue-logo__needle {
+  transform-origin: 50px 50px;
+}
+
+/* ── One-shot 0.9s Signature Animation ── */
+.viscue-logo.is-animated .viscue-logo__needle {
+  animation: viscueNeedleSpin 0.9s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  transform-origin: 50px 50px;
+}
+
+.viscue-logo.is-animated .viscue-logo__upper {
+  animation: viscueUpperBlink 0.9s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+.viscue-logo.is-animated .viscue-logo__lower {
+  animation: viscueLowerBlink 0.9s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+.viscue-logo.is-animated .viscue-logo__svg {
+  animation: viscueSettle 0.9s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  transform-origin: center center;
+}
+
+/* The inner cue needle rotates exactly 360° */
+@keyframes viscueNeedleSpin {
+  0% {
+    transform: rotate(0deg);
+  }
+  75% {
+    transform: rotate(360deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Upper and lower eye curves briefly move inward to create a natural blink */
+@keyframes viscueUpperBlink {
+  0%, 62% {
+    transform: translateY(0);
+  }
+  78% {
+    transform: translateY(4.5px);
+  }
+  90% {
+    transform: translateY(-0.8px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes viscueLowerBlink {
+  0%, 62% {
+    transform: translateY(0);
+  }
+  78% {
+    transform: translateY(-4.5px);
+  }
+  90% {
+    transform: translateY(0.8px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+/* The symbol gently settles into its static form */
+@keyframes viscueSettle {
+  0%, 75% {
+    transform: scale(1);
+  }
+  86% {
+    transform: scale(1.03);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Reduced-motion mode displays only the finished static icon */
+@media (prefers-reduced-motion: reduce) {
+  .viscue-logo.is-animated .viscue-logo__needle,
+  .viscue-logo.is-animated .viscue-logo__upper,
+  .viscue-logo.is-animated .viscue-logo__lower,
+  .viscue-logo.is-animated .viscue-logo__svg {
+    animation: none !important;
+    transform: none !important;
+  }
+}

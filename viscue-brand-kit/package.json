@@ -1,15 +1,11 @@
 {
   "name": "viscue-brand-kit",
   "version": "1.0.0",
-  "private": true,
+  "description": "Viscue Brand Kit with Viscue Flow Display typeface and design assets",
   "type": "module",
   "scripts": {
-    "build:icons": "node scripts/build-icons.mjs",
-    "validate:icons": "node scripts/validate-icons.mjs",
-    "test": "node --test tests/icon-source.test.mjs tests/icon-output.test.mjs"
-  },
-  "peerDependencies": {
-    "react": ">=18.0.0",
-    "react-dom": ">=18.0.0"
+    "build:font": ".venv\\Scripts\\python.exe scripts\\build-font.py",
+    "validate:font": ".venv\\Scripts\\python.exe scripts\\validate-font.py",
+    "test": ".venv\\Scripts\\python.exe -m unittest discover -s tests -p \"test_*.py\""
   }
 }

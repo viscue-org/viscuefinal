@@ -131,7 +131,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         });
         sendResponse(result);
       } catch (err) {
-        sendResponse({ ok: false, error: err.message, code: err.code });
+        // If session expired, provide a friendly re-auth prompt
+        if (err.code === 'session_expired' || err.code === 'unauthorized' || err.status === 401) {
+          sendResponse({
+            ok: false,
+            error: 'Your session has expired. Please sign in again via the extension settings.',
+            code: 'session_expired',
+          });
+        } else {
+          sendResponse({ ok: false, error: err.message, code: err.code });
+        }
       }
       return;
     }

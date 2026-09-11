@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Viscue Brand Kit — Humanist Flow</title>
+  <link rel="stylesheet" href="../font/css/viscue-flow.css">
+  <style>
+    :root {
+      --bg: #0b1320;
+      --card-bg: #152238;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --brand: #5B7593;
+      --brand-light: #7E9AB8;
+      --border-radius: 20.5px;
+    }
+    body {
+      margin: 0;
+      padding: 40px;
+      font-family: var(--font-viscue-display);
+      background-color: var(--bg);
+      color: var(--text-main);
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 40px;
+    }
+    .logo-badge {
+      width: 52px;
+      height: 52px;
+      background: var(--brand);
+      border-radius: var(--border-radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      color: white;
+    }
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--border-radius);
+      padding: 32px;
+      margin-bottom: 24px;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    h1 { font-size: 32px; font-weight: 600; margin: 0; }
+    h2 { font-size: 24px; font-weight: 600; margin-top: 0; color: var(--brand-light); }
+    p { font-size: 16px; line-height: 1.6; color: var(--text-muted); }
+
+    /* Viscue Original Logo Signature Animation */
+    .signature-card {
+      background: var(--card-bg);
+      border-radius: var(--border-radius);
+      padding: 32px;
+      margin-bottom: 24px;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .signature-row {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      margin: 24px 0;
+      flex-wrap: wrap;
+    }
+    .signature-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    .signature-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: sans-serif;
+    }
+    .replay-btn {
+      background: var(--brand);
+      color: #fff;
+      border: none;
+      padding: 10px 22px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s ease, transform 0.15s ease;
+      font-family: sans-serif;
+    }
+    .replay-btn:hover {
+      background: var(--brand-light);
+      transform: translateY(-1px);
+    }
+
+    /* Keyframe Animations */
+    .viscue-logo {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .viscue-logo svg {
+      overflow: visible;
+    }
+    .viscue-logo.is-animated .viscue-logo__needle {
+      animation: viscueNeedleSpin 0.9s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+      transform-origin: 50px 50px;
+    }
+    .viscue-logo.is-animated .viscue-logo__upper {
+      animation: viscueUpperBlink 0.9s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    }
+    .viscue-logo.is-animated .viscue-logo__lower {
+      animation: viscueLowerBlink 0.9s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    }
+    .viscue-logo.is-animated .viscue-logo__svg {
+      animation: viscueSettle 0.9s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+      transform-origin: center center;
+    }
+
+    @keyframes viscueNeedleSpin {
+      0% { transform: rotate(0deg); }
+      75% { transform: rotate(360deg); }
+      100% { transform: rotate(360deg); }
+    }
+    @keyframes viscueUpperBlink {
+      0%, 62% { transform: translateY(0); }
+      78% { transform: translateY(4.5px); }
+      90% { transform: translateY(-0.8px); }
+      100% { transform: translateY(0); }
+    }
+    @keyframes viscueLowerBlink {
+      0%, 62% { transform: translateY(0); }
+      78% { transform: translateY(-4.5px); }
+      90% { transform: translateY(0.8px); }
+      100% { transform: translateY(0); }
+    }
+    @keyframes viscueSettle {
+      0%, 75% { transform: scale(1); }
+      86% { transform: scale(1.03); }
+      100% { transform: scale(1); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .viscue-logo.is-animated .viscue-logo__needle,
+      .viscue-logo.is-animated .viscue-logo__upper,
+      .viscue-logo.is-animated .viscue-logo__lower,
+      .viscue-logo.is-animated .viscue-logo__svg {
+        animation: none !important;
+        transform: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo-badge">
+      <svg width="34" height="34" viewBox="0 0 100 100" fill="none" stroke="#FFFFFF" stroke-width="8.5" stroke-linecap="round">
+        <path d="M 79.5 14 C 58 7.5, 14 26, 14 50" />
+        <path d="M 14 50 C 14 74, 46 88, 77.5 78" />
+        <line x1="56" y1="50" x2="84" y2="50" />
+      </svg>
+    </div>
+    <div>
+      <h1>Viscue Flow Display</h1>
+      <p style="margin: 4px 0 0 0;">Humanist Flow Typeface & Brand Kit</p>
+    </div>
+  </div>
+
+  <div class="signature-card">
+    <h2>Brand Mark &amp; Signature Animation</h2>
+    <p>A single one-shot 0.9s animation communicating <strong>see → understand → cue action</strong>. The inner cue needle rotates 360°, followed by a natural eye blink as upper and lower curves move inward, settling gently into static form.</p>
+    
+    <div class="signature-row">
+      <div class="signature-item">
+        <div id="brandTileLogo" class="viscue-logo is-animated" style="width: 88px; height: 88px;">
+          <svg class="viscue-logo__svg" viewBox="0 0 100 100" width="88" height="88" fill="none">
+            <rect x="2" y="2" width="96" height="96" rx="22" fill="#5B7593" />
+            <path class="viscue-logo__upper" d="M 79.5 14 C 58 7.5, 14 26, 14 50" stroke="#FFFFFF" stroke-width="8.2" stroke-linecap="round" />
+            <path class="viscue-logo__lower" d="M 14 50 C 14 74, 46 88, 77.5 78" stroke="#FFFFFF" stroke-width="8.2" stroke-linecap="round" />
+            <line class="viscue-logo__needle" x1="56" y1="50" x2="84" y2="50" stroke="#FFFFFF" stroke-width="8.2" stroke-linecap="round" />
+          </svg>
+        </div>
+        <span class="signature-label">App Icon Squircle (20.5% radius)</span>
+      </div>
+
+      <div class="signature-item">
+        <div id="brandMarkLogo" class="viscue-logo is-animated" style="width: 88px; height: 88px;">
+          <svg class="viscue-logo__svg" viewBox="0 0 100 100" width="88" height="88" fill="none">
+            <path class="viscue-logo__upper" d="M 79.5 14 C 58 7.5, 14 26, 14 50" stroke="#7E9AB8" stroke-width="8.8" stroke-linecap="round" />
+            <path class="viscue-logo__lower" d="M 14 50 C 14 74, 46 88, 77.5 78" stroke="#7E9AB8" stroke-width="8.8" stroke-linecap="round" />
+            <line class="viscue-logo__needle" x1="56" y1="50" x2="84" y2="50" stroke="#7E9AB8" stroke-width="8.8" stroke-linecap="round" />
+          </svg>
+        </div>
+        <span class="signature-label">Standalone Mark (Steel Blue)</span>
+      </div>
+    </div>
+
+    <button id="replayBtn" class="replay-btn" type="button">Replay Signature Animation</button>
+  </div>
+
+  <div class="card">
+    <h2>Display Typography (Regular 400 & Semibold 600)</h2>
+    <p style="font-size: 28px; color: var(--text-main); font-weight: 600;">Visual Intelligence Canvas — Think with Spatial Clarity</p>
+    <p style="font-size: 20px; color: var(--text-muted); font-weight: 400;">Deconstruct problems into visual cue trees, reasoning graphs, and multimodal intent pipelines.</p>
+  </div>
+
+  <script>
+    const replayBtn = document.getElementById('replayBtn');
+    const tileLogo = document.getElementById('brandTileLogo');
+    const markLogo = document.getElementById('brandMarkLogo');
+
+    function replay() {
+      tileLogo.classList.remove('is-animated');
+      markLogo.classList.remove('is-animated');
+      void tileLogo.offsetWidth;
+      void markLogo.offsetWidth;
+      tileLogo.classList.add('is-animated');
+      markLogo.classList.add('is-animated');
+    }
+
+    replayBtn.addEventListener('click', replay);
+    tileLogo.addEventListener('click', replay);
+    markLogo.addEventListener('click', replay);
+  </script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "terminalRoundRadius": {"400": 34, "600": 42},
+  "cueCutWidth": {"400": 76, "600": 84},
+  "cueCutHeight": {"400": 38, "600": 46},
+  "openCounterShift": {"400": 22, "600": 18},
+  "softCornerRadius": {"400": 28, "600": 34},
+  "displayTracking": -12,
+  "markCodepoint": "E000"
+}

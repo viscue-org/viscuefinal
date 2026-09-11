@@ -46,7 +46,7 @@ export class BedrockGateway {
     routes = MODEL_ROUTES,
     request = signedJsonRequest,
     visualTimeoutMs = 2200,
-    compilerTimeoutMs = 1600,
+    compilerTimeoutMs = 4500,
     relevanceTimeoutMs = 1200,
   } = {}) {
     this.region = region;
@@ -154,16 +154,64 @@ export class BedrockGateway {
         warning: { reason: 'Compiler model is not configured.' },
       };
     }
-    try {
-      const body = {
-        system: [{ text: 'You are a visual intent prompt compiler for image and design AI tools (ChatGPT, Claude, Gemini). Compile the user\'s visual workspace directives into concise, direct, and natural instructions for image generation or editing.\nRULES:\n1. Do NOT generate bureaucratic section headers (e.g., no "Reference Specification", no "Modification Action", no "Target File / Action / Constraints" forms).\n2. Output clear, concise bullet points describing the exact visual modifications to perform.\n3. Strictly preserve the user\'s intended actions, references, coordinates/percentages (e.g., [50%, 45%]), and spatial targets.\n4. When multiple images are referenced or connected, explicitly name each image in double quotes and state the transfer or modification relationship clearly.\n5. Keep all referenced filenames in exact double quotes.\n6. Never invent labels, reference hashes, or non-existent entities.\n7. Return only the compiled instructions without conversational filler.' }],
-        messages: [{ role: 'user', content: [{ text: canonical.prompt }] }],
-        inferenceConfig: { maxTokens: 1400, temperature: 0 },
-      };
-      const candidate = responseText(await this.#call(this.routes.compiler, body, 'converse', this.compilerTimeoutMs));
-      const duration_ms = Math.round(performance.now() - startTime);
-      const verification = verifyProtectedFacts(candidate, canonical);
-      if (!candidate || !verification.ok) {
+    const systemPrompt = [
+      'You are a visual intent prompt compiler for AI image and design tools (ChatGPT, Claude, Gemini).',
+      'Your job is to transform user workspace directives into clear, direct, and natural AI instructions.',
+      '',
+      'CRITICAL RULES:',
+      '1. CORRECT all spelling mistakes, grammar errors, and typos in user instructions while keeping their exact intended meaning.',
+      '2. Do NOT add bureaucratic section headers like "Reference Specification", "Modification Action", or "Target File" forms.',
+      '3. Output clear, concise bullet points describing exact visual modifications.',
+      '4. Preserve all user actions, references, coordinates/percentages (e.g., [50%, 45%]), and spatial targets exactly.',
+      '5. When multiple images are referenced, name each in double quotes and state relationships clearly.',
+      '6. Keep all referenced filenames in exact double quotes.',
+      '7. Never invent labels, reference hashes, or non-existent entities.',
+      '8. Return ONLY the compiled instructions – no preamble, no commentary, no filler.',
+      '9. Make the output read as a natural, precise instruction a user would send to an AI tool.',
+    ].join('\n');
+    const body = {
+      system: [{ text: systemPrompt }],
+      messages: [{ role: 'user', content: [{ text: canonical.prompt }] }],
+      inferenceConfig: { maxTokens: 1400, temperature: 0 },
+    };
+    // Attempt compiler twice before falling back to deterministic
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      const remainingMs = Math.max(1000, this.compilerTimeoutMs - Math.round(performance.now() - startTime));
+      try {
+        const candidate = responseText(await this.#call(this.routes.compiler, body, 'converse', remainingMs));
+        const duration_ms = Math.round(performance.now() - startTime);
+        const verification = verifyProtectedFacts(candidate, canonical);
+        if (!candidate) {
+          if (attempt < 2) continue; // retry
+          break;
+        }
+        if (!verification.ok) {
+          // Verified facts failed – still use candidate if it has substance, else fallback
+          if (candidate.length > 40) {
+            return {
+              status: 'degraded',
+              provider: 'bedrock-mistral',
+              model: this.routes.compiler,
+              duration_ms,
+              text: candidate,
+              fallback: false,
+              warning: verification,
+            };
+          }
+          if (attempt < 2) continue;
+          break;
+        }
+        return {
+          status: 'ok',
+          provider: 'bedrock-mistral',
+          model: this.routes.compiler,
+          duration_ms,
+          text: candidate,
+          fallback: false,
+        };
+      } catch (err) {
+        if (attempt < 2) continue; // retry on error
+        const duration_ms = Math.round(performance.now() - startTime);
         return {
           status: 'degraded',
           provider: 'deterministic',
@@ -171,29 +219,20 @@ export class BedrockGateway {
           duration_ms,
           fallback: true,
           fallback_from: this.routes.compiler,
-          warning: verification,
+          warning: { reason: `Compiler unavailable after ${attempt} attempt(s): ${err?.message || 'unknown error'}` },
         };
       }
-      return {
-        status: 'ok',
-        provider: 'bedrock-mistral',
-        model: this.routes.compiler,
-        duration_ms,
-        text: candidate,
-        fallback: false,
-      };
-    } catch {
-      const duration_ms = Math.round(performance.now() - startTime);
-      return {
-        status: 'degraded',
-        provider: 'deterministic',
-        text: canonical.prompt,
-        duration_ms,
-        fallback: true,
-        fallback_from: this.routes.compiler,
-        warning: { reason: 'Compiler unavailable.' },
-      };
     }
+    const duration_ms = Math.round(performance.now() - startTime);
+    return {
+      status: 'degraded',
+      provider: 'deterministic',
+      text: canonical.prompt,
+      duration_ms,
+      fallback: true,
+      fallback_from: this.routes.compiler,
+      warning: { reason: 'Compiler returned empty or unverifiable output.' },
+    };
   }
 
   async verifyPrompt(candidate, canonical) {

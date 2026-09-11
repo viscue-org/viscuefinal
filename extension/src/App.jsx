@@ -20,6 +20,7 @@ import {
   HistoryDialog, ConfirmDialog, DocumentDialog, HostClosedDialog
 } from './components/dialogs/Dialogs';
 import { GestureLabDialog } from './components/dialogs/GestureLabDialog';
+import { ViscueLogo } from './components/ui/ViscueLogo';
 
 import {
   WorkspaceCommandDock,
@@ -29,7 +30,15 @@ import {
   WorkspaceUtilities,
 } from './components/workspace/WorkspaceChrome.mjs';
 import { resolvePageCapture, resolveToolbarOption } from './components/workspace/workspaceChromeModel.mjs';
-import { createHistoryExport, importHistoryArchive } from './components/workspace/workspaceHistoryModel.mjs';
+import {
+  createHistoryExport,
+  importHistoryArchive,
+  DEFAULT_HISTORY_CONFIG,
+  RETENTION_OPTIONS,
+  normalizeHistoryConfig,
+  pruneExpiredHistory,
+  appendHistoryItem,
+} from './components/workspace/workspaceHistoryModel.mjs';
 import { cancelNodeMotion, finishNodeMotion, removeNodeMotion, startNodeMotion } from './components/nodes/motionModel.mjs';
 import './components/workspace/WorkspaceChrome.css';
 import { fileToDataUrl, normalizeUrl, isValidUrl, safeHost, renderCropDataUrl, captureVideoFrame, digest, downscaleDataUrl, formatTime, createWebpagePreview, cropImageDataUrl } from './utils/helpers';
@@ -184,6 +193,7 @@ function CueProcessingLine({ phase, onMount }) {
   return (
     <div className={`cue-processing-screen${exiting ? ' cue-processing-screen--exit' : ''}`} aria-live="polite" aria-label="Processing">
       <div className={`cue-capsule-wrap${capsule ? ' cue-capsule-wrap--expanded' : ''}${isError ? ' cue-capsule-wrap--error' : ''}`}>
+        {capsule && <ViscueLogo size={22} variant="mark" animated={true} style={{ color: '#FFFFFF', marginRight: '8px', flexShrink: 0 }} />}
         <span className={`cue-capsule-text${capsule && !isFinished ? ' cue-capsule-text--visible' : ''}${isFinished ? ' cue-capsule-text--done' : ''}`}>
           {isFinished ? (isDone ? 'Done' : 'Failed') : `${CUE_STATUS_CYCLE[statusIdx]}…`}
         </span>
@@ -216,11 +226,13 @@ function AppCanvas() {
   const [platformCapability, setPlatformCapability] = useState(() => normalizePlatformCapability({}, new URLSearchParams(location.search).get('destination') || 'ChatGPT'));
   const [platformSetupLoaded, setPlatformSetupLoaded] = useState(false);
   const [needsPlatformSetup, setNeedsPlatformSetup] = useState(false);
-  const [historyConfig, setHistoryConfig] = useState({ autoDeleteHours: 24 });
+  const [historyConfig, setHistoryConfig] = useState(DEFAULT_HISTORY_CONFIG);
   const [persistentHistory, setPersistentHistory] = useState([]);
   const [gestureOperations, setGestureOperations] = useState([]);
   const [platformName, setPlatformName] = useState(() => new URLSearchParams(location.search).get('destination') || 'ChatGPT');
   const [cueAnimation, setCueAnimation] = useState(null); // null | { phase, nodeRects, submitRef }
+  const [showContinueDialog, setShowContinueDialog] = useState(false); // workspace continuation dialog
+  const continueDialogChecked = useRef(false);
   const preparedCompilationRef = useRef(null);
   const fileInput = useRef(null);
   const zipInput = useRef(null);
@@ -236,6 +248,21 @@ function AppCanvas() {
   }, [nodes, edges, gestureOperations]);
 
   usePersistentWorkspace(nodes, edges, gestureOperations, setNodes, setEdges, setGestureOperations);
+  // On first mount after workspace loads, prompt if there's existing content
+  useEffect(() => {
+    if (continueDialogChecked.current) return;
+    continueDialogChecked.current = true;
+    const load = globalThis.chrome?.storage?.local
+      ? new Promise(resolve => chrome.storage.local.get('viscue-react-workspace', resolve))
+      : Promise.resolve({ 'viscue-react-workspace': JSON.parse(localStorage.getItem('viscue-react-workspace') || 'null') });
+    load.then(result => {
+      const saved = result?.['viscue-react-workspace'];
+      const hasContent = (saved?.nodes?.length > 0) || (saved?.gestureOperations?.length > 0);
+      if (hasContent) {
+        setShowContinueDialog(true);
+      }
+    });
+  }, []);
   useEffect(() => { chromeMessage({ type: 'health' }).then(setHealth); }, []);
   useEffect(() => {
     Promise.resolve(chromeMessage({ type: 'account-get' })).then(response => {
@@ -275,8 +302,15 @@ function AppCanvas() {
   useEffect(() => {
     if (globalThis.chrome?.storage?.onChanged) {
       const listener = (changes, area) => {
-        if (area === 'local' && (changes[PLATFORM_PLAN_STORAGE_KEY] || changes[PLATFORM_PLAN_SETUP_KEY])) {
-          refreshPlatformPlan(platformName);
+        if (area === 'local') {
+          if (changes[PLATFORM_PLAN_STORAGE_KEY] || changes[PLATFORM_PLAN_SETUP_KEY]) {
+            refreshPlatformPlan(platformName);
+          }
+          if (changes['viscue-history-config']) {
+            const nextConfig = normalizeHistoryConfig(changes['viscue-history-config'].newValue);
+            setHistoryConfig(nextConfig);
+            setPersistentHistory(prev => pruneExpiredHistory(prev, nextConfig.autoDeleteHours));
+          }
         }
       };
       chrome.storage.onChanged.addListener(listener);
@@ -285,6 +319,13 @@ function AppCanvas() {
       const listener = (e) => {
         if (e.key === PLATFORM_PLAN_STORAGE_KEY || e.key === PLATFORM_PLAN_SETUP_KEY) {
           refreshPlatformPlan(platformName);
+        }
+        if (e.key === 'viscue-history-config') {
+          try {
+            const nextConfig = normalizeHistoryConfig(JSON.parse(e.newValue || '{}'));
+            setHistoryConfig(nextConfig);
+            setPersistentHistory(prev => pruneExpiredHistory(prev, nextConfig.autoDeleteHours));
+          } catch {}
         }
       };
       window.addEventListener('storage', listener);
@@ -326,28 +367,19 @@ function AppCanvas() {
         });
 
     load.then(result => {
-      const config = result['viscue-history-config'] || { autoDeleteHours: 24 };
+      const config = normalizeHistoryConfig(result['viscue-history-config']);
       setHistoryConfig(config);
       setTheme(result['viscue-theme'] || 'light');
       setAutoSubmit(Boolean(result['viscue-auto-submit']));
       refreshPlatformPlan(platformName);
       
-      const log = result['viscue-history-log'] || [];
-      if (config.autoDeleteHours > 0) {
-        const cutoff = Date.now() - (config.autoDeleteHours * 60 * 60 * 1000);
-        const filtered = log.filter(item => {
-          const t = typeof item.timestamp === 'number' ? item.timestamp : Date.parse(item.timestamp) || 0;
-          return t > cutoff;
-        });
-        
-        setPersistentHistory(filtered);
-        
-        if (filtered.length !== log.length) {
-          if (globalThis.chrome?.storage?.local) chrome.storage.local.set({ 'viscue-history-log': filtered });
-          else localStorage.setItem('viscue-history-log', JSON.stringify(filtered));
-        }
-      } else {
-        setPersistentHistory(log);
+      const log = Array.isArray(result['viscue-history-log']) ? result['viscue-history-log'] : [];
+      const filtered = pruneExpiredHistory(log, config.autoDeleteHours);
+      setPersistentHistory(filtered);
+      
+      if (filtered.length !== log.length) {
+        if (globalThis.chrome?.storage?.local) chrome.storage.local.set({ 'viscue-history-log': filtered });
+        else localStorage.setItem('viscue-history-log', JSON.stringify(filtered));
       }
     });
   }, []);
@@ -372,14 +404,14 @@ function AppCanvas() {
   }, [nodes, referencePolicy.limit]);
 
   const saveToPersistentHistory = useCallback((currentNodes, currentEdges, currentGestureOperations = gestureOperations) => {
+    const workspace = createWorkspaceSnapshot(currentNodes, currentEdges, currentGestureOperations);
     setPersistentHistory(prev => {
-      const workspace = createWorkspaceSnapshot(currentNodes, currentEdges, currentGestureOperations);
-      const next = [{ id: crypto.randomUUID(), timestamp: Date.now(), ...workspace }, ...prev];
+      const next = appendHistoryItem(prev, workspace, historyConfig.autoDeleteHours);
       if (globalThis.chrome?.storage?.local) chrome.storage.local.set({ 'viscue-history-log': next });
       else localStorage.setItem('viscue-history-log', JSON.stringify(next));
       return next;
     });
-  }, [gestureOperations]);
+  }, [gestureOperations, historyConfig.autoDeleteHours]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -397,35 +429,23 @@ function AppCanvas() {
   };
 
   const updateHistoryConfig = (hours) => {
-    const numHours = Number(hours) || 24;
-    const config = { autoDeleteHours: numHours };
+    const config = normalizeHistoryConfig(hours);
     setHistoryConfig(config);
     if (globalThis.chrome?.storage?.local) chrome.storage.local.set({ 'viscue-history-config': config });
     else localStorage.setItem('viscue-history-config', JSON.stringify(config));
     
-    if (numHours > 0) {
-      const cutoff = Date.now() - (numHours * 60 * 60 * 1000);
-      setPersistentHistory(prev => {
-        const filtered = prev.filter(item => {
-          const t = typeof item.timestamp === 'number' ? item.timestamp : Date.parse(item.timestamp) || 0;
-          return t > cutoff;
-        });
-        if (globalThis.chrome?.storage?.local) chrome.storage.local.set({ 'viscue-history-log': filtered });
-        else localStorage.setItem('viscue-history-log', JSON.stringify(filtered));
-        return filtered;
-      });
-    }
+    setPersistentHistory(prev => {
+      const filtered = pruneExpiredHistory(prev, config.autoDeleteHours);
+      if (globalThis.chrome?.storage?.local) chrome.storage.local.set({ 'viscue-history-log': filtered });
+      else localStorage.setItem('viscue-history-log', JSON.stringify(filtered));
+      return filtered;
+    });
   };
 
   useEffect(() => {
-    if (dialog?.type === 'history' && historyConfig?.autoDeleteHours && historyConfig.autoDeleteHours > 0) {
-      const numHours = Number(historyConfig.autoDeleteHours);
-      const cutoff = Date.now() - (numHours * 60 * 60 * 1000);
+    if (dialog?.type === 'history') {
       setPersistentHistory(prev => {
-        const filtered = prev.filter(item => {
-          const t = typeof item.timestamp === 'number' ? item.timestamp : Date.parse(item.timestamp) || 0;
-          return t > cutoff;
-        });
+        const filtered = pruneExpiredHistory(prev, historyConfig.autoDeleteHours);
         if (filtered.length !== prev.length) {
           if (globalThis.chrome?.storage?.local) chrome.storage.local.set({ 'viscue-history-log': filtered });
           else localStorage.setItem('viscue-history-log', JSON.stringify(filtered));
@@ -433,7 +453,29 @@ function AppCanvas() {
         return filtered;
       });
     }
-  }, [dialog?.type, historyConfig]);
+  }, [dialog?.type, historyConfig.autoDeleteHours]);
+
+  useEffect(() => {
+    if (historyConfig.autoDeleteHours <= 0) return;
+    const pruneCurrent = () => {
+      setPersistentHistory(prev => {
+        const filtered = pruneExpiredHistory(prev, historyConfig.autoDeleteHours);
+        if (filtered.length !== prev.length) {
+          if (globalThis.chrome?.storage?.local) chrome.storage.local.set({ 'viscue-history-log': filtered });
+          else localStorage.setItem('viscue-history-log', JSON.stringify(filtered));
+        }
+        return filtered;
+      });
+    };
+    const interval = setInterval(pruneCurrent, 60000);
+    window.addEventListener('focus', pruneCurrent);
+    document.addEventListener('visibilitychange', pruneCurrent);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', pruneCurrent);
+      document.removeEventListener('visibilitychange', pruneCurrent);
+    };
+  }, [historyConfig.autoDeleteHours]);
 
   const clearPersistentHistory = () => {
     setPersistentHistory([]);
@@ -570,10 +612,19 @@ function AppCanvas() {
     const anchorId = `annot-${crypto.randomUUID()}`;
     const anchor = { id: anchorId, x: 0.5, y: 0.5, isWholeAsset: true };
     const parentW = parent.measured?.width || 280;
-    const position = findFreePosition(nodes, parent.position.x + parentW + 40, parent.position.y);
+    const position = findFreePosition(nodes, parent.position.x + parentW + 60, parent.position.y);
+    const explainNode = {
+      ...createTextNode(textId, position, 'sticky'),
+      selected: true,
+      data: {
+        ...createTextNode(textId, position, 'sticky').data,
+        text: 'Explain this',
+        autoFocus: true,
+      },
+    };
     setNodes(items => [
       ...items.map(node => node.id === id ? { ...node, selected: false, data: { ...node.data, cueAnchors: [...(node.data.cueAnchors || []), anchor] } } : { ...node, selected: false }),
-      { ...createTextNode(textId, position), selected: true }
+      explainNode
     ]);
     setEdges(items => [...items, createAnnotationEdge(id, anchorId, textId)]);
   }, [nodes, edges, setNodes, setEdges, snapshot]);
@@ -1165,7 +1216,7 @@ function AppCanvas() {
       assetMediaCache.set(id, dataUrl);
       return {
         id, type: 'asset', position: { x: center.x - 180 + (index % 3) * 400, y: center.y - 130 + Math.floor(index / 3) * 280 },
-        data: { kind, name: file.name, mime: file.type, dataUrl: URL.createObjectURL(file), hash: await digest(dataUrl), role: 'Reference', strokes: [], cueAnchors: [], targetAnchors: [] },
+        data: { kind, name: file.name, mime: file.type, dataUrl: dataUrl, hash: await digest(dataUrl), role: 'Reference', strokes: [], cueAnchors: [], targetAnchors: [] },
       };
     }));
     setNodes(items => [...items, ...additions]); event.target.value = ''; setMode('select');
@@ -1186,7 +1237,7 @@ function AppCanvas() {
         importedAt: Date.now(),
       };
       setPersistentHistory(prev => {
-        const next = [newHistoryItem, ...prev];
+        const next = appendHistoryItem(prev, newHistoryItem, historyConfig.autoDeleteHours);
         if (globalThis.chrome?.storage?.local) chrome.storage.local.set({ 'viscue-history-log': next });
         else localStorage.setItem('viscue-history-log', JSON.stringify(next));
         return next;
@@ -1224,7 +1275,7 @@ function AppCanvas() {
       return {
         id, type: 'asset', 
         position: { x: position.x - 180 + (index % 3) * 400, y: position.y - 130 + Math.floor(index / 3) * 280 },
-        data: { kind, name: file.name, mime: file.type, dataUrl: URL.createObjectURL(file), hash: await digest(dataUrl), role: 'Reference', strokes: [], cueAnchors: [], targetAnchors: [] },
+        data: { kind, name: file.name, mime: file.type, dataUrl: dataUrl, hash: await digest(dataUrl), role: 'Reference', strokes: [], cueAnchors: [], targetAnchors: [] },
       };
     }));
     setNodes(items => [...items, ...additions]);
@@ -1305,6 +1356,10 @@ function AppCanvas() {
     setGestureOperations(workspace.gestureOperations);
     setHistory([]);
     setFuture([]);
+    // Explicitly clear persistent storage so the workspace doesn't reload stale state
+    const emptySnapshot = { nodes: [], edges: [], gestureOperations: [] };
+    if (globalThis.chrome?.storage?.local) chrome.storage.local.set({ 'viscue-react-workspace': emptySnapshot });
+    else localStorage.setItem('viscue-react-workspace', JSON.stringify(emptySnapshot));
   }, [setEdges, setGestureOperations, setNodes]);
 
   function clearAll() { if (!nodes.length && !gestureOperations.length) return; setDialog({ type: 'clear' }); }
@@ -1609,7 +1664,7 @@ function AppCanvas() {
         edgeTypes={edgeTypes} 
         onPaneClick={onPaneClick} 
         onNodeDragStart={snapshot}
-        panOnDrag={[1, 2]}
+        panOnDrag={[0, 1, 2]}
         selectionOnDrag={true}
         selectionKeyCode="Shift"
         panOnScroll={true}
@@ -1751,6 +1806,39 @@ function AppCanvas() {
         />
       )}
       {dialog?.type === 'clear' && <NewCanvasDialog close={() => setDialog(null)} saveAndDiscard={() => { saveToPersistentHistory(nodes, edges); resetCanvas(); setDialog(null); }} clearWithoutSaving={() => { resetCanvas(); setDialog(null); }} />}
+      {showContinueDialog && (
+        <div className="continue-workspace-backdrop" role="dialog" aria-modal="true" aria-label="Continue workspace">
+          <div className="continue-workspace-dialog">
+            <div className="continue-workspace-icon" aria-hidden="true">
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect x="4" y="4" width="24" height="24" rx="6" fill="var(--signal-soft, rgba(91,117,147,0.12))" /><path d="M10 16h12M16 10l6 6-6 6" stroke="var(--brand,#5B7593)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </div>
+            <div className="continue-workspace-body">
+              <h2>Continue where you left off?</h2>
+              <p>Your previous workspace has references and instructions. You can continue working on it or start a fresh canvas.</p>
+            </div>
+            <div className="continue-workspace-actions">
+              <button
+                type="button"
+                className="primary-button"
+                onClick={() => setShowContinueDialog(false)}
+              >
+                Continue workspace
+              </button>
+              <button
+                type="button"
+                className="quiet-button"
+                onClick={() => {
+                  saveToPersistentHistory(nodes, edges);
+                  resetCanvas();
+                  setShowContinueDialog(false);
+                }}
+              >
+                Start fresh
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {dialog?.type === 'history' && (
         <div className="history-backdrop">
           <WorkspaceHistory

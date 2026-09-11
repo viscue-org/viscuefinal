@@ -1,0 +1,164 @@
+/* Auth Background & Animated Eyelash Secondary Visual */
+
+.auth-background-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(circle at 50% 30%, #1e3046 0%, #132030 45%, #0B131D 100%);
+}
+
+/* Atmospheric ambient gradient orbs */
+.auth-bg-ambient-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  opacity: 0.45;
+}
+
+.auth-bg-ambient-orb--main {
+  width: 600px;
+  height: 400px;
+  top: 8%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: radial-gradient(circle, rgba(91, 117, 147, 0.35) 0%, rgba(35, 54, 72, 0.1) 70%, transparent 100%);
+  animation: viscueOrbDrift 12s ease-in-out infinite alternate;
+}
+
+.auth-bg-ambient-orb--secondary {
+  width: 500px;
+  height: 320px;
+  top: 14%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: radial-gradient(circle, rgba(255, 90, 54, 0.16) 0%, rgba(255, 125, 96, 0.05) 50%, transparent 100%);
+  animation: viscueSecondaryGlow 6s ease-in-out infinite alternate;
+}
+
+/* Eyelash Visual Wrapper (Big in the background) */
+.auth-eyelash-stage {
+  position: absolute;
+  top: 4%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(880px, 94vw);
+  height: min(460px, 50vh);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.auth-eyelash-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 4px 30px rgba(255, 90, 54, 0.22)) drop-shadow(0 0 60px rgba(165, 194, 222, 0.14));
+  transform-origin: 400px 220px;
+}
+
+/* ── "Air coming in, closing, and animating up" Motion ── */
+.auth-eyelash-svg.is-breathing {
+  animation: viscueAirBreath 5.8s cubic-bezier(0.37, 0, 0.23, 1) infinite;
+}
+
+/* Individual lash depth layers */
+.lash-layer-0 {
+  stroke: url(#viscueSecondaryGradFront);
+}
+
+.lash-layer-1 {
+  stroke: url(#viscueSecondaryGradMid);
+  animation: viscueLashFlutter 5.8s ease-in-out infinite;
+  transform-origin: 400px 240px;
+}
+
+.lash-layer-2 {
+  stroke: url(#viscueSecondaryGradBack);
+}
+
+.eyelid-base-line {
+  stroke: url(#viscueSecondaryGradFront);
+  stroke-linecap: round;
+  opacity: 0.85;
+}
+
+/* ── Keyframe Animations ── */
+
+/* 1. Master Breathing Cycle: Inhale lift -> Close blink -> Animate up -> Settle */
+@keyframes viscueAirBreath {
+  0% {
+    transform: translateY(0) scale(1) rotate(0deg);
+    opacity: 0.88;
+  }
+  /* Air coming in (Inhalation / lift) */
+  26% {
+    transform: translateY(-14px) scale(1.035) scaleY(1.02) rotate(-0.4deg);
+    opacity: 0.98;
+    filter: drop-shadow(0 6px 36px rgba(255, 90, 54, 0.32)) drop-shadow(0 0 70px rgba(165, 194, 222, 0.24));
+  }
+  /* Closing (Eye closes down like an eyelid blink) */
+  54% {
+    transform: translateY(30px) scaleY(0.18) scaleX(1.02);
+    opacity: 0.65;
+    filter: drop-shadow(0 2px 14px rgba(255, 90, 54, 0.12));
+  }
+  /* Animating up (Exhale / bloom / sweeps upward with air) */
+  74% {
+    transform: translateY(-18px) scaleY(1.06) scaleX(0.99) rotate(0.5deg);
+    opacity: 1;
+    filter: drop-shadow(0 8px 42px rgba(255, 90, 54, 0.36)) drop-shadow(0 0 80px rgba(165, 194, 222, 0.28));
+  }
+  /* Gentle settle */
+  88% {
+    transform: translateY(-4px) scale(1.01);
+    opacity: 0.92;
+  }
+  100% {
+    transform: translateY(0) scale(1) rotate(0deg);
+    opacity: 0.88;
+  }
+}
+
+@keyframes viscueLashFlutter {
+  0%, 100% { transform: scaleY(1); }
+  26% { transform: scaleY(1.02) translateY(-2px); }
+  54% { transform: scaleY(0.7) translateY(4px); }
+  74% { transform: scaleY(1.04) translateY(-3px); }
+}
+
+@keyframes viscueOrbDrift {
+  0% { transform: translateX(-50%) translateY(0) scale(1); }
+  100% { transform: translateX(-50%) translateY(-25px) scale(1.1); }
+}
+
+@keyframes viscueSecondaryGlow {
+  0% { opacity: 0.35; transform: translateX(-50%) scale(0.95); }
+  100% { opacity: 0.55; transform: translateX(-50%) scale(1.08); }
+}
+
+/* ── Accessibility ── */
+@media (prefers-reduced-motion: reduce) {
+  .auth-eyelash-svg,
+  .auth-bg-ambient-orb--main,
+  .auth-bg-ambient-orb--secondary,
+  .lash-layer-1 {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+/* ── Responsive Viewport Scaling ── */
+@media (max-width: 768px) {
+  .auth-eyelash-stage {
+    top: 2%;
+    width: 96vw;
+    height: 320px;
+    opacity: 0.75;
+  }
+}

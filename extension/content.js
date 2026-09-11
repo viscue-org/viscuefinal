@@ -65,12 +65,26 @@
 
   async function clearStaleComposerAttachments(composer){
     const root = composer ? (composer.closest('form') || composer.closest('[role="presentation"]') || composer.closest('[class*="composer"]') || composer.closest('main') || composer.parentElement?.parentElement || document) : document;
+    // Early exit: skip clearing if there are no attachment-like elements visible — prevents triggering platform error states unnecessarily
+    const attachmentIndicatorSelectors = [
+      '[data-testid*="attachment" i]',
+      '[class*="attachment" i]',
+      '[class*="file-preview" i]',
+      '[class*="thumbnail" i]',
+      '[aria-label*="Remove file" i]',
+      '[aria-label*="Remove attachment" i]',
+      '[class*="pill" i]',
+      'li[class*="attachment" i]',
+    ];
+    const hasAttachments = attachmentIndicatorSelectors.some(sel => root.querySelectorAll(sel).length > 0);
+    if (!hasAttachments) return; // Nothing to clear — skip entirely
     for (let pass = 0; pass < 3; pass++) {
       let removed = 0;
+      // Only remove image-cards that are NOT inside the composer text area itself
       const imgs = root.querySelectorAll('img');
       for (const img of imgs) {
         if (composer && composer.contains(img)) continue;
-        const card = img.closest('div, li, [role="group"]') || img.parentElement;
+        const card = img.closest('[class*="attachment" i],[class*="file-preview" i],[class*="thumbnail" i],[class*="pill" i],li,[role="group"]') || null;
         if (!card || !root.contains(card)) continue;
         card.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
         card.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
@@ -88,23 +102,20 @@
         'button[aria-label*="Remove" i]',
         'button[aria-label*="Delete" i]',
         'button[aria-label*="Dismiss" i]',
-        'button[aria-label*="Clear" i]',
-        'button[aria-label*="Close" i]',
         'button[data-testid*="remove" i]',
         'button[data-testid*="delete" i]',
-        'button[data-testid*="close" i]',
         'div[class*="attachment" i] button',
         'div[class*="file-preview" i] button',
         'div[class*="thumbnail" i] button',
         'li[class*="attachment" i] button',
-        '[class*="pill" i] button'
+        '[class*="pill" i] button',
       ];
       for (const selector of removeSelectors) {
         const buttons = root.querySelectorAll(selector);
         for (const btn of buttons) {
           if (btn.getAttribute('data-testid') === 'send-button') continue;
           const label = (btn.getAttribute('aria-label') || '').toLowerCase();
-          if (label.includes('send') || label.includes('voice') || label.includes('attach') || label.includes('submit')) continue;
+          if (label.includes('send') || label.includes('voice') || label.includes('attach') || label.includes('submit') || label.includes('close dialog')) continue;
           try {
             btn.click();
             removed++;
@@ -112,7 +123,7 @@
         }
       }
       if (removed > 0) {
-        await delay(200);
+        await delay(250);
       } else {
         break;
       }

@@ -89,6 +89,49 @@ export const TextNode = memo(function TextNode({ id, data, selected }) {
     }
   }, [id, context]);
 
+  const handlePaste = useCallback((e) => {
+    // If the clipboard has HTML content, convert it to plain text preserving basic formatting
+    const html = e.clipboardData?.getData('text/html');
+    if (!html) return; // Let default paste handle plain text
+    e.preventDefault();
+    // Convert HTML to markdown-like plain text
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    // Replace block elements with newlines before processing
+    div.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
+    div.querySelectorAll('p, div, li, h1, h2, h3, h4, h5, h6, blockquote, tr').forEach(el => {
+      const tag = el.tagName.toLowerCase();
+      if (tag === 'li') el.prepend('- ');
+      if (/^h[1-6]$/.test(tag)) el.prepend('## ');
+      el.append('\n');
+    });
+    div.querySelectorAll('b, strong').forEach(el => {
+      el.prepend('**'); el.append('**');
+    });
+    div.querySelectorAll('i, em').forEach(el => {
+      el.prepend('_'); el.append('_');
+    });
+    const plain = (div.textContent || div.innerText || '').replace(/\n{3,}/g, '\n\n').trim();
+    if (!plain) return;
+    // Insert at cursor position in textarea
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart ?? draft.length;
+    const end = textarea.selectionEnd ?? draft.length;
+    const next = draft.slice(0, start) + plain + draft.slice(end);
+    setDraft(next);
+    if (draftTimer.current) clearTimeout(draftTimer.current);
+    draftTimer.current = setTimeout(() => onChange(id, next), 400);
+    // Restore cursor position after state update
+    requestAnimationFrame(() => {
+      if (textareaRef.current) {
+        const pos = start + plain.length;
+        textareaRef.current.selectionStart = pos;
+        textareaRef.current.selectionEnd = pos;
+      }
+    });
+  }, [id, draft, onChange]);
+
   const setStyle = patch => onStyleChange(id, patch);
   const isActive = (key, value) => style[key] === value;
 
@@ -177,6 +220,7 @@ export const TextNode = memo(function TextNode({ id, data, selected }) {
         onChange={handleTextChange}
         onKeyDown={handleKeyDown}
         onBlur={handleBlur}
+        onPaste={handlePaste}
         placeholder={isSticky ? 'Write a sticky note…' : 'Type your instruction…'}
         autoFocus={data.autoFocus}
         aria-label={isSticky ? 'Sticky note text' : 'Intent text'}

@@ -317,6 +317,8 @@ export function HistoryDialog({ close, history, config, setConfig, clearAll, res
           <option value={24}>24 hours</option>
           <option value={48}>48 hours</option>
           <option value={168}>7 days</option>
+          <option value={720}>30 days</option>
+          <option value={-1}>Never</option>
         </select>
       </div>
 

@@ -1,3 +1,19 @@
+@font-face {
+  font-family: "Viscue Flow Display";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/ViscueFlowDisplay-Regular.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Viscue Flow Display";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/ViscueFlowDisplay-Semibold.woff2") format("woff2");
+}
+
 :root {
   --bg: #0F1720;
   --card-bg: rgba(255, 255, 255, 0.04);
@@ -6,12 +22,13 @@
   --text-muted: #8E9BAE;
   --brand: #5B7593;
   --brand-accent: #FF5A36;
-  --radius-compact: 10px;
-  --radius-control: 14px;
-  --radius-card: 18px;
-  --radius-card-large: 24px;
+  --radius-compact: 20.5px;
+  --radius-control: 20.5px;
+  --radius-card: 20.5px;
+  --radius-card-large: 20.5px;
   --radius-round: 999px;
-  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-family: "Viscue Flow Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-display: "Viscue Flow Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 * {

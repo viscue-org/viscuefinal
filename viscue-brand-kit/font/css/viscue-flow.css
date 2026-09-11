@@ -1,0 +1,19 @@
+@font-face {
+  font-family: "Viscue Flow Display";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../woff2/ViscueFlowDisplay-Regular.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Viscue Flow Display";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../woff2/ViscueFlowDisplay-Semibold.woff2") format("woff2");
+}
+
+:root {
+  --font-viscue-display: "Viscue Flow Display", "Instrument Sans", Inter, system-ui, sans-serif;
+}

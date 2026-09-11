@@ -5,11 +5,15 @@ import markOrange from '../assets/viscue-mark-orange.png';
 import usageHero from '../assets/viscue-usage-hero.png';
 import person from '../assets/onboarding-person.png';
 import aiGrid from '../assets/onboarding-ai-grid.png';
+import { ViscueLogo } from './components/ui/ViscueLogo';
 import {
   SlidersHorizontal,
   UserCircle,
   SignOut,
   X,
+  ArrowUpRight,
+  House,
+  Sparkle,
 } from '@phosphor-icons/react';
 import {
   advanceOnboarding,
@@ -269,6 +273,21 @@ function StandardPopup() {
     }
   }, []);
 
+  const refreshPlatformDetection = useCallback(() => {
+    Promise.all([
+      readSetting(PLATFORM_PLAN_STORAGE_KEY, null),
+      readSetting(PLATFORM_PLAN_SETUP_KEY, false),
+      globalThis.chrome?.runtime?.sendMessage
+        ? new Promise(resolve => chrome.runtime.sendMessage({ type: 'active-context' }, resolve))
+        : Promise.resolve(null),
+    ]).then(([capability, completed, response]) => {
+      const detected = response?.context?.platform || 'ChatGPT';
+      const state = platformPlanState({ [PLATFORM_PLAN_STORAGE_KEY]: capability, [PLATFORM_PLAN_SETUP_KEY]: completed }, detected);
+      setPlatformName(detected);
+      setPlatformCapability(state.capability);
+    });
+  }, []);
+
   useEffect(() => {
     readSetting('viscue-auto-submit', false).then(setAutoSubmit);
     readSetting(STORAGE_KEY, null).then(sess => {
@@ -282,23 +301,13 @@ function StandardPopup() {
       }
     });
 
-    Promise.all([
-      readSetting(PLATFORM_PLAN_STORAGE_KEY, null),
-      readSetting(PLATFORM_PLAN_SETUP_KEY, false),
-      globalThis.chrome?.runtime?.sendMessage
-        ? new Promise(resolve => chrome.runtime.sendMessage({ type: 'active-context' }, resolve))
-        : Promise.resolve(null),
-    ]).then(([capability, completed, response]) => {
-      const detected = response?.context?.platform || 'ChatGPT';
-      const state = platformPlanState({ [PLATFORM_PLAN_STORAGE_KEY]: capability, [PLATFORM_PLAN_SETUP_KEY]: completed }, detected);
-      setPlatformName(detected);
-      setPlatformCapability(state.capability);
-    });
+    refreshPlatformDetection();
     fetchSummary();
 
     const onVisibilityChange = () => {
       if (!document.hidden) {
         fetchSummary();
+        refreshPlatformDetection(); // Re-detect platform every time popup opens
       }
     };
     document.addEventListener('visibilitychange', onVisibilityChange);
@@ -323,6 +332,10 @@ function StandardPopup() {
               setSummary(newSummary);
             }
           }
+          // Re-sync platform capability when storage changes (e.g. user navigates to different AI tool)
+          if (changes[PLATFORM_PLAN_STORAGE_KEY] || changes[PLATFORM_PLAN_SETUP_KEY]) {
+            refreshPlatformDetection();
+          }
         }
       };
       chrome.storage.onChanged.addListener(storageListener);
@@ -333,7 +346,7 @@ function StandardPopup() {
       document.removeEventListener('visibilitychange', onVisibilityChange);
       if (removeStorageListener) removeStorageListener();
     };
-  }, [fetchSummary]);
+  }, [fetchSummary, refreshPlatformDetection]);
 
   const updatePlatformCapability = capability => {
     const normalized = normalizePlatformCapability(capability, platformName);
@@ -402,63 +415,133 @@ function StandardPopup() {
   const view = accountView(summary, session);
   const planLabel = { free: 'Free', pro: 'Pro', plus: 'Plus' }[view.plan] ?? 'Free';
 
+  const openWorkspace = () => {
+    if (globalThis.chrome?.tabs?.create) {
+      chrome.tabs.create({ url: chrome.runtime.getURL('index.html') });
+    } else {
+      window.open('./index.html', '_blank');
+    }
+  };
+
+  const countParts = String(view.count || '9/9').split('/');
+  const currentCount = parseInt(countParts[0], 10) || 0;
+  const totalCount = parseInt(countParts[1], 10) || 9;
+  const countPercent = totalCount > 0 ? Math.min(100, Math.max(0, Math.round((currentCount / totalCount) * 100))) : 100;
+
   return (
     <main className="popup-shell">
       <div className="popup-content">
         <header className="brand-lockup">
           <div className="brand-lockup-main">
-            <img src={markSteel} alt="" />
+            <ViscueLogo size={34} variant="mark" animated={true} style={{ color: '#5B7593', cursor: 'pointer' }} title="Viscue — Click to replay animation" />
             <h1>Viscue</h1>
+          </div>
+          <div className="brand-lockup-actions">
+            <button
+              type="button"
+              className="plan-label"
+              onClick={() => setActiveView('settings')}
+              title="Change plan"
+            >
+              <span className="plan-pill-tag">Plan</span>
+              <span className="plan-pill-sep">·</span>
+              <span className="plan-pill-val">{planLabel}</span>
+            </button>
+            <button
+              type="button"
+              className="brand-settings-toggle"
+              onClick={() => setActiveView(activeView === 'home' ? 'settings' : 'home')}
+              aria-label={activeView === 'home' ? 'Open settings' : 'Return to home'}
+              title={activeView === 'home' ? 'Open settings' : 'Return to home'}
+            >
+              <SlidersHorizontal size={18} weight="bold" />
+            </button>
+          </div>
+        </header>
+
+        <section className="popup-hero-card" aria-label="Daily Cue Allowance">
+          <div className="popup-hero-header">
+            <span className="typography-cue">
+              Cue left
+            </span>
+            <span className="popup-hero-badge">
+              <Sparkle size={11} weight="fill" />
+              <span>{view.plan === 'free' ? 'Daily Reset' : `${planLabel} Plan`}</span>
+            </span>
+          </div>
+
+          <div className="popup-hero-count-row">
+            <span className="typography-count">
+              {view.count}
+            </span>
+            <span className="popup-hero-count-sub">cues left today</span>
+          </div>
+
+          <div className="popup-hero-meter" role="progressbar" aria-valuenow={currentCount} aria-valuemin={0} aria-valuemax={totalCount}>
+            <div className="popup-hero-track">
+              <div
+                className="popup-hero-bar"
+                style={{ width: `${countPercent}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="popup-hero-meta-row">
+            <span className="popup-hero-meta-chip ready">
+              <span className="meta-dot" />
+              <span>{countPercent}% Available</span>
+            </span>
+            <span className="popup-hero-meta-chip">
+              <Sparkle size={11} weight="fill" />
+              <span>Visual Intent Ready</span>
+            </span>
+          </div>
+
+          <p className="popup-hero-caption">
+            Visual reference context and AI intents ready for ChatGPT, Claude &amp; more.
+          </p>
+        </section>
+
+        <div className="popup-actions-group">
+          <button
+            type="button"
+            className="popup-btn-open-workspace"
+            onClick={openWorkspace}
+            title="Open Viscue Canvas Workspace"
+          >
+            <span>Open Canvas Workspace</span>
+            <ArrowUpRight size={17} weight="bold" />
+          </button>
+        </div>
+
+        <div className="popup-platform-status">
+          <div className="popup-platform-indicator">
+            <span className="popup-platform-dot" />
+            <span className="popup-platform-dot-ring" />
+          </div>
+          <div className="popup-platform-text">
+            <span className="popup-platform-title">Connected AI</span>
+            <span className="popup-platform-val">{platformName || 'ChatGPT'} · Intent Ready</span>
           </div>
           <button
             type="button"
-            className="brand-settings-toggle"
-            onClick={() => setActiveView(activeView === 'home' ? 'settings' : 'home')}
-            aria-label={activeView === 'home' ? 'Open settings' : 'Return to home'}
-            title={activeView === 'home' ? 'Open settings' : 'Return to home'}
+            className="popup-platform-config-btn"
+            onClick={() => setActiveView('settings')}
+            title="Configure platform plan"
           >
-            <SlidersHorizontal size={20} weight="bold" />
+            Configure
           </button>
-        </header>
-
-        <button
-          type="button"
-          className="plan-label"
-          onClick={() => setActiveView('settings')}
-          title="Change plan"
-        >
-          <strong>Plan</strong> - {planLabel}
-        </button>
-
-        <div className="typography-cue">
-          Cue<br />left
         </div>
 
-        <div className="typography-count">
-          {view.count}
-        </div>
-
-        <div className="toggle-container" role="tablist" aria-label="Navigation">
-          <div className={`segmented-control ${activeView === 'settings' ? 'is-settings' : 'is-home'}`}>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeView === 'home'}
-              className={`segmented-btn ${activeView === 'home' ? 'is-active' : ''}`}
-              onClick={() => setActiveView('home')}
-            >
-              Home
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeView === 'settings'}
-              className={`segmented-btn ${activeView === 'settings' ? 'is-active' : ''}`}
-              onClick={() => setActiveView('settings')}
-            >
-              Settings
-            </button>
-            <span className="segmented-thumb" aria-hidden="true" />
+        <div className="popup-feature-card">
+          <div className="popup-feature-item">
+            <span className="popup-feature-icon">
+              <Sparkle size={15} weight="fill" />
+            </span>
+            <div className="popup-feature-copy">
+              <strong>Visual Intent Engine</strong>
+              <small>Point, annotate, and compile instructions into your chat</small>
+            </div>
           </div>
         </div>
       </div>
@@ -466,14 +549,17 @@ function StandardPopup() {
       {activeView === 'settings' && (
         <aside className="settings-overlay" aria-label="Settings">
           <header className="settings-overlay-header">
-            <h2>Settings</h2>
+            <div className="settings-overlay-title-group">
+              <h2>Settings</h2>
+              <p className="settings-overlay-sub">Preferences, account &amp; AI limits</p>
+            </div>
             <button
               type="button"
               className="settings-overlay-close"
               onClick={() => setActiveView('home')}
               aria-label="Close settings"
             >
-              <X size={22} weight="bold" />
+              <X size={20} weight="bold" />
             </button>
           </header>
 
@@ -601,6 +687,32 @@ function StandardPopup() {
           </div>
         </aside>
       )}
+
+      <div className="toggle-container" role="tablist" aria-label="Navigation">
+        <div className={`segmented-control ${activeView === 'settings' ? 'is-settings' : 'is-home'}`}>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeView === 'home'}
+            className={`segmented-btn ${activeView === 'home' ? 'is-active' : ''}`}
+            onClick={() => setActiveView('home')}
+          >
+            <House size={14} weight={activeView === 'home' ? 'fill' : 'bold'} />
+            <span>Home</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeView === 'settings'}
+            className={`segmented-btn ${activeView === 'settings' ? 'is-active' : ''}`}
+            onClick={() => setActiveView('settings')}
+          >
+            <SlidersHorizontal size={14} weight={activeView === 'settings' ? 'fill' : 'bold'} />
+            <span>Settings</span>
+          </button>
+          <span className="segmented-thumb" aria-hidden="true" />
+        </div>
+      </div>
     </main>
   );
 }

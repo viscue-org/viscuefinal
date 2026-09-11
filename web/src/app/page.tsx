@@ -9,7 +9,7 @@ export default function Home() {
           width: '100%',
           background: 'rgba(255, 255, 255, 0.04)',
           border: '1px solid rgba(255, 255, 255, 0.1)',
-          borderRadius: '24px',
+          borderRadius: '20.5px',
           padding: '40px',
           textAlign: 'center',
         }}
@@ -30,7 +30,7 @@ export default function Home() {
             background: '#5B7593',
             color: '#FFFFFF',
             padding: '12px 28px',
-            borderRadius: '14px',
+            borderRadius: '20.5px',
             fontSize: '15px',
             fontWeight: 600,
             textDecoration: 'none',

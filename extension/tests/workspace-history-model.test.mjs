@@ -5,6 +5,13 @@ import {
   createHistoryExport,
   importHistoryArchive,
   computeSha256,
+  DEFAULT_HISTORY_CONFIG,
+  RETENTION_OPTIONS,
+  normalizeHistoryConfig,
+  getHistoryCutoff,
+  isHistoryItemExpired,
+  pruneExpiredHistory,
+  appendHistoryItem,
 } from '../src/components/workspace/workspaceHistoryModel.mjs';
 import { hydrateWorkspace } from '../../gesture/shared/operation-lifecycle.mjs';
 
@@ -170,3 +177,113 @@ test('rejects oversized compressed archive', async () => {
     /Archive exceeds maximum compressed size limit/i
   );
 });
+
+test('normalizeHistoryConfig preserves valid retention periods and falls back safely', () => {
+  assert.deepEqual(normalizeHistoryConfig(24), { autoDeleteHours: 24 });
+  assert.deepEqual(normalizeHistoryConfig(48), { autoDeleteHours: 48 });
+  assert.deepEqual(normalizeHistoryConfig(168), { autoDeleteHours: 168 });
+  assert.deepEqual(normalizeHistoryConfig(720), { autoDeleteHours: 720 });
+  assert.deepEqual(normalizeHistoryConfig(-1), { autoDeleteHours: -1 });
+
+  assert.deepEqual(normalizeHistoryConfig({ autoDeleteHours: 48 }), { autoDeleteHours: 48 });
+  assert.deepEqual(normalizeHistoryConfig({ autoDeleteHours: -1 }), { autoDeleteHours: -1 });
+  assert.deepEqual(normalizeHistoryConfig({ autoDeleteHours: '168' }), { autoDeleteHours: 168 });
+
+  // Invalid fallbacks
+  assert.deepEqual(normalizeHistoryConfig(null), { autoDeleteHours: 24 });
+  assert.deepEqual(normalizeHistoryConfig(undefined), { autoDeleteHours: 24 });
+  assert.deepEqual(normalizeHistoryConfig({}), { autoDeleteHours: 24 });
+  assert.deepEqual(normalizeHistoryConfig('invalid'), { autoDeleteHours: 24 });
+  assert.deepEqual(normalizeHistoryConfig(NaN), { autoDeleteHours: 24 });
+});
+
+test('getHistoryCutoff computes correct timestamp boundaries', () => {
+  const now = 1788256800000;
+  assert.equal(getHistoryCutoff(24, now), now - (24 * 3600 * 1000));
+  assert.equal(getHistoryCutoff(48, now), now - (48 * 3600 * 1000));
+  assert.equal(getHistoryCutoff(168, now), now - (168 * 3600 * 1000));
+  assert.equal(getHistoryCutoff(720, now), now - (720 * 3600 * 1000));
+
+  // Disabled / Never
+  assert.equal(getHistoryCutoff(-1, now), null);
+  assert.equal(getHistoryCutoff(0, now), null);
+  assert.equal(getHistoryCutoff(-99, now), null);
+});
+
+test('isHistoryItemExpired detects items exceeding retention window', () => {
+  const now = 1788256800000;
+  const oneHourAgo = now - 3600 * 1000;
+  const twentyFiveHoursAgo = now - 25 * 3600 * 1000;
+  const fortyNineHoursAgo = now - 49 * 3600 * 1000;
+
+  // Never expires with autoDeleteHours = -1
+  assert.equal(isHistoryItemExpired({ timestamp: twentyFiveHoursAgo }, -1, now), false);
+  assert.equal(isHistoryItemExpired({ timestamp: fortyNineHoursAgo }, -1, now), false);
+
+  // 24 hours retention
+  assert.equal(isHistoryItemExpired({ timestamp: oneHourAgo }, 24, now), false);
+  assert.equal(isHistoryItemExpired({ timestamp: twentyFiveHoursAgo }, 24, now), true);
+
+  // 48 hours retention
+  assert.equal(isHistoryItemExpired({ timestamp: twentyFiveHoursAgo }, 48, now), false);
+  assert.equal(isHistoryItemExpired({ timestamp: fortyNineHoursAgo }, 48, now), true);
+
+  // ISO string timestamp format
+  assert.equal(isHistoryItemExpired({ timestamp: new Date(oneHourAgo).toISOString() }, 24, now), false);
+  assert.equal(isHistoryItemExpired({ timestamp: new Date(twentyFiveHoursAgo).toISOString() }, 24, now), true);
+
+  // Fallback timestamp properties
+  assert.equal(isHistoryItemExpired({ importedAt: twentyFiveHoursAgo }, 24, now), true);
+  assert.equal(isHistoryItemExpired({ createdAt: twentyFiveHoursAgo }, 24, now), true);
+
+  // Missing or corrupt timestamp is not expired (preserves user data)
+  assert.equal(isHistoryItemExpired({}, 24, now), false);
+  assert.equal(isHistoryItemExpired({ timestamp: 'not-a-date' }, 24, now), false);
+});
+
+test('pruneExpiredHistory removes expired items and preserves valid ones', () => {
+  const now = 1788256800000;
+  const fresh = { id: 'fresh', timestamp: now - 3600 * 1000 };
+  const dayOld = { id: 'day-old', timestamp: now - 26 * 3600 * 1000 };
+  const weekOld = { id: 'week-old', timestamp: now - 8 * 24 * 3600 * 1000 };
+  const monthOld = { id: 'month-old', timestamp: now - 32 * 24 * 3600 * 1000 };
+
+  const allItems = [fresh, dayOld, weekOld, monthOld];
+
+  // 24 hours retention keeps only fresh
+  const pruned24 = pruneExpiredHistory(allItems, 24, now);
+  assert.deepEqual(pruned24.map(i => i.id), ['fresh']);
+
+  // 48 hours retention keeps fresh and dayOld
+  const pruned48 = pruneExpiredHistory(allItems, 48, now);
+  assert.deepEqual(pruned48.map(i => i.id), ['fresh', 'day-old']);
+
+  // 7 days (168h) keeps fresh and dayOld
+  const pruned7d = pruneExpiredHistory(allItems, 168, now);
+  assert.deepEqual(pruned7d.map(i => i.id), ['fresh', 'day-old']);
+
+  // 30 days (720h) keeps fresh, dayOld, weekOld
+  const pruned30d = pruneExpiredHistory(allItems, 720, now);
+  assert.deepEqual(pruned30d.map(i => i.id), ['fresh', 'day-old', 'week-old']);
+
+  // Never (-1) keeps all items
+  const prunedNever = pruneExpiredHistory(allItems, -1, now);
+  assert.deepEqual(prunedNever.map(i => i.id), ['fresh', 'day-old', 'week-old', 'month-old']);
+});
+
+test('appendHistoryItem prepends new snapshot and prunes expired ones automatically', () => {
+  const now = 1788256800000;
+  const oldItem = { id: 'old', timestamp: now - 25 * 3600 * 1000 };
+  const existingItem = { id: 'existing', timestamp: now - 2 * 3600 * 1000 };
+
+  const result = appendHistoryItem([existingItem, oldItem], { nodes: [{ id: 'n1' }] }, 24, now);
+
+  assert.equal(result.length, 2);
+  assert.equal(result[0].nodes[0].id, 'n1');
+  assert.equal(result[0].timestamp, now);
+  assert.ok(result[0].id);
+  assert.equal(result[1].id, 'existing');
+  // 'old' was auto-deleted because it exceeded 24 hours
+  assert.ok(!result.some(i => i.id === 'old'));
+});
+

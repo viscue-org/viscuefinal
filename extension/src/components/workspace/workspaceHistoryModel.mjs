@@ -277,3 +277,102 @@ export async function importHistoryArchive(bytes) {
 
   return snapshot;
 }
+
+export const DEFAULT_HISTORY_CONFIG = Object.freeze({
+  autoDeleteHours: 24,
+});
+
+export const RETENTION_OPTIONS = Object.freeze([24, 48, 168, 720, -1]);
+
+/**
+ * Normalizes history config input into a valid configuration object.
+ * Supported retention hours: 24, 48, 168 (7 days), 720 (30 days), -1 (Never).
+ * Defaults to 24 hours.
+ */
+export function normalizeHistoryConfig(config) {
+  const hours = typeof config === 'number'
+    ? config
+    : (config && typeof config === 'object' ? Number(config.autoDeleteHours) : Number(config));
+
+  if (Number.isFinite(hours) && (RETENTION_OPTIONS.includes(hours) || hours > 0 || hours === -1)) {
+    return { autoDeleteHours: hours };
+  }
+  return { ...DEFAULT_HISTORY_CONFIG };
+}
+
+/**
+ * Calculates cutoff timestamp in milliseconds.
+ * Returns null if retention is disabled (<= 0, e.g. -1 for Never).
+ */
+export function getHistoryCutoff(autoDeleteHours, now = Date.now()) {
+  const hours = Number(autoDeleteHours);
+  if (!Number.isFinite(hours) || hours <= 0) {
+    return null;
+  }
+  return now - (hours * 60 * 60 * 1000);
+}
+
+/**
+ * Determines whether a history snapshot item is expired given the retention period.
+ */
+export function isHistoryItemExpired(item, autoDeleteHours, now = Date.now()) {
+  const cutoff = getHistoryCutoff(autoDeleteHours, now);
+  if (cutoff === null) {
+    return false; // Retention is disabled / Never
+  }
+
+  let timestamp = NaN;
+  if (typeof item?.timestamp === 'number' && Number.isFinite(item.timestamp)) {
+    timestamp = item.timestamp;
+  } else if (typeof item?.timestamp === 'string') {
+    timestamp = Date.parse(item.timestamp);
+  } else if (typeof item?.createdAt === 'number' && Number.isFinite(item.createdAt)) {
+    timestamp = item.createdAt;
+  } else if (typeof item?.createdAt === 'string') {
+    timestamp = Date.parse(item.createdAt);
+  } else if (typeof item?.importedAt === 'number' && Number.isFinite(item.importedAt)) {
+    timestamp = item.importedAt;
+  } else if (typeof item?.importedAt === 'string') {
+    timestamp = Date.parse(item.importedAt);
+  }
+
+  // If no valid timestamp can be parsed, preserve item to prevent accidental data loss
+  if (!Number.isFinite(timestamp)) {
+    return false;
+  }
+
+  return timestamp < cutoff;
+}
+
+/**
+ * Prunes expired items from an array of history snapshots.
+ * Returns a new array.
+ */
+export function pruneExpiredHistory(items = [], autoDeleteHours = 24, now = Date.now()) {
+  if (!Array.isArray(items)) return [];
+  const cutoff = getHistoryCutoff(autoDeleteHours, now);
+  if (cutoff === null) {
+    return [...items];
+  }
+  return items.filter(item => !isHistoryItemExpired(item, autoDeleteHours, now));
+}
+
+/**
+ * Prepends a new history snapshot and prunes any expired items based on retention policy.
+ */
+export function appendHistoryItem(items = [], snapshot = {}, autoDeleteHours = 24, now = Date.now()) {
+  const list = Array.isArray(items) ? items : [];
+  const timestamp = typeof snapshot.timestamp === 'number' && Number.isFinite(snapshot.timestamp)
+    ? snapshot.timestamp
+    : (typeof snapshot.timestamp === 'string' && Number.isFinite(Date.parse(snapshot.timestamp))
+      ? Date.parse(snapshot.timestamp)
+      : now);
+
+  const newItem = {
+    ...snapshot,
+    id: snapshot.id || (typeof crypto?.randomUUID === 'function' ? crypto.randomUUID() : `hist-${now}-${Math.random().toString(36).slice(2, 8)}`),
+    timestamp,
+  };
+
+  return pruneExpiredHistory([newItem, ...list], autoDeleteHours, now);
+}

@@ -47,8 +47,8 @@ describe('logo-derived radius system', () => {
     const card = heading.parentElement;
     const action = screen.getByRole('link');
 
-    expect(card).toHaveStyle({ borderRadius: '24px' });
-    expect(action).toHaveStyle({ borderRadius: '14px' });
+    expect(card).toHaveStyle({ borderRadius: '20.5px' });
+    expect(action).toHaveStyle({ borderRadius: '20.5px' });
   });
 
   it('keeps workspace and popup cards and buttons on the same radius scale', () => {
@@ -73,14 +73,14 @@ describe('logo-derived radius system', () => {
       </section>
     `;
 
-    expect(computedRadius('.workspace-history')).toBe('24px');
-    expect(computedRadius('.workspace-history__retention-bar')).toBe('18px');
-    expect(computedRadius('.workspace-history__item')).toBe('18px');
-    expect(computedRadius('.workspace-history__restore')).toBe('14px');
-    expect(computedRadius('.workspace-history__actions button')).toBe('10px');
-    expect(computedRadius('.workspace-history__close-btn')).toBe('14px');
-    expect(computedRadius('.settings-card')).toBe('18px');
-    expect(computedRadius('.settings-account-auth-btn')).toBe('10px');
-    expect(computedRadius('.settings-plan-select-btn')).toBe('10px');
+    expect(computedRadius('.workspace-history')).toBe('20.5px');
+    expect(computedRadius('.workspace-history__retention-bar')).toBe('20.5px');
+    expect(computedRadius('.workspace-history__item')).toBe('20.5px');
+    expect(computedRadius('.workspace-history__restore')).toBe('20.5px');
+    expect(computedRadius('.workspace-history__actions button')).toBe('20.5px');
+    expect(computedRadius('.workspace-history__close-btn')).toBe('20.5px');
+    expect(computedRadius('.settings-card')).toBe('20.5px');
+    expect(computedRadius('.settings-account-auth-btn')).toBe('20.5px');
+    expect(computedRadius('.settings-plan-select-btn')).toBe('20.5px');
   });
 });

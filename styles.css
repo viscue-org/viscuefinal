@@ -44,7 +44,7 @@ body {
   height: 935px;
   background: var(--viscue-canvas);
   border: 1px solid var(--viscue-hairline);
-  border-radius: 16px;
+  border-radius: 20.5px;
   overflow: hidden;
   transform: translate(-50%, -50%);
   top: 50%;

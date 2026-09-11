@@ -1,0 +1,86 @@
+<div id="viscue-brand-directions">
+  <style>
+    #viscue-brand-directions .intro { max-width: 760px; margin-bottom: 20px; }
+    #viscue-brand-directions .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    #viscue-brand-directions .card-image { min-height: 270px; display: flex; flex-direction: column; justify-content: space-between; gap: 18px; padding: 22px; overflow: hidden; background: var(--card); color: var(--card-foreground); }
+    #viscue-brand-directions .mark-row { display: flex; align-items: center; gap: 12px; }
+    #viscue-brand-directions .mark { width: 60px; height: 60px; flex: 0 0 auto; }
+    #viscue-brand-directions .mini-icons { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+    #viscue-brand-directions .mini-icons span { min-height: 38px; display: grid; place-items: center; color: #5B7593; }
+    #viscue-brand-directions .mini-icons svg { width: 25px; height: 25px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    #viscue-brand-directions .type-a { font-family: "Arial Rounded MT Bold", "Trebuchet MS", sans-serif; font-weight: 500; letter-spacing: -0.045em; line-height: .92; font-size: 28px; }
+    #viscue-brand-directions .type-b { font-family: "Trebuchet MS", "Segoe UI", sans-serif; font-weight: 500; letter-spacing: -0.025em; line-height: .96; font-size: 27px; }
+    #viscue-brand-directions .type-c { font-family: Consolas, "Courier New", monospace; font-weight: 500; letter-spacing: -0.04em; line-height: .95; font-size: 25px; }
+    #viscue-brand-directions .sample-copy { margin: 7px 0 0; color: var(--muted-foreground); font-size: 12px; }
+    #viscue-brand-directions .recommended { display: inline-flex; color: #5B7593; font-size: 12px; font-weight: 500; margin-bottom: 6px; }
+    @media (max-width: 780px) { #viscue-brand-directions .cards { grid-template-columns: 1fr; } }
+  </style>
+
+  <div class="intro">
+    <h2>Choose Viscue's icon and type direction</h2>
+    <p class="subtitle">Each direction keeps the open eye/C and cue dash from the logo. Click the system that feels most like Viscue.</p>
+  </div>
+
+  <div class="cards">
+    <div class="card" data-choice="focus-sans" onclick="toggleSelect(this)">
+      <div class="card-image">
+        <div>
+          <span class="recommended">Recommended</span>
+          <div class="mark-row">
+            <svg class="mark" viewBox="0 0 64 64" aria-label="Refined Viscue mark"><rect width="64" height="64" rx="17" fill="#5B7593"/><path d="M48 17C38 13 24 17 18 27c-7 12 0 25 13 26 8 1 15-2 19-7" fill="none" stroke="#F6F4EF" stroke-width="6.5" stroke-linecap="round"/><path d="M38 32h11" stroke="#F6F4EF" stroke-width="6.5" stroke-linecap="round"/></svg>
+            <div class="type-a">Visuals into<br>clear intent.</div>
+          </div>
+          <p class="sample-copy">Custom display face + proven readable UI text</p>
+        </div>
+        <div class="mini-icons" aria-label="Focus Sans icon examples">
+          <span><svg viewBox="0 0 24 24"><path d="M18 6C13 3 6 6 5 12c-1 6 6 10 12 6"/><path d="M14 12h5"/></svg></span>
+          <span><svg viewBox="0 0 24 24"><path d="M5 5v14M19 5v14M5 8h4M15 8h4M5 16h4M15 16h4"/></svg></span>
+          <span><svg viewBox="0 0 24 24"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="7" r="2.5"/><circle cx="18" cy="17" r="2.5"/><path d="m8 11 7-3M8 13l7 3"/></svg></span>
+          <span><svg viewBox="0 0 24 24"><path d="M4 4l7 16 2-7 7-2Z"/><path d="m14 14 5 5"/></svg></span>
+          <span><svg viewBox="0 0 24 24"><path d="M4 18c3-8 5-11 8-11s4 8 8 8"/><path d="m17 12 3 3-3 3"/></svg></span>
+        </div>
+      </div>
+      <div class="card-body"><h3>A. Focus Sans</h3><p>Rounded geometric forms, open counters, and short cue-like terminals. About 48 custom workspace icons plus a distinctive display font; Instrument Sans remains for dense controls.</p></div>
+    </div>
+
+    <div class="card" data-choice="humanist-flow" onclick="toggleSelect(this)">
+      <div class="card-image">
+        <div>
+          <div class="mark-row">
+            <svg class="mark" viewBox="0 0 64 64" aria-label="Soft Viscue mark"><rect width="64" height="64" rx="21" fill="#5B7593"/><path d="M48 18C38 13 25 17 19 27c-7 12 0 24 12 26 8 1 15-2 19-7" fill="none" stroke="#F6F4EF" stroke-width="6" stroke-linecap="round"/><circle cx="44" cy="32" r="3.2" fill="#F6F4EF"/></svg>
+            <div class="type-b">Ideas move<br>when they connect.</div>
+          </div>
+          <p class="sample-copy">One expressive font for brand and interface</p>
+        </div>
+        <div class="mini-icons" aria-label="Humanist Flow icon examples">
+          <span><svg viewBox="0 0 24 24"><path d="M18 6c-5-3-12 0-13 6-1 6 6 10 12 6"/><circle cx="18" cy="12" r="1.5"/></svg></span>
+          <span><svg viewBox="0 0 24 24"><path d="M5 5c4 1 4 5 7 5s4-4 7-5M5 19c4-1 4-5 7-5s4 4 7 5"/></svg></span>
+          <span><svg viewBox="0 0 24 24"><circle cx="7" cy="12" r="3"/><circle cx="17" cy="8" r="3"/><path d="M10 11l4-2"/></svg></span>
+          <span><svg viewBox="0 0 24 24"><path d="M5 4c8 3 10 8 14 16M5 4l1 8 6-5"/></svg></span>
+          <span><svg viewBox="0 0 24 24"><path d="M4 17c4-8 7-10 10-8s1 7 6 7"/></svg></span>
+        </div>
+      </div>
+      <div class="card-body"><h3>B. Humanist Flow</h3><p>Softer curves and more organic relationships. Friendly and expressive, but less precise at 16px and riskier for a dense canvas product.</p></div>
+    </div>
+
+    <div class="card" data-choice="signal-mono" onclick="toggleSelect(this)">
+      <div class="card-image">
+        <div>
+          <div class="mark-row">
+            <svg class="mark" viewBox="0 0 64 64" aria-label="Technical Viscue mark"><rect width="64" height="64" rx="12" fill="#5B7593"/><path d="M48 16H30c-9 0-16 7-16 16s7 16 16 16h18" fill="none" stroke="#F6F4EF" stroke-width="6" stroke-linecap="round"/><path d="M38 32h11" stroke="#F6F4EF" stroke-width="6" stroke-linecap="round"/></svg>
+            <div class="type-c">CONNECT<br>WHAT YOU SEE</div>
+          </div>
+          <p class="sample-copy">Technical font and strict modular symbols</p>
+        </div>
+        <div class="mini-icons" aria-label="Signal Mono icon examples">
+          <span><svg viewBox="0 0 24 24"><path d="M19 5H9a7 7 0 0 0 0 14h10"/><path d="M15 12h5"/></svg></span>
+          <span><svg viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM9 14h6v6H9z"/></svg></span>
+          <span><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="19" cy="18" r="2"/><path d="M7 11l10-4M7 13l10 4"/></svg></span>
+          <span><svg viewBox="0 0 24 24"><path d="M4 3v18l5-5 3 5 3-2-3-5h7Z"/></svg></span>
+          <span><svg viewBox="0 0 24 24"><path d="M4 17h5V7h6v5h5"/><path d="m17 9 3 3-3 3"/></svg></span>
+        </div>
+      </div>
+      <div class="card-body"><h3>C. Signal Mono</h3><p>Rigid grid geometry and a technical monospaced voice. Excellent for data and model tooling, but colder than Viscue's creative workflow.</p></div>
+    </div>
+  </div>
+</div>

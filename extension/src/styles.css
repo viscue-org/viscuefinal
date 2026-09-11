@@ -801,22 +801,23 @@ textarea:focus-visible {
 .text-node { 
   min-width: 200px; 
   min-height: 64px; 
-  border-radius: 8px; 
-  padding: 14px 18px; 
+  border-radius: var(--radius-card, 20.5px); 
+  padding: 16px 20px; 
   background: var(--bg-surface); 
   opacity: 1; 
   border: 1.5px solid var(--border-default); 
-  box-shadow: none;
-  transition: border-color var(--duration-normal) var(--ease-ambient);
+  box-shadow: 0 1px 4px rgba(17, 35, 52, 0.04);
+  transition: border-color var(--duration-normal) var(--ease-ambient), box-shadow var(--duration-normal) var(--ease-ambient);
 }
 
 .text-node:hover {
   border-color: var(--border-hover);
+  box-shadow: 0 2px 8px rgba(17, 35, 52, 0.08);
 }
 
 .text-node.selected { 
-  border-color: var(--color-selection); 
-  box-shadow: 0 0 0 2px rgba(91, 117, 147, 0.18);
+  border-color: var(--color-selection, #5B7593); 
+  box-shadow: 0 0 0 2.5px rgba(91, 117, 147, 0.16), 0 4px 14px rgba(17, 35, 52, 0.08);
 }
 
 .text-node textarea { 
@@ -851,8 +852,8 @@ textarea:focus-visible {
 .sticky-note {
   width: 286px;
   min-height: 184px;
-  padding: 14px 14px 12px;
-  border-radius: var(--radius-lg);
+  padding: 16px 18px 14px;
+  border-radius: var(--radius-card, 20.5px);
   border-color: var(--note-200);
   background: var(--note-50);
   opacity: 1;
@@ -918,13 +919,26 @@ textarea:focus-visible {
 .surface-swatches { margin-left: 4px; padding-left: 6px; border-left: 1px solid var(--border-default); }
 
 .text-handle { 
+  width: 10px !important;
+  height: 10px !important;
+  background: var(--bg-surface, #ffffff) !important;
+  border: 2px solid var(--color-selection, #5B7593) !important;
+  border-radius: 50% !important;
+  box-shadow: 0 1px 3px rgba(17, 35, 52, 0.15) !important;
   opacity: 0;
-  transition: opacity var(--duration-fast) var(--ease-ambient);
+  transition: opacity var(--duration-fast) var(--ease-ambient), transform var(--duration-fast) var(--ease-ambient), background-color var(--duration-fast) var(--ease-ambient);
+  z-index: 5;
 }
 
 .text-node:hover .text-handle,
 .text-node.selected .text-handle {
   opacity: 1;
+}
+
+.text-handle:hover {
+  transform: scale(1.25) !important;
+  background: var(--brand, #5B7593) !important;
+  border-color: #ffffff !important;
 }
 
 /* Canvas inventory â€” the bottom-left contents button opens this live summary. */
@@ -2343,10 +2357,6 @@ textarea:focus-visible {
   margin-left: auto;
 }
 
-
-.text-node-action-btn { background: var(--accent); color: var(--on-accent); border: none; border-radius: 4px; padding: 4px 8px; font-size: 12px; cursor: pointer; transition: opacity 0.2s; }
-.text-node-action-btn:hover { opacity: 0.8; }
-
 .flow-add-btn { opacity: 0; pointer-events: none; }
 .text-node:hover .flow-add-btn { opacity: 1; pointer-events: auto; }
 .flow-add-btn.top { top: -28px; left: 50%; transform: translateX(-50%); }
@@ -2355,8 +2365,33 @@ textarea:focus-visible {
 .flow-add-btn.left:hover { transform: translateY(-50%) scale(1.1); }
 .flow-add-btn.right { right: -28px; }
 .flow-add-btn.bottom { bottom: -28px; }
-.text-node-action-btn { background: transparent; color: var(--text-muted); border: 1px solid var(--border-default); border-radius: 12px; padding: 4px 10px; font-size: 11px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
-.text-node-action-btn:hover { background: var(--bg-subtle); color: var(--text-primary); }
+
+.text-node-action-btn { 
+  background: var(--bg-surface, #ffffff); 
+  color: var(--text-secondary, #4A6380); 
+  border: 1px solid var(--border-default); 
+  border-radius: var(--radius-control, 20.5px); 
+  padding: 5px 14px; 
+  font-size: 12px; 
+  font-weight: 500; 
+  cursor: pointer; 
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--duration-fast) var(--ease-ambient); 
+  box-shadow: 0 1px 2px rgba(17, 35, 52, 0.04);
+}
+.text-node-action-btn:hover { 
+  background: var(--steel-50, #F3F6FA); 
+  border-color: var(--brand, #5B7593);
+  color: var(--brand, #5B7593); 
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(91, 117, 147, 0.12);
+}
+.text-node-action-btn:active {
+  transform: translateY(0);
+  background: var(--steel-100, #E6EDF4);
+}
 
 .react-flow__edges { z-index: 9999 !important; }
 

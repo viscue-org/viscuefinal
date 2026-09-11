@@ -51,6 +51,18 @@ export async function apiFetch(endpoint, options = {}, deps = {}) {
         // Fall through to 401 handler
       }
     }
+    // If still 401 after refresh attempt, try re-fetching a fresh token from storage
+    // (accounts for the case where another tab already refreshed the session)
+    if (response.status === 401) {
+      const freshToken = await getAccessToken(deps.config || {}, storage, true);
+      if (freshToken && freshToken !== token) {
+        headers['Authorization'] = `Bearer ${freshToken}`;
+        response = await fetchFn(url, {
+          ...options,
+          headers,
+        });
+      }
+    }
   }
 
   if (response.status === 429) {
@@ -58,7 +70,8 @@ export async function apiFetch(endpoint, options = {}, deps = {}) {
   }
 
   if (response.status === 401) {
-    throw new ApiError('Unauthorized. Please sign in.', 401, 'unauthorized');
+    // Signal to caller that re-authentication is needed, not just a generic error
+    throw new ApiError('Session expired. Please sign in again to continue.', 401, 'session_expired');
   }
 
   if (!response.ok) {

@@ -260,7 +260,7 @@ export function WorkspaceHistory({ items = [], historyConfig = { autoDeleteHours
     h('div', { className: 'workspace-history__retention-bar' },
       h('label', { className: 'workspace-history__retention', htmlFor: 'history-retention' },
         h('span', null, 'Auto-delete history older than'),
-        h('select', { id: 'history-retention', value: historyConfig.autoDeleteHours, onChange: event => onHistoryConfigChange(Number(event.target.value)) },
+        h('select', { id: 'history-retention', value: Number(historyConfig?.autoDeleteHours ?? (typeof historyConfig === 'number' ? historyConfig : 24)), onChange: event => onHistoryConfigChange(Number(event.target.value)) },
           h('option', { value: 24 }, '24 hours'),
           h('option', { value: 48 }, '48 hours'),
           h('option', { value: 168 }, '7 days'),
